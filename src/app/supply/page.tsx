@@ -252,7 +252,7 @@ export default function SupplyPage() {
 
   return (
     <AppShell>
-      <Stack gap="lg">
+      <Stack gap="lg" pb="xl">
         <Title order={3} fw={700}>Rekod Inden Baharu</Title>
 
         {successId && (
