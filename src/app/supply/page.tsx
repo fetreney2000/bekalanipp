@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import AppShell from "@/components/AppShell";
 import {
   Box,
@@ -14,9 +14,11 @@ import {
   Flex,
   Heading,
   Alert,
+  Combobox,
   createToaster,
+  createListCollection,
 } from "@chakra-ui/react";
-import { Package, Plus, Trash2, Send, CheckCircle, AlertTriangle, Search } from "lucide-react";
+import { Package, Plus, Trash2, Send, CheckCircle, AlertTriangle } from "lucide-react";
 
 interface Ward {
   id: number;
@@ -56,129 +58,23 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function SearchableSelect({
-  items,
-  value,
-  onChange,
-  placeholder,
-  label,
-}: {
-  items: { value: number | string; label: string }[];
-  value: number | string | null;
-  onChange: (val: number | string) => void;
-  placeholder: string;
-  label?: string;
-}) {
-  const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const selectedItem = items.find((i) => String(i.value) === String(value));
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return items;
-    const q = query.toLowerCase();
-    return items.filter((i) => i.label.toLowerCase().includes(q));
-  }, [items, query]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <Box position="relative" ref={ref}>
-      <Box
-        bg="#123a66"
-        border="1px solid"
-        borderColor="rgba(79,135,255,0.12)"
-        borderRadius="10px"
-        px={2}
-        py={1.5}
-        display="flex"
-        alignItems="center"
-        gap={2}
-        cursor="pointer"
-        onClick={() => setIsOpen(!isOpen)}
-        minH="36px"
-      >
-        <Search size={14} color="#a3aab3" />
-        <input
-          type="text"
-          value={isOpen ? query : (selectedItem?.label || "")}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            if (!isOpen) setIsOpen(true);
-          }}
-          onFocus={() => {
-            setIsOpen(true);
-            setQuery("");
-          }}
-          placeholder={selectedItem ? "" : placeholder}
-          style={{
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: "#e7eaee",
-            fontSize: "14px",
-            width: "100%",
-          }}
-        />
-      </Box>
-      {isOpen && filtered.length > 0 && (
-        <Box
-          position="absolute"
-          top="100%"
-          left={0}
-          right={0}
-          bg="#1c1f22"
-          border="1px solid"
-          borderColor="rgba(79,135,255,0.12)"
-          borderRadius="10px"
-          mt={1}
-          maxH="260px"
-          overflowY="auto"
-          zIndex={100}
-          boxShadow="0 8px 24px rgba(0,0,0,0.3)"
-        >
-          {filtered.map((item) => (
-            <Box
-              key={item.value}
-              px={3}
-              py={2}
-              fontSize="13px"
-              cursor="pointer"
-              bg={String(item.value) === String(value) ? "rgba(79,135,255,0.15)" : "transparent"}
-              _hover={{ bg: "rgba(79,135,255,0.08)" }}
-              borderBottom="1px solid rgba(231,234,238,0.05)"
-              color="#e7eaee"
-              onClick={() => {
-                onChange(item.value);
-                setIsOpen(false);
-                setQuery("");
-              }}
-            >
-              {item.label}
-            </Box>
-          ))}
-        </Box>
-      )}
-    </Box>
-  );
-}
+const comboboxInputCss = {
+  bg: "#123a66",
+  borderColor: "rgba(79,135,255,0.12)",
+  color: "#e7eaee",
+  borderRadius: "10px",
+  fontSize: "14px",
+  padding: "6px 10px",
+  width: "100%",
+};
 
 export default function SupplyPage() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
+  const [selectedWardId, setSelectedWardId] = useState<string[]>([]);
   const [orderDate, setOrderDate] = useState(todayStr());
   const [orderNumber, setOrderNumber] = useState("");
-  const [orderType, setOrderType] = useState("FS");
+  const [orderType, setOrderType] = useState<string[]>(["FS"]);
   const [masaDiterima, setMasaDiterima] = useState(nowTimeStr());
   const [masaPejabat, setMasaPejabat] = useState(true);
   const [orderRows, setOrderRows] = useState<OrderRow[]>([
@@ -203,10 +99,39 @@ export default function SupplyPage() {
       .catch(() => setCatalogItems([]));
   }, []);
 
-  const handleWardChange = (wardId: number | string) => {
-    const numId = Number(wardId);
-    setSelectedWardId(numId);
-    fetchCatalog(numId);
+  const wardCollection = useMemo(
+    () =>
+      createListCollection({
+        items: wards.map((w) => ({ value: String(w.id), label: w.name })),
+      }),
+    [wards]
+  );
+
+  const orderTypeCollection = createListCollection({
+    items: [
+      { value: "FS", label: "FS - Floor Stock" },
+      { value: "EMT", label: "EMT - Emergency Trolley" },
+      { value: "AOH", label: "AOH - After Office Hours" },
+    ],
+  });
+
+  const catalogCollection = useMemo(
+    () =>
+      createListCollection({
+        items: catalogItems.map((c) => ({
+          value: String(c.item_id),
+          label: c.item_name,
+        })),
+      }),
+    [catalogItems]
+  );
+
+  const handleWardChange = (details: { value: string[] }) => {
+    setSelectedWardId(details.value);
+    const numId = Number(details.value[0]);
+    if (numId) {
+      fetchCatalog(numId);
+    }
     setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
     setNextRowId(2);
     setErrors({});
@@ -244,7 +169,7 @@ export default function SupplyPage() {
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-    if (!selectedWardId) errs.ward = "Pilih wad/jabatan";
+    if (!selectedWardId[0]) errs.ward = "Pilih wad/jabatan";
     if (!orderDate) errs.date = "Tarikh diperlukan";
     if (!orderNumber.trim()) errs.number = "No. Inden diperlukan";
 
@@ -279,10 +204,10 @@ export default function SupplyPage() {
 
     try {
       const payload = {
-        ward_id: selectedWardId,
+        ward_id: Number(selectedWardId[0]),
         order_date: orderDate,
         order_number: orderNumber.trim(),
-        order_type: orderType,
+        order_type: orderType[0],
         masa_pejabat: masaPejabat,
         masa_diterima: masaDiterima || null,
         sudah_disedia: false,
@@ -310,25 +235,19 @@ export default function SupplyPage() {
 
       setOrderNumber("");
       setOrderDate(todayStr());
-      setOrderType("FS");
+      setOrderType(["FS"]);
       setMasaDiterima(nowTimeStr());
       setMasaPejabat(true);
       setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
       setNextRowId(2);
       setErrors({});
-      if (selectedWardId) fetchCatalog(selectedWardId);
+      if (selectedWardId[0]) fetchCatalog(Number(selectedWardId[0]));
     } catch {
       toaster.create({ title: "Ralat", description: "Gagal menghantar pesanan", type: "error" });
     } finally {
       setSubmitting(false);
     }
   };
-
-  const orderTypeOptions = [
-    { value: "FS", label: "FS - Floor Stock" },
-    { value: "EMT", label: "EMT - Emergency Trolley" },
-    { value: "AOH", label: "AOH - After Office Hours" },
-  ];
 
   return (
     <AppShell>
@@ -352,12 +271,31 @@ export default function SupplyPage() {
             <HStack gap={4} flexWrap="wrap" align="start">
               <Box flex="1 1 220px">
                 <Text fontSize="13px" color="text.muted" mb={1.5}>Wad/Jabatan *</Text>
-                <SearchableSelect
-                  items={wards.map((w) => ({ value: w.id, label: w.name }))}
+                <Combobox.Root
+                  collection={wardCollection}
                   value={selectedWardId}
-                  onChange={handleWardChange}
-                  placeholder="Cari wad/jabatan..."
-                />
+                  onValueChange={handleWardChange}
+                  positioning={{ sameWidth: true }}
+                >
+                  <Combobox.Control>
+                    <Combobox.Input
+                      placeholder="Cari wad/jabatan..."
+                      css={comboboxInputCss}
+                    />
+                    <Combobox.Trigger />
+                  </Combobox.Control>
+                  <Combobox.Positioner>
+                    <Combobox.Content bg="#1c1f22" borderColor="line" color="#e7eaee">
+                      <Combobox.Empty>Tiada hasil</Combobox.Empty>
+                      {wardCollection.items.map((w) => (
+                        <Combobox.Item key={w.value} item={w}>
+                          <Combobox.ItemText>{w.label}</Combobox.ItemText>
+                          <Combobox.ItemIndicator />
+                        </Combobox.Item>
+                      ))}
+                    </Combobox.Content>
+                  </Combobox.Positioner>
+                </Combobox.Root>
                 {errors.ward && <Text fontSize="12px" color="bad" mt={1}>{errors.ward}</Text>}
               </Box>
 
@@ -375,12 +313,31 @@ export default function SupplyPage() {
 
               <Box flex="1 1 180px">
                 <Text fontSize="13px" color="text.muted" mb={1.5}>Jenis *</Text>
-                <SearchableSelect
-                  items={orderTypeOptions}
+                <Combobox.Root
+                  collection={orderTypeCollection}
                   value={orderType}
-                  onChange={(v) => setOrderType(String(v))}
-                  placeholder="Pilih jenis..."
-                />
+                  onValueChange={(details) => setOrderType(details.value)}
+                  positioning={{ sameWidth: true }}
+                >
+                  <Combobox.Control>
+                    <Combobox.Input
+                      placeholder="Pilih jenis..."
+                      css={comboboxInputCss}
+                    />
+                    <Combobox.Trigger />
+                  </Combobox.Control>
+                  <Combobox.Positioner>
+                    <Combobox.Content bg="#1c1f22" borderColor="line" color="#e7eaee">
+                      <Combobox.Empty>Tiada hasil</Combobox.Empty>
+                      {orderTypeCollection.items.map((item) => (
+                        <Combobox.Item key={item.value} item={item}>
+                          <Combobox.ItemText>{item.label}</Combobox.ItemText>
+                          <Combobox.ItemIndicator />
+                        </Combobox.Item>
+                      ))}
+                    </Combobox.Content>
+                  </Combobox.Positioner>
+                </Combobox.Root>
               </Box>
 
               <Box flex="1 1 140px">
@@ -432,12 +389,42 @@ export default function SupplyPage() {
                     <tr key={row.id}>
                       <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", fontSize: 13, textAlign: "center" }}>{idx + 1}</td>
                       <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", minWidth: 200 }}>
-                        <SearchableSelect
-                          items={catalogItems.map((c) => ({ value: c.item_id, label: c.item_name }))}
-                          value={row.item_id}
-                          onChange={(v) => updateRow(row.id, "item_id", Number(v))}
-                          placeholder="Cari item..."
-                        />
+                        <Combobox.Root
+                          collection={catalogCollection}
+                          value={row.item_id ? [String(row.item_id)] : []}
+                          onValueChange={(details) => {
+                            const val = details.value[0];
+                            updateRow(row.id, "item_id", val ? Number(val) : null);
+                          }}
+                          positioning={{ sameWidth: true }}
+                        >
+                          <Combobox.Control>
+                            <Combobox.Input
+                              placeholder="Cari item..."
+                              css={{
+                                bg: "#123a66",
+                                borderColor: "rgba(79,135,255,0.12)",
+                                color: "#e7eaee",
+                                borderRadius: "8px",
+                                fontSize: "12px",
+                                padding: "4px 8px",
+                                minWidth: "180px",
+                              }}
+                            />
+                            <Combobox.Trigger />
+                          </Combobox.Control>
+                          <Combobox.Positioner>
+                            <Combobox.Content bg="#1c1f22" borderColor="line" color="#e7eaee" maxH="260px" overflowY="auto">
+                              <Combobox.Empty>Tiada item</Combobox.Empty>
+                              {catalogCollection.items.map((c) => (
+                                <Combobox.Item key={c.value} item={c}>
+                                  <Combobox.ItemText>{c.label}</Combobox.ItemText>
+                                  <Combobox.ItemIndicator />
+                                </Combobox.Item>
+                              ))}
+                            </Combobox.Content>
+                          </Combobox.Positioner>
+                        </Combobox.Root>
                         {errors[`item_${row.id}`] && <Text fontSize="11px" color="bad" mt={0.5}>{errors[`item_${row.id}`]}</Text>}
                       </td>
                       <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)" }}>
