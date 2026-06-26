@@ -2,25 +2,31 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
+  Stack,
+  Group,
+  TextInput,
   Button,
   Text,
   Badge,
-  IconButton,
+  ActionIcon,
   Flex,
-  Heading,
-} from "@chakra-ui/react";
+  Title,
+  Box,
+  Modal,
+  Table,
+  Alert,
+  Loader,
+  Select,
+} from "@mantine/core";
 import {
-  Edit,
-  Trash2,
-  X,
-  ShoppingCart,
-  Filter,
-  ArrowUpDown,
-} from "lucide-react";
+  IconEdit,
+  IconTrash,
+  IconX,
+  IconShoppingCart,
+  IconFilter,
+  IconArrowsSort,
+  IconAlertCircle,
+} from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
 type OrderItem = {
@@ -292,7 +298,7 @@ export default function OrdersPage() {
   };
 
   const SortIcon = ({ active }: { active: boolean }) => (
-    <ArrowUpDown
+    <IconArrowsSort
       size={14}
       style={{
         opacity: active ? 1 : 0.4,
@@ -301,86 +307,104 @@ export default function OrdersPage() {
     />
   );
 
+  const ORDER_TYPE_DATA = [
+    { value: "FS", label: "Floor Stock" },
+    { value: "EMT", label: "Emergency Trolley" },
+    { value: "AOH", label: "Selepas Waktu Pejabat" },
+  ];
+
   return (
     <AppShell>
-      <VStack gap={4} align="stretch">
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack gap={2}>
-            <ShoppingCart size={22} color="#4f87ff" />
-            <Heading size="lg">Butiran Inden</Heading>
-          </HStack>
+      <Stack gap="md">
+        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
+          <Group gap="sm">
+            <IconShoppingCart size={22} color="#4f87ff" />
+            <Title order={2}>Butiran Inden</Title>
+          </Group>
         </Flex>
 
-        <Flex gap={3} flexWrap="wrap" align="flex-end">
+        <Flex gap="sm" wrap="wrap" align="flex-end">
           <Box>
-            <Text fontSize="13px" color="muted" mb={1}>
+            <Text size="xs" c="dimmed" mb={4}>
               Dari Tarikh
             </Text>
-            <Input
+            <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              size="sm"
-              maxW="180px"
+              style={{
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid var(--mantine-color-default-border)",
+                background: "var(--mantine-color-body)",
+                color: "var(--mantine-color-bright)",
+                fontSize: "14px",
+                maxWidth: "180px",
+              }}
             />
           </Box>
           <Box>
-            <Text fontSize="13px" color="muted" mb={1}>
+            <Text size="xs" c="dimmed" mb={4}>
               Ke Tarikh
             </Text>
-            <Input
+            <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              size="sm"
-              maxW="180px"
+              style={{
+                padding: "6px 10px",
+                borderRadius: "8px",
+                border: "1px solid var(--mantine-color-default-border)",
+                background: "var(--mantine-color-body)",
+                color: "var(--mantine-color-bright)",
+                fontSize: "14px",
+                maxWidth: "180px",
+              }}
             />
           </Box>
           <Button
-            size="sm"
+            size="compact-sm"
             onClick={fetchOrders}
-            display="inline-flex"
-            gap={2}
+            leftSection={<IconFilter size={14} />}
           >
-            <Filter size={14} /> Tapis
+            Tapis
           </Button>
-          <Box flex={1} minW="200px">
-            <Text fontSize="13px" color="muted" mb={1}>
+          <Box style={{ flex: 1, minWidth: 200 }}>
+            <Text size="xs" c="dimmed" mb={4}>
               Cari
             </Text>
-            <Input
+            <TextInput
               placeholder="Cari No. Inden atau Wad..."
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => setSearchText(e.currentTarget.value)}
               size="sm"
             />
           </Box>
         </Flex>
 
         {loading && (
-          <Box py={8} textAlign="center" color="muted">
-            Memuatkan data...
+          <Box py={40} style={{ textAlign: "center", color: "var(--mantine-color-dimmed)" }}>
+            <Loader size="sm" />
+            <Text size="sm" mt="xs" c="dimmed">Memuatkan data...</Text>
           </Box>
         )}
 
         {error && (
-          <Box
-            py={4}
-            px={4}
-            bg="rgba(239,83,80,0.1)"
-            border="1px solid rgba(239,83,80,0.3)"
-            borderRadius="10px"
-            color="red.300"
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            color="red"
+            variant="light"
+            radius="md"
           >
             {error}
-          </Box>
+          </Alert>
         )}
 
         {!loading && !error && (
-          <Box overflowX="auto">
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
+          <Box style={{ overflowX: "auto" }}>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
                   {[
                     { key: null, label: "No" },
                     { key: "order_date" as SortKey, label: "Tarikh" },
@@ -392,489 +416,327 @@ export default function OrdersPage() {
                     { key: null, label: "Masa" },
                     { key: null, label: "Aksi" },
                   ].map((col, i) => (
-                    <th
+                    <Table.Th
                       key={i}
                       onClick={
                         col.key ? () => toggleSort(col.key!) : undefined
                       }
                       style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        color: "var(--muted)",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        textAlign: "left",
                         cursor: col.key ? "pointer" : "default",
                         whiteSpace: "nowrap",
+                        userSelect: "none",
                       }}
                     >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
+                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
                         {col.label}
                         {col.key && (
                           <SortIcon active={sortKey === col.key} />
                         )}
-                      </span>
-                    </th>
+                      </Group>
+                    </Table.Th>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={9}
-                      style={{
-                        padding: "24px",
-                        textAlign: "center",
-                        color: "var(--muted)",
-                      }}
-                    >
-                      Tiada data ditemui
-                    </td>
-                  </tr>
+                  <Table.Tr>
+                    <Table.Td colSpan={9} style={{ textAlign: "center" }}>
+                      <Text c="dimmed" py="md">Tiada data ditemui</Text>
+                    </Table.Td>
+                  </Table.Tr>
                 )}
                 {filtered.map((order, idx) => (
-                  <tr
+                  <Table.Tr
                     key={order.id}
                     style={{ cursor: "pointer" }}
                     onClick={() => openModal(order)}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(79,135,255,0.06)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
                   >
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      }}
-                    >
-                      {idx + 1}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <Table.Td>{idx + 1}</Table.Td>
+                    <Table.Td style={{ whiteSpace: "nowrap" }}>
                       {order.order_date}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        fontWeight: 600,
-                      }}
-                    >
+                    </Table.Td>
+                    <Table.Td style={{ fontWeight: 600 }}>
                       {order.order_number}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      }}
-                    >
+                    </Table.Td>
+                    <Table.Td>
                       <Badge
+                        color={ORDER_TYPE_COLOR[order.order_type] || "gray"}
+                        variant="filled"
+                        radius="xl"
                         size="sm"
-                        colorPalette={ORDER_TYPE_COLOR[order.order_type] || "gray"}
-                        variant="solid"
-                        borderRadius="full"
                       >
                         {ORDER_TYPE_MAP[order.order_type] || order.order_type}
                       </Badge>
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      }}
-                    >
-                      {order.ward_name}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        textAlign: "center",
-                      }}
-                    >
+                    </Table.Td>
+                    <Table.Td>{order.ward_name}</Table.Td>
+                    <Table.Td style={{ textAlign: "center" }}>
                       {order.masa_pejabat ? (
-                        <Badge size="sm" colorPalette="orange" variant="solid">
+                        <Badge color="orange" variant="filled" size="sm">
                           Ya
                         </Badge>
                       ) : (
-                        <Text color="muted" fontSize="13px">
-                          -
-                        </Text>
+                        <Text c="dimmed" size="sm">-</Text>
                       )}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        textAlign: "center",
-                      }}
-                    >
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: "center" }}>
                       {order.sudah_disedia ? (
-                        <Badge size="sm" colorPalette="green" variant="solid">
+                        <Badge color="green" variant="filled" size="sm">
                           Diterima
                         </Badge>
                       ) : (
-                        <Badge size="sm" colorPalette="yellow" variant="solid">
+                        <Badge color="yellow" variant="filled" size="sm">
                           Menunggu
                         </Badge>
                       )}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    </Table.Td>
+                    <Table.Td style={{ whiteSpace: "nowrap" }}>
                       <Badge
+                        color={elapsedColor(order)}
+                        variant="light"
+                        radius="xl"
                         size="sm"
-                        colorPalette={elapsedColor(order)}
-                        variant="subtle"
-                        borderRadius="full"
                       >
                         {elapsedMinutes(order)}
                       </Badge>
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px",
-                        borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      }}
+                    </Table.Td>
+                    <Table.Td
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <HStack gap={1}>
-                        <IconButton
-                          aria-label="Sunting"
-                          size="xs"
-                          variant="ghost"
+                      <Group gap="xs">
+                        <ActionIcon
+                          variant="subtle"
+                          size="sm"
                           onClick={() => openModal(order)}
                         >
-                          <Edit size={14} />
-                        </IconButton>
-                      </HStack>
-                    </td>
-                  </tr>
+                          <IconEdit size={14} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
                 ))}
-              </tbody>
-            </table>
+              </Table.Tbody>
+            </Table>
           </Box>
         )}
 
-        <Text fontSize="12px" color="muted">
+        <Text size="xs" c="dimmed">
           {filtered.length} pesanan dipaparkan
         </Text>
-      </VStack>
+      </Stack>
 
-      {selectedOrder && (
-        <Box
-          position="fixed"
-          inset={0}
-          bg="rgba(0,0,0,0.6)"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          zIndex={9999}
-          p={4}
-          onClick={closeModal}
-        >
-          <Box
-            bg="var(--card)"
-            border="1px solid var(--line)"
-            borderRadius="14px"
-            w="100%"
-            maxW="640px"
-            maxH="90vh"
-            overflowY="auto"
-            p={0}
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Modal
+        opened={!!selectedOrder}
+        onClose={closeModal}
+        title="Butiran Inden"
+        size="md"
+        centered
+      >
+        {modalLoading ? (
+          <Box py={40} style={{ textAlign: "center" }}>
+            <Loader size="sm" />
+            <Text size="sm" mt="xs" c="dimmed">Memuatkan butiran...</Text>
+          </Box>
+        ) : (
+          <Stack gap="md">
+            {modalError && (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                color="red"
+                variant="light"
+                radius="md"
+              >
+                {modalError}
+              </Alert>
+            )}
+
+            {modalSuccess && (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                color="green"
+                variant="light"
+                radius="md"
+                style={{ whiteSpace: "pre-wrap" }}
+              >
+                {modalSuccess}
+              </Alert>
+            )}
+
+            <TextInput
+              label="Tarikh Inden"
+              type="date"
+              value={editForm.order_date}
+              onChange={(e) =>
+                setEditForm({ ...editForm, order_date: e.target.value })
+              }
+            />
+
+            <TextInput
+              label="No. Inden"
+              value={editForm.order_number}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  order_number: e.currentTarget.value,
+                })
+              }
+            />
+
+            <Select
+              label="Jenis"
+              data={ORDER_TYPE_DATA}
+              value={editForm.order_type}
+              onChange={(val) =>
+                setEditForm({ ...editForm, order_type: val || "FS" })
+              }
+            />
+
+            <Group grow>
+              <Select
+                label="Masa Pejabat"
+                data={[
+                  { value: "false", label: "Tidak" },
+                  { value: "true", label: "Ya" },
+                ]}
+                value={String(editForm.masa_pejabat)}
+                onChange={(val) =>
+                  setEditForm({
+                    ...editForm,
+                    masa_pejabat: val === "true",
+                  })
+                }
+              />
+              <Select
+                label="Masa Diterima"
+                data={[
+                  { value: "false", label: "Tidak" },
+                  { value: "true", label: "Ya" },
+                ]}
+                value={String(editForm.masa_diterima)}
+                onChange={(val) =>
+                  setEditForm({
+                    ...editForm,
+                    masa_diterima: val === "true",
+                  })
+                }
+              />
+            </Group>
+
+            <Box>
+              <Text size="sm" fw={500} mb={8}>
+                Item
+              </Text>
+              <Stack gap="xs">
+                {editItems.map((item, idx) => (
+                  <Flex
+                    key={idx}
+                    gap="sm"
+                    align="center"
+                    p="xs"
+                    style={{
+                      borderRadius: "8px",
+                      background: "var(--mantine-color-gray-light)",
+                    }}
+                  >
+                    <Text style={{ flex: 1 }} size="sm">
+                      {item.item_name}
+                    </Text>
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateItemQuantity(
+                          idx,
+                          Math.max(1, parseInt(e.target.value) || 1)
+                        )
+                      }
+                      min={1}
+                      style={{
+                        width: 70,
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--mantine-color-default-border)",
+                        background: "var(--mantine-color-body)",
+                        color: "var(--mantine-color-bright)",
+                        fontSize: "13px",
+                      }}
+                    />
+                    <ActionIcon
+                      variant="subtle"
+                      color="red"
+                      size="sm"
+                      onClick={() => removeItem(idx)}
+                    >
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                  </Flex>
+                ))}
+                {editItems.length === 0 && (
+                  <Text c="dimmed" size="sm" style={{ textAlign: "center" }} py="xs">
+                    Tiada item
+                  </Text>
+                )}
+              </Stack>
+            </Box>
+
             <Flex
               justify="space-between"
               align="center"
-              px={5}
-              py={4}
-              borderBottom="1px solid var(--line)"
+              pt="sm"
+              style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
             >
-              <Heading size="md">Butiran Inden</Heading>
-              <IconButton
-                aria-label="Tutup"
-                size="sm"
-                variant="ghost"
-                onClick={closeModal}
-              >
-                <X size={18} />
-              </IconButton>
-            </Flex>
-
-            {modalLoading ? (
-              <Box py={8} textAlign="center" color="muted">
-                Memuatkan butiran...
-              </Box>
-            ) : (
-              <VStack gap={4} align="stretch" p={5}>
-                {modalError && (
-                  <Box
-                    py={3}
-                    px={4}
-                    bg="rgba(239,83,80,0.1)"
-                    border="1px solid rgba(239,83,80,0.3)"
-                    borderRadius="10px"
-                    color="red.300"
-                    fontSize="13px"
-                  >
-                    {modalError}
-                  </Box>
-                )}
-
-                {modalSuccess && (
-                  <Box
-                    py={3}
-                    px={4}
-                    bg="rgba(76,175,80,0.1)"
-                    border="1px solid rgba(76,175,80,0.3)"
-                    borderRadius="10px"
-                    color="green.300"
-                    fontSize="13px"
-                    whiteSpace="pre-wrap"
-                  >
-                    {modalSuccess}
-                  </Box>
-                )}
-
-                <Box>
-                  <Text fontSize="13px" color="muted" mb={1}>
-                    Tarikh Inden
-                  </Text>
-                  <Input
-                    type="date"
-                    value={editForm.order_date}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, order_date: e.target.value })
-                    }
-                    size="sm"
-                  />
-                </Box>
-
-                <Box>
-                  <Text fontSize="13px" color="muted" mb={1}>
-                    No. Inden
-                  </Text>
-                  <Input
-                    value={editForm.order_number}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        order_number: e.target.value,
-                      })
-                    }
-                    size="sm"
-                  />
-                </Box>
-
-                <Box>
-                  <Text fontSize="13px" color="muted" mb={1}>
-                    Jenis
-                  </Text>
-                  <select
-                    value={editForm.order_type}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, order_type: e.target.value })
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "8px 10px",
-                      borderRadius: "10px",
-                      border: "1px solid var(--control-border)",
-                      background: "var(--control)",
-                      color: "var(--text)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <option value="FS">Floor Stock</option>
-                    <option value="EMT">Emergency Trolley</option>
-                    <option value="AOH">Selepas Waktu Pejabat</option>
-                  </select>
-                </Box>
-
-                <HStack gap={4}>
-                  <Box flex={1}>
-                    <Text fontSize="13px" color="muted" mb={1}>
-                      Masa Pejabat
+              <Group gap="sm">
+                {confirmDelete ? (
+                  <Group gap="sm">
+                    <Text size="sm" c="red">
+                      Pasti padam?
                     </Text>
-                    <select
-                      value={editForm.masa_pejabat ? "true" : "false"}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          masa_pejabat: e.target.value === "true",
-                        })
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "10px",
-                        border: "1px solid var(--control-border)",
-                        background: "var(--control)",
-                        color: "var(--text)",
-                        fontSize: "14px",
-                      }}
+                    <Button
+                      size="compact-sm"
+                      color="red"
+                      onClick={handleDelete}
+                      loading={deleting}
                     >
-                      <option value="false">Tidak</option>
-                      <option value="true">Ya</option>
-                    </select>
-                  </Box>
-                  <Box flex={1}>
-                    <Text fontSize="13px" color="muted" mb={1}>
-                      Masa Diterima
-                    </Text>
-                    <select
-                      value={editForm.masa_diterima ? "true" : "false"}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          masa_diterima: e.target.value === "true",
-                        })
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: "10px",
-                        border: "1px solid var(--control-border)",
-                        background: "var(--control)",
-                        color: "var(--text)",
-                        fontSize: "14px",
-                      }}
-                    >
-                      <option value="false">Tidak</option>
-                      <option value="true">Ya</option>
-                    </select>
-                  </Box>
-                </HStack>
-
-                <Box>
-                  <Text fontSize="13px" color="muted" mb={2}>
-                    Item
-                  </Text>
-                  <VStack gap={2} align="stretch">
-                    {editItems.map((item, idx) => (
-                      <Flex
-                        key={idx}
-                        gap={2}
-                        align="center"
-                        bg="var(--bg)"
-                        p={2}
-                        borderRadius="8px"
-                      >
-                        <Text flex={1} fontSize="13px">
-                          {item.item_name}
-                        </Text>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateItemQuantity(
-                              idx,
-                              Math.max(1, parseInt(e.target.value) || 1)
-                            )
-                          }
-                          size="xs"
-                          w="70px"
-                          min={1}
-                        />
-                        <IconButton
-                          aria-label="Buang item"
-                          size="xs"
-                          variant="ghost"
-                          color="red.400"
-                          onClick={() => removeItem(idx)}
-                        >
-                          <Trash2 size={14} />
-                        </IconButton>
-                      </Flex>
-                    ))}
-                    {editItems.length === 0 && (
-                      <Text color="muted" fontSize="13px" textAlign="center" py={2}>
-                        Tiada item
-                      </Text>
-                    )}
-                  </VStack>
-                </Box>
-
-                <Flex
-                  justify="space-between"
-                  align="center"
-                  pt={2}
-                  borderTop="1px solid var(--line)"
-                >
-                  <HStack gap={2}>
-                    {confirmDelete ? (
-                      <HStack gap={2}>
-                        <Text fontSize="13px" color="red.300">
-                          Pasti padam?
-                        </Text>
-                        <Button
-                          size="sm"
-                          colorPalette="red"
-                          onClick={handleDelete}
-                          loading={deleting}
-                        >
-                          Ya, Padam
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setConfirmDelete(false)}
-                        >
-                          Batal
-                        </Button>
-                      </HStack>
-                    ) : (
-                      <IconButton
-                        aria-label="Padam"
-                        size="sm"
-                        variant="ghost"
-                        color="red.400"
-                        onClick={() => setConfirmDelete(true)}
-                      >
-                        <Trash2 size={16} />
-                      </IconButton>
-                    )}
-                  </HStack>
-                  <HStack gap={2}>
-                    <Button size="sm" variant="ghost" onClick={closeModal}>
-                      Batal
+                      Ya, Padam
                     </Button>
                     <Button
-                      size="sm"
-                      onClick={handleSave}
-                      loading={saving}
-                      colorPalette="blue"
+                      size="compact-sm"
+                      variant="subtle"
+                      onClick={() => setConfirmDelete(false)}
                     >
-                      Simpan
+                      Batal
                     </Button>
-                  </HStack>
-                </Flex>
-              </VStack>
-            )}
-          </Box>
-        </Box>
-      )}
+                  </Group>
+                ) : (
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    size="sm"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                )}
+              </Group>
+              <Group gap="sm">
+                <Button
+                  size="compact-sm"
+                  variant="subtle"
+                  onClick={closeModal}
+                >
+                  Batal
+                </Button>
+                <Button
+                  size="compact-sm"
+                  onClick={handleSave}
+                  loading={saving}
+                >
+                  Simpan
+                </Button>
+              </Group>
+            </Flex>
+          </Stack>
+        )}
+      </Modal>
     </AppShell>
   );
 }

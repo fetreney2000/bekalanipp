@@ -3,22 +3,34 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import AppShell from "@/components/AppShell";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
-  Button,
+  Stack,
+  Group,
+  Paper,
   Text,
   Badge,
-  IconButton,
-  Flex,
-  Heading,
+  Button,
+  TextInput,
+  Select,
+  NumberInput,
+  Switch,
   Alert,
-  Combobox,
-  createToaster,
-  createListCollection,
-} from "@chakra-ui/react";
-import { Package, Plus, Trash2, Send, CheckCircle, AlertTriangle } from "lucide-react";
+  Table,
+  TableScrollContainer,
+  ActionIcon,
+  Title,
+  Flex,
+  Box,
+  rem,
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import {
+  IconPackage,
+  IconPlus,
+  IconTrash,
+  IconSend,
+  IconCheck,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 
 interface Ward {
   id: number;
@@ -41,8 +53,6 @@ interface OrderRow {
   quantity: number;
 }
 
-const toaster = createToaster({ placement: "top", overlap: true, gap: 16 });
-
 function nowTimeStr() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -58,23 +68,13 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-const comboboxInputCss = {
-  bg: "#123a66",
-  borderColor: "rgba(79,135,255,0.12)",
-  color: "#e7eaee",
-  borderRadius: "10px",
-  fontSize: "14px",
-  padding: "6px 10px",
-  width: "100%",
-};
-
 export default function SupplyPage() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
-  const [selectedWardId, setSelectedWardId] = useState<string[]>([]);
+  const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
   const [orderDate, setOrderDate] = useState(todayStr());
   const [orderNumber, setOrderNumber] = useState("");
-  const [orderType, setOrderType] = useState<string[]>(["FS"]);
+  const [orderType, setOrderType] = useState<string | null>("FS");
   const [masaDiterima, setMasaDiterima] = useState(nowTimeStr());
   const [masaPejabat, setMasaPejabat] = useState(true);
   const [orderRows, setOrderRows] = useState<OrderRow[]>([
@@ -99,36 +99,25 @@ export default function SupplyPage() {
       .catch(() => setCatalogItems([]));
   }, []);
 
-  const wardCollection = useMemo(
-    () =>
-      createListCollection({
-        items: wards.map((w) => ({ value: String(w.id), label: w.name })),
-      }),
+  const wardData = useMemo(
+    () => wards.map((w) => ({ value: String(w.id), label: w.name })),
     [wards]
   );
 
-  const orderTypeCollection = createListCollection({
-    items: [
-      { value: "FS", label: "FS - Floor Stock" },
-      { value: "EMT", label: "EMT - Emergency Trolley" },
-      { value: "AOH", label: "AOH - After Office Hours" },
-    ],
-  });
+  const orderTypeData = [
+    { value: "FS", label: "FS - Floor Stock" },
+    { value: "EMT", label: "EMT - Emergency Trolley" },
+    { value: "AOH", label: "AOH - After Office Hours" },
+  ];
 
-  const catalogCollection = useMemo(
-    () =>
-      createListCollection({
-        items: catalogItems.map((c) => ({
-          value: String(c.item_id),
-          label: c.item_name,
-        })),
-      }),
+  const catalogData = useMemo(
+    () => catalogItems.map((c) => ({ value: String(c.item_id), label: c.item_name })),
     [catalogItems]
   );
 
-  const handleWardChange = (details: { value: string[] }) => {
-    setSelectedWardId(details.value);
-    const numId = Number(details.value[0]);
+  const handleWardChange = (value: string | null) => {
+    setSelectedWardId(value);
+    const numId = Number(value);
     if (numId) {
       fetchCatalog(numId);
     }
@@ -169,7 +158,7 @@ export default function SupplyPage() {
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-    if (!selectedWardId[0]) errs.ward = "Pilih wad/jabatan";
+    if (!selectedWardId) errs.ward = "Pilih wad/jabatan";
     if (!orderDate) errs.date = "Tarikh diperlukan";
     if (!orderNumber.trim()) errs.number = "No. Inden diperlukan";
 
@@ -204,10 +193,10 @@ export default function SupplyPage() {
 
     try {
       const payload = {
-        ward_id: Number(selectedWardId[0]),
+        ward_id: Number(selectedWardId),
         order_date: orderDate,
         order_number: orderNumber.trim(),
-        order_type: orderType[0],
+        order_type: orderType,
         masa_pejabat: masaPejabat,
         masa_diterima: masaDiterima || null,
         sudah_disedia: false,
@@ -226,24 +215,36 @@ export default function SupplyPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        toaster.create({ title: "Ralat", description: data.error || "Gagal mencipta pesanan", type: "error" });
+        notifications.show({
+          title: "Ralat",
+          message: data.error || "Gagal mencipta pesanan",
+          color: "red",
+        });
         return;
       }
 
       setSuccessId(data.id);
-      toaster.create({ title: "Berjaya", description: `Pesanan ${orderNumber} telah dicipta`, type: "success" });
+      notifications.show({
+        title: "Berjaya",
+        message: `Pesanan ${orderNumber} telah dicipta`,
+        color: "green",
+      });
 
       setOrderNumber("");
       setOrderDate(todayStr());
-      setOrderType(["FS"]);
+      setOrderType("FS");
       setMasaDiterima(nowTimeStr());
       setMasaPejabat(true);
       setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
       setNextRowId(2);
       setErrors({});
-      if (selectedWardId[0]) fetchCatalog(Number(selectedWardId[0]));
+      if (selectedWardId) fetchCatalog(Number(selectedWardId));
     } catch {
-      toaster.create({ title: "Ralat", description: "Gagal menghantar pesanan", type: "error" });
+      notifications.show({
+        title: "Ralat",
+        message: "Gagal menghantar pesanan",
+        color: "red",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -251,215 +252,204 @@ export default function SupplyPage() {
 
   return (
     <AppShell>
-      <VStack align="stretch" gap={6}>
-        <Heading fontSize="1.3rem" fontWeight={700}>Rekod Inden Baharu</Heading>
+      <Stack gap="lg">
+        <Title order={3} fw={700}>Rekod Inden Baharu</Title>
 
         {successId && (
-          <Alert.Root status="success" borderRadius="10px">
-            <Alert.Indicator><CheckCircle size={16} /></Alert.Indicator>
-            <Box>
-              <Text fontSize="14px" fontWeight={600}>Pesanan berjaya dicipta</Text>
-              <Text fontSize="13px" color="text.muted">ID: {successId}</Text>
-            </Box>
-          </Alert.Root>
+          <Alert
+            icon={<IconCheck size={16} />}
+            title="Pesanan berjaya dicipta"
+            color="green"
+            variant="light"
+            radius="md"
+          >
+            <Text size="sm" c="dimmed">ID: {successId}</Text>
+          </Alert>
         )}
 
-        <Box bg="bg.card" border="1px solid" borderColor="line" borderRadius="14px" p={5}>
-          <VStack align="stretch" gap={4}>
-            <Heading fontSize="0.95rem" fontWeight={600} mb={1}>Maklumat Inden</Heading>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Stack gap="md">
+            <Title order={5} fw={600}>Maklumat Inden</Title>
 
-            <HStack gap={4} flexWrap="wrap" align="start">
-              <Box flex="1 1 220px">
-                <Text fontSize="13px" color="text.muted" mb={1.5}>Wad/Jabatan *</Text>
-                <Combobox.Root
-                  collection={wardCollection}
+            <Group gap="md" align="flex-start" wrap="wrap">
+              <Box style={{ flex: "1 1 220px" }}>
+                <Select
+                  label="Wad/Jabatan *"
+                  placeholder="Cari wad/jabatan..."
+                  data={wardData}
+                  searchable
                   value={selectedWardId}
-                  onValueChange={handleWardChange}
-                  positioning={{ sameWidth: true }}
-                >
-                  <Combobox.Control>
-                    <Combobox.Input
-                      placeholder="Cari wad/jabatan..."
-                      css={comboboxInputCss}
-                    />
-                    <Combobox.Trigger />
-                  </Combobox.Control>
-                  <Combobox.Positioner>
-                    <Combobox.Content bg="#1c1f22" borderColor="line" color="#e7eaee">
-                      <Combobox.Empty>Tiada hasil</Combobox.Empty>
-                      {wardCollection.items.map((w) => (
-                        <Combobox.Item key={w.value} item={w}>
-                          <Combobox.ItemText>{w.label}</Combobox.ItemText>
-                          <Combobox.ItemIndicator />
-                        </Combobox.Item>
-                      ))}
-                    </Combobox.Content>
-                  </Combobox.Positioner>
-                </Combobox.Root>
-                {errors.ward && <Text fontSize="12px" color="bad" mt={1}>{errors.ward}</Text>}
+                  onChange={handleWardChange}
+                  error={errors.ward}
+                />
               </Box>
 
-              <Box flex="1 1 160px">
-                <Text fontSize="13px" color="text.muted" mb={1.5}>Tarikh *</Text>
-                <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} bg="#123a66" borderColor="rgba(79,135,255,0.12)" color="text" borderRadius="10px" size="sm" />
-                {errors.date && <Text fontSize="12px" color="bad" mt={1}>{errors.date}</Text>}
+              <Box style={{ flex: "1 1 160px" }}>
+                <TextInput
+                  label="Tarikh *"
+                  type="date"
+                  value={orderDate}
+                  onChange={(e) => setOrderDate(e.target.value)}
+                  error={errors.date}
+                />
               </Box>
 
-              <Box flex="1 1 180px">
-                <Text fontSize="13px" color="text.muted" mb={1.5}>No. Inden *</Text>
-                <Input type="text" placeholder="Contoh: IND-2026-001" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} bg="#123a66" borderColor="rgba(79,135,255,0.12)" color="text" borderRadius="10px" size="sm" />
-                {errors.number && <Text fontSize="12px" color="bad" mt={1}>{errors.number}</Text>}
+              <Box style={{ flex: "1 1 180px" }}>
+                <TextInput
+                  label="No. Inden *"
+                  placeholder="Contoh: IND-2026-001"
+                  value={orderNumber}
+                  onChange={(e) => setOrderNumber(e.target.value)}
+                  error={errors.number}
+                />
               </Box>
 
-              <Box flex="1 1 180px">
-                <Text fontSize="13px" color="text.muted" mb={1.5}>Jenis *</Text>
-                <Combobox.Root
-                  collection={orderTypeCollection}
+              <Box style={{ flex: "1 1 180px" }}>
+                <Select
+                  label="Jenis *"
+                  placeholder="Pilih jenis..."
+                  data={orderTypeData}
                   value={orderType}
-                  onValueChange={(details) => setOrderType(details.value)}
-                  positioning={{ sameWidth: true }}
-                >
-                  <Combobox.Control>
-                    <Combobox.Input
-                      placeholder="Pilih jenis..."
-                      css={comboboxInputCss}
-                    />
-                    <Combobox.Trigger />
-                  </Combobox.Control>
-                  <Combobox.Positioner>
-                    <Combobox.Content bg="#1c1f22" borderColor="line" color="#e7eaee">
-                      <Combobox.Empty>Tiada hasil</Combobox.Empty>
-                      {orderTypeCollection.items.map((item) => (
-                        <Combobox.Item key={item.value} item={item}>
-                          <Combobox.ItemText>{item.label}</Combobox.ItemText>
-                          <Combobox.ItemIndicator />
-                        </Combobox.Item>
-                      ))}
-                    </Combobox.Content>
-                  </Combobox.Positioner>
-                </Combobox.Root>
+                  onChange={setOrderType}
+                />
               </Box>
 
-              <Box flex="1 1 140px">
-                <Text fontSize="13px" color="text.muted" mb={1.5}>Masa Diterima</Text>
-                <Input type="time" value={masaDiterima} onChange={(e) => setMasaDiterima(e.target.value)} bg="#123a66" borderColor="rgba(79,135,255,0.12)" color="text" borderRadius="10px" size="sm" />
+              <Box style={{ flex: "1 1 140px" }}>
+                <TextInput
+                  label="Masa Diterima"
+                  type="time"
+                  value={masaDiterima}
+                  onChange={(e) => setMasaDiterima(e.target.value)}
+                />
               </Box>
 
-              <Box flex="0 0 auto" pt={5}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#a3aab3" }}>
-                  <input type="checkbox" checked={masaPejabat} onChange={(e) => setMasaPejabat(e.target.checked)} style={{ width: 16, height: 16, accentColor: "#4f87ff" }} />
-                  Masa Pejabat
-                </label>
+              <Box style={{ paddingTop: rem(20) }}>
+                <Switch
+                  label="Masa Pejabat"
+                  checked={masaPejabat}
+                  onChange={(e) => setMasaPejabat(e.currentTarget.checked)}
+                />
               </Box>
-            </HStack>
-          </VStack>
-        </Box>
+            </Group>
+          </Stack>
+        </Paper>
 
-        <Box bg="bg.card" border="1px solid" borderColor="line" borderRadius="14px" p={5}>
-          <Flex justifyContent="space-between" alignItems="center" mb={4}>
-            <Heading fontSize="0.95rem" fontWeight={600}>
-              <Flex alignItems="center" gap={2}><Package size={16} /> Item Pesanan</Flex>
-            </Heading>
-            <Button size="xs" bg="#4f87ff" color="white" borderRadius="8px" onClick={addRow} _hover={{ bg: "#3d6fcc" }}>
-              <Plus size={14} /> Tambah Baris
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Flex justify="space-between" align="center" mb="md">
+            <Group gap="xs">
+              <IconPackage size={16} />
+              <Title order={5} fw={600}>Item Pesanan</Title>
+            </Group>
+            <Button
+              size="compact-sm"
+              variant="filled"
+              leftSection={<IconPlus size={14} />}
+              onClick={addRow}
+            >
+              Tambah Baris
             </Button>
           </Flex>
 
           {errors.items && (
-            <Alert.Root status="error" borderRadius="10px" mb={4}>
-              <Alert.Indicator><AlertTriangle size={16} /></Alert.Indicator>
-              <Alert.Title>{errors.items}</Alert.Title>
-            </Alert.Root>
+            <Alert
+              icon={<IconAlertTriangle size={16} />}
+              color="red"
+              variant="light"
+              radius="md"
+              mb="md"
+            >
+              {errors.items}
+            </Alert>
           )}
 
-          <Box overflowX="auto">
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  {["#", "Item", "Kuantiti", "Had/Pesanan", "Kuota Bulanan", "Diguna", "Status", ""].map((header) => (
-                    <th key={header} style={{ textAlign: header === "#" || header === "Status" ? "center" : "left", color: "#a3aab3", fontSize: 12, fontWeight: 600, padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)" }}>{header}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+          <TableScrollContainer minWidth={600}>
+            <Table striped highlightOnHover withTableBorder>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ textAlign: "center" }}>#</Table.Th>
+                  <Table.Th>Item</Table.Th>
+                  <Table.Th>Kuantiti</Table.Th>
+                  <Table.Th>Had/Pesanan</Table.Th>
+                  <Table.Th>Kuota Bulanan</Table.Th>
+                  <Table.Th>Diguna</Table.Th>
+                  <Table.Th style={{ textAlign: "center" }}>Status</Table.Th>
+                  <Table.Th />
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {orderRows.map((row, idx) => {
                   const cat = getCatalogInfo(row.item_id);
                   const pct = getUsagePct(row.item_id);
                   return (
-                    <tr key={row.id}>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", fontSize: 13, textAlign: "center" }}>{idx + 1}</td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", minWidth: 200 }}>
-                        <Combobox.Root
-                          collection={catalogCollection}
-                          value={row.item_id ? [String(row.item_id)] : []}
-                          onValueChange={(details) => {
-                            const val = details.value[0];
-                            updateRow(row.id, "item_id", val ? Number(val) : null);
+                    <Table.Tr key={row.id}>
+                      <Table.Td style={{ textAlign: "center" }}>{idx + 1}</Table.Td>
+                      <Table.Td style={{ minWidth: 200 }}>
+                        <Select
+                          placeholder="Cari item..."
+                          data={catalogData}
+                          searchable
+                          value={row.item_id ? String(row.item_id) : null}
+                          onChange={(value) => {
+                            updateRow(row.id, "item_id", value ? Number(value) : null);
                           }}
-                          positioning={{ sameWidth: true }}
-                        >
-                          <Combobox.Control>
-                            <Combobox.Input
-                              placeholder="Cari item..."
-                              css={{
-                                bg: "#123a66",
-                                borderColor: "rgba(79,135,255,0.12)",
-                                color: "#e7eaee",
-                                borderRadius: "8px",
-                                fontSize: "12px",
-                                padding: "4px 8px",
-                                minWidth: "180px",
-                              }}
-                            />
-                            <Combobox.Trigger />
-                          </Combobox.Control>
-                          <Combobox.Positioner>
-                            <Combobox.Content bg="#1c1f22" borderColor="line" color="#e7eaee" maxH="260px" overflowY="auto">
-                              <Combobox.Empty>Tiada item</Combobox.Empty>
-                              {catalogCollection.items.map((c) => (
-                                <Combobox.Item key={c.value} item={c}>
-                                  <Combobox.ItemText>{c.label}</Combobox.ItemText>
-                                  <Combobox.ItemIndicator />
-                                </Combobox.Item>
-                              ))}
-                            </Combobox.Content>
-                          </Combobox.Positioner>
-                        </Combobox.Root>
-                        {errors[`item_${row.id}`] && <Text fontSize="11px" color="bad" mt={0.5}>{errors[`item_${row.id}`]}</Text>}
-                      </td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)" }}>
-                        <Input type="number" min={1} value={row.quantity} onChange={(e) => updateRow(row.id, "quantity", parseInt(e.target.value) || 0)} bg="#123a66" borderColor="rgba(79,135,255,0.12)" color="text" borderRadius="8px" size="xs" w="70px" />
-                        {errors[`qty_${row.id}`] && <Text fontSize="11px" color="bad" mt={0.5}>{errors[`qty_${row.id}`]}</Text>}
-                      </td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", fontSize: 13 }}>{cat ? cat.max_per_order : "—"}</td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", fontSize: 13 }}>{cat ? cat.monthly_quota : "—"}</td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", fontSize: 13 }}>{cat ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", textAlign: "center" }}>
+                          size="xs"
+                          error={errors[`item_${row.id}`]}
+                        />
+                      </Table.Td>
+                      <Table.Td>
+                        <NumberInput
+                          min={1}
+                          value={row.quantity}
+                          onChange={(value) => updateRow(row.id, "quantity", typeof value === "number" ? value : 0)}
+                          size="xs"
+                          style={{ width: 70 }}
+                          hideControls
+                          error={errors[`qty_${row.id}`]}
+                        />
+                      </Table.Td>
+                      <Table.Td style={{ fontSize: 13 }}>{cat ? cat.max_per_order : "—"}</Table.Td>
+                      <Table.Td style={{ fontSize: 13 }}>{cat ? cat.monthly_quota : "—"}</Table.Td>
+                      <Table.Td style={{ fontSize: 13 }}>{cat ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Table.Td>
+                      <Table.Td style={{ textAlign: "center" }}>
                         {pct !== null ? (
-                          <Badge colorPalette={getUsageBadgeColor(pct)} size="sm" borderRadius="full">{pct}%</Badge>
+                          <Badge color={getUsageBadgeColor(pct)} variant="light" size="sm">
+                            {pct}%
+                          </Badge>
                         ) : "—"}
-                      </td>
-                      <td style={{ padding: "8px", borderBottom: "1px solid rgba(231,234,238,0.10)", textAlign: "center" }}>
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "center" }}>
                         {orderRows.length > 1 && (
-                          <IconButton aria-label="Padam" size="xs" bg="transparent" color="bad" _hover={{ bg: "rgba(239,83,80,0.1)" }} onClick={() => removeRow(row.id)}>
-                            <Trash2 size={14} />
-                          </IconButton>
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            size="sm"
+                            onClick={() => removeRow(row.id)}
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
                         )}
-                      </td>
-                    </tr>
+                      </Table.Td>
+                    </Table.Tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </Box>
-        </Box>
+              </Table.Tbody>
+            </Table>
+          </TableScrollContainer>
+        </Paper>
 
-        <Flex justifyContent="flex-end">
-          <Button bg="#4f87ff" color="white" borderRadius="10px" px={6} onClick={handleSubmit} disabled={submitting} _hover={{ bg: "#3d6fcc" }}>
-            <Send size={16} /> {submitting ? "Menghantar..." : "Hantar Pesanan"}
+        <Flex justify="flex-end">
+          <Button
+            variant="filled"
+            size="md"
+            px="xl"
+            leftSection={<IconSend size={16} />}
+            onClick={handleSubmit}
+            loading={submitting}
+          >
+            {submitting ? "Menghantar..." : "Hantar Pesanan"}
           </Button>
         </Flex>
-      </VStack>
+      </Stack>
     </AppShell>
   );
 }
