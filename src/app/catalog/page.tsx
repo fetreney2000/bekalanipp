@@ -2,18 +2,31 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
+  Stack,
+  Group,
+  TextInput,
+  NumberInput,
   Button,
   Text,
   Badge,
-  IconButton,
+  ActionIcon,
   Flex,
-  Heading,
-} from "@chakra-ui/react";
-import { Plus, Edit, Trash2, BookOpen, Save, X, AlertTriangle } from "lucide-react";
+  Title,
+  Alert,
+  Table,
+  TableScrollContainer,
+  Select,
+} from "@mantine/core";
+import {
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconBook2,
+  IconDeviceFloppy,
+  IconX,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
 
 interface Ward {
@@ -99,12 +112,12 @@ export default function CatalogPage() {
     return allItems.filter((i) => !inCatalog.has(i.id));
   }, [allItems, catalogItems]);
 
-  function getUsageColor(used: number, quota: number) {
-    if (quota === 0) return { bg: "rgba(163,170,179,0.15)", color: "#a3aab3", border: "rgba(163,170,179,0.3)" };
+  function getUsageColor(used: number, quota: number): "red" | "yellow" | "green" | "gray" {
+    if (quota === 0) return "gray";
     const pct = (used / quota) * 100;
-    if (pct >= 100) return { bg: "rgba(239,83,80,0.15)", color: "#ef5350", border: "rgba(239,83,80,0.3)" };
-    if (pct >= 80) return { bg: "rgba(240,173,78,0.15)", color: "#f0ad4e", border: "rgba(240,173,78,0.3)" };
-    return { bg: "rgba(76,175,80,0.15)", color: "#4caf50", border: "rgba(76,175,80,0.3)" };
+    if (pct >= 100) return "red";
+    if (pct >= 80) return "yellow";
+    return "green";
   }
 
   function startEdit(ci: CatalogItem) {
@@ -140,6 +153,7 @@ export default function CatalogPage() {
             : c
         )
       );
+      notifications.show({ message: "Item katalog dikemaskini", color: "green" });
       cancelEdit();
     } catch {
       setError("Ralat sambungan");
@@ -170,6 +184,7 @@ export default function CatalogPage() {
         setError(data.error || "Ralat menyimpan");
         return;
       }
+      notifications.show({ message: "Item ditambah ke katalog", color: "green" });
       setShowAdd(false);
       setAddItemId("");
       setAddMax(10);
@@ -196,6 +211,7 @@ export default function CatalogPage() {
         return;
       }
       setCatalogItems((prev) => prev.filter((c) => c.item_id !== ci.item_id));
+      notifications.show({ message: "Item dipadam daripada katalog", color: "red" });
     } catch {
       setError("Ralat sambungan");
     } finally {
@@ -203,337 +219,251 @@ export default function CatalogPage() {
     }
   }
 
-  const thStyle: React.CSSProperties = {
-    color: "#a3aab3",
-    fontWeight: 600,
-    fontSize: "13px",
-    padding: "10px",
-    borderBottom: "1px solid rgba(231,234,238,0.10)",
-    textAlign: "left",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "10px",
-    borderBottom: "1px solid rgba(231,234,238,0.10)",
-    verticalAlign: "middle",
-  };
-
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 8px",
-    borderRadius: "10px",
-    border: "1px solid rgba(79,135,255,0.12)",
-    background: "#123a66",
-    color: "#e7eaee",
-    fontSize: "13px",
-    outline: "none",
-    width: "100%",
-  };
+  const wardSelectData = wards.map((w) => ({ value: w.id, label: w.name }));
+  const itemSelectData = availableItems.map((i) => ({ value: i.id, label: i.name }));
 
   return (
     <AppShell>
-      <VStack align="stretch" gap={5}>
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack gap={2}>
-            <BookOpen size={22} color="#4f87ff" />
-            <Heading size="lg">Katalog Wad/Jabatan</Heading>
-          </HStack>
+      <Stack gap="md">
+        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
+          <Group gap="sm">
+            <IconBook2 size={22} color="var(--mantine-color-blue-6)" />
+            <Title order={3}>Katalog Wad/Jabatan</Title>
+          </Group>
         </Flex>
 
         {error && (
-          <Box bg="rgba(239,83,80,0.12)" border="1px solid rgba(239,83,80,0.3)" borderRadius="10px" px={4} py={3}>
-            <Text color="#ef5350" fontSize="sm">{error}</Text>
-          </Box>
+          <Alert color="red" variant="light" title="Ralat">
+            {error}
+          </Alert>
         )}
 
-        <HStack flexWrap="wrap" gap={3}>
-          <Box flex={1} minW="200px">
-            <Text fontSize="sm" color="#a3aab3" mb={1}>Pilih Wad/Jabatan</Text>
-            <select
-              value={selectedWard}
-              onChange={(e) => {
-                setSelectedWard(e.target.value);
-                setShowAdd(false);
+        <Group wrap="wrap" gap="md">
+          <Select
+            label="Pilih Wad/Jabatan"
+            placeholder="-- Pilih Wad/Jabatan --"
+            data={wardSelectData}
+            value={selectedWard}
+            onChange={(val) => {
+              setSelectedWard(val || "");
+              setShowAdd(false);
+              setError("");
+            }}
+            searchable
+            clearable
+            maw={300}
+          />
+          <TextInput
+            label="Bulan"
+            type="month"
+            value={currentMonth}
+            onChange={(e) => setCurrentMonth(e.currentTarget.value)}
+            w={180}
+          />
+          {selectedWard && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => {
+                setShowAdd(!showAdd);
                 setError("");
               }}
-              style={{
-                ...selectStyle,
-                background: "#1c1f22",
-                border: "1px solid rgba(231,234,238,0.10)",
-              }}
+              mt="xl"
             >
-              <option value="">-- Pilih Wad/Jabatan --</option>
-              {wards.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          </Box>
-          <Box minW="160px">
-            <Text fontSize="sm" color="#a3aab3" mb={1}>Bulan</Text>
-            <Input
-              type="month"
-              value={currentMonth}
-              onChange={(e) => setCurrentMonth(e.target.value)}
-              bg="#1c1f22"
-              border="1px solid rgba(231,234,238,0.10)"
-              color="#e7eaee"
-              _focus={{ borderColor: "#4f87ff" }}
-            />
-          </Box>
-          {selectedWard && (
-            <Box alignSelf="flex-end">
-              <Button
-                size="sm"
-                onClick={() => {
-                  setShowAdd(!showAdd);
-                  setError("");
-                }}
-                bg="#4f87ff"
-                color="white"
-                _hover={{ bg: "#3d6fcc" }}
-              >
-                <Plus size={16} />
-                Tambah Item
-              </Button>
-            </Box>
+              Tambah Item
+            </Button>
           )}
-        </HStack>
+        </Group>
 
         {selectedWard && wardName && (
-          <Text fontSize="sm" color="#a3aab3">
-            Wad/Jabatan: <Text as="span" color="#e7eaee" fontWeight={600}>{wardName}</Text>
+          <Text size="sm" c="dimmed">
+            Wad/Jabatan: <Text component="span" fw={600} c="var(--mantine-color-text)">{wardName}</Text>
           </Text>
         )}
 
         {showAdd && selectedWard && (
-          <Box bg="#1c1f22" border="1px solid rgba(231,234,238,0.10)" borderRadius="14px" p={4}>
-            <Text fontWeight={600} mb={3}>Tambah Item ke Katalog</Text>
-            <VStack align="stretch" gap={3}>
-              <Box>
-                <Text fontSize="sm" color="#a3aab3" mb={1}>Item</Text>
-                <select
-                  value={addItemId}
-                  onChange={(e) => setAddItemId(e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="">-- Pilih Item --</option>
-                  {availableItems.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name}
-                    </option>
-                  ))}
-                </select>
-                {availableItems.length === 0 && (
-                  <Text fontSize="xs" color="#a3aab3" mt={1}>Semua item telah ditambah ke katalog ini.</Text>
-                )}
-              </Box>
-              <HStack flexWrap="wrap" gap={3}>
-                <Box flex={1} minW="140px">
-                  <Text fontSize="sm" color="#a3aab3" mb={1}>Max/Order</Text>
-                  <Input
-                    type="number"
-                    value={addMax}
-                    onChange={(e) => setAddMax(parseInt(e.target.value) || 0)}
-                    bg="#123a66"
-                    border="1px solid rgba(79,135,255,0.12)"
-                    color="#e7eaee"
-                    _focus={{ borderColor: "#4f87ff" }}
-                  />
-                </Box>
-                <Box flex={1} minW="140px">
-                  <Text fontSize="sm" color="#a3aab3" mb={1}>Kuota Bulanan</Text>
-                  <Input
-                    type="number"
-                    value={addQuota}
-                    onChange={(e) => setAddQuota(parseInt(e.target.value) || 0)}
-                    bg="#123a66"
-                    border="1px solid rgba(79,135,255,0.12)"
-                    color="#e7eaee"
-                    _focus={{ borderColor: "#4f87ff" }}
-                  />
-                </Box>
-              </HStack>
-              <HStack justify="flex-end" gap={2}>
+          <Alert variant="light" color="blue" title="Tambah Item ke Katalog">
+            <Stack gap="sm">
+              <Select
+                label="Item"
+                placeholder="-- Pilih Item --"
+                data={itemSelectData}
+                value={addItemId}
+                onChange={(val) => setAddItemId(val || "")}
+                searchable
+              />
+              {availableItems.length === 0 && (
+                <Text size="xs" c="dimmed">
+                  Semua item telah ditambah ke katalog ini.
+                </Text>
+              )}
+              <Group wrap="wrap" gap="md">
+                <NumberInput
+                  label="Max/Order"
+                  value={addMax}
+                  onChange={(val) => setAddMax(typeof val === "number" ? val : 0)}
+                  min={0}
+                  w={160}
+                />
+                <NumberInput
+                  label="Kuota Bulanan"
+                  value={addQuota}
+                  onChange={(val) => setAddQuota(typeof val === "number" ? val : 0)}
+                  min={0}
+                  w={160}
+                />
+              </Group>
+              <Group justify="flex-end" gap="sm">
                 <Button
-                  size="sm"
-                  bg="rgba(0,0,0,0.04)"
-                  border="1px solid rgba(231,234,238,0.10)"
-                  color="#a3aab3"
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<IconX size={14} />}
                   onClick={() => { setShowAdd(false); setError(""); }}
                 >
-                  <X size={14} /> Batal
+                  Batal
                 </Button>
                 <Button
-                  size="sm"
-                  bg="#4f87ff"
-                  color="white"
-                  _hover={{ bg: "#3d6fcc" }}
+                  leftSection={<IconDeviceFloppy size={14} />}
                   onClick={addToCatalog}
-                  disabled={saving || !addItemId}
+                  loading={saving}
+                  disabled={!addItemId}
                 >
-                  <Save size={14} /> Simpan
+                  Simpan
                 </Button>
-              </HStack>
-            </VStack>
-          </Box>
+              </Group>
+            </Stack>
+          </Alert>
         )}
 
         {selectedWard && (
-          <Box overflowX="auto">
+          <TableScrollContainer minWidth={600}>
             {loading ? (
-              <Box textAlign="center" py={6} color="#a3aab3">Memuat data...</Box>
+              <Text c="dimmed" ta="center" py="md">Memuat data...</Text>
             ) : catalogItems.length === 0 ? (
-              <Box textAlign="center" py={6} color="#a3aab3">
-                <AlertTriangle size={20} style={{ margin: "0 auto 8px" }} />
-                Tiada item dalam katalog wad/jabatan ini. Klik &quot;Tambah Item&quot; untuk menambah.
-              </Box>
+              <Stack align="center" gap="xs" py="md" c="dimmed">
+                <IconAlertTriangle size={20} />
+                <Text size="sm" ta="center">
+                  Tiada item dalam katalog wad/jabatan ini. Klik &quot;Tambah Item&quot; untuk menambah.
+                </Text>
+              </Stack>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Item</th>
-                    <th style={thStyle}>Maks/Order</th>
-                    <th style={thStyle}>Kuota Bulanan</th>
-                    <th style={thStyle}>Digunakan</th>
-                    <th style={thStyle}>Baki</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Item</Table.Th>
+                    <Table.Th>Maks/Order</Table.Th>
+                    <Table.Th>Kuota Bulanan</Table.Th>
+                    <Table.Th>Digunakan</Table.Th>
+                    <Table.Th>Baki</Table.Th>
+                    <Table.Th style={{ textAlign: "right" }}>Aksi</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
                   {catalogItems.map((ci) => {
                     const used = ci.month_used || 0;
                     const baki = ci.monthly_quota - used;
-                    const colors = getUsageColor(used, ci.monthly_quota);
+                    const usageColor = getUsageColor(used, ci.monthly_quota);
                     const editKey = ci.item_id;
 
                     return (
-                      <tr key={editKey} style={{ transition: "background 0.2s" }}>
-                        <td style={{ ...tdStyle, fontWeight: 500 }}>{ci.item_name}</td>
-                        <td style={tdStyle}>
+                      <Table.Tr key={editKey}>
+                        <Table.Td fw={500}>{ci.item_name}</Table.Td>
+                        <Table.Td>
                           {editingKey === editKey ? (
-                            <Input
-                              size="sm"
-                              type="number"
+                            <NumberInput
+                              size="xs"
                               value={editMax}
-                              onChange={(e) => setEditMax(parseInt(e.target.value) || 0)}
-                              bg="#123a66"
-                              border="1px solid rgba(79,135,255,0.12)"
-                              color="#e7eaee"
-                              _focus={{ borderColor: "#4f87ff" }}
-                              w="100px"
+                              onChange={(val) => setEditMax(typeof val === "number" ? val : 0)}
+                              min={0}
+                              w={100}
                             />
                           ) : (
                             ci.max_per_order
                           )}
-                        </td>
-                        <td style={tdStyle}>
+                        </Table.Td>
+                        <Table.Td>
                           {editingKey === editKey ? (
-                            <Input
-                              size="sm"
-                              type="number"
+                            <NumberInput
+                              size="xs"
                               value={editQuota}
-                              onChange={(e) => setEditQuota(parseInt(e.target.value) || 0)}
-                              bg="#123a66"
-                              border="1px solid rgba(79,135,255,0.12)"
-                              color="#e7eaee"
-                              _focus={{ borderColor: "#4f87ff" }}
-                              w="100px"
+                              onChange={(val) => setEditQuota(typeof val === "number" ? val : 0)}
+                              min={0}
+                              w={100}
                             />
                           ) : (
                             ci.monthly_quota
                           )}
-                        </td>
-                        <td style={tdStyle}>
-                          <Badge
-                            bg={colors.bg}
-                            color={colors.color}
-                            border="1px solid"
-                            borderColor={colors.border}
-                            px={2.5}
-                            py={0.5}
-                            borderRadius="999px"
-                            fontSize="12px"
-                            fontWeight={600}
-                          >
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={usageColor} variant="light">
                             {used}
                           </Badge>
-                        </td>
-                        <td style={tdStyle}>
+                        </Table.Td>
+                        <Table.Td>
                           <Text
-                            fontWeight={600}
-                            color={baki < 0 ? "#ef5350" : baki === 0 ? "#f0ad4e" : "#4caf50"}
+                            fw={600}
+                            c={baki < 0 ? "red" : baki === 0 ? "yellow" : "green"}
                           >
                             {baki}
                           </Text>
-                        </td>
-                        <td style={{ ...tdStyle, textAlign: "right" }}>
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "right" }}>
                           {editingKey === editKey ? (
-                            <HStack justify="flex-end" gap={1}>
-                              <IconButton
-                                aria-label="Simpan"
+                            <Group justify="flex-end" gap="xs">
+                              <ActionIcon
+                                color="green"
+                                variant="filled"
                                 size="sm"
-                                bg="#4caf50"
-                                color="white"
-                                _hover={{ bg: "#43a047" }}
                                 onClick={() => saveEdit(ci)}
-                                disabled={saving}
+                                loading={saving}
                               >
-                                <Save size={14} />
-                              </IconButton>
-                              <IconButton
-                                aria-label="Batal"
+                                <IconDeviceFloppy size={14} />
+                              </ActionIcon>
+                              <ActionIcon
+                                color="gray"
+                                variant="subtle"
                                 size="sm"
-                                bg="rgba(0,0,0,0.04)"
-                                border="1px solid rgba(231,234,238,0.10)"
-                                color="#a3aab3"
-                                _hover={{ bg: "rgba(0,0,0,0.08)" }}
                                 onClick={cancelEdit}
                               >
-                                <X size={14} />
-                              </IconButton>
-                            </HStack>
+                                <IconX size={14} />
+                              </ActionIcon>
+                            </Group>
                           ) : (
-                            <HStack justify="flex-end" gap={1}>
-                              <IconButton
-                                aria-label="Edit"
+                            <Group justify="flex-end" gap="xs">
+                              <ActionIcon
+                                color="blue"
+                                variant="light"
                                 size="sm"
-                                bg="rgba(79,135,255,0.12)"
-                                color="#4f87ff"
-                                _hover={{ bg: "rgba(79,135,255,0.22)" }}
                                 onClick={() => startEdit(ci)}
                               >
-                                <Edit size={14} />
-                              </IconButton>
-                              <IconButton
-                                aria-label="Padam"
+                                <IconEdit size={14} />
+                              </ActionIcon>
+                              <ActionIcon
+                                color="red"
+                                variant="light"
                                 size="sm"
-                                bg="rgba(239,83,80,0.12)"
-                                color="#ef5350"
-                                _hover={{ bg: "rgba(239,83,80,0.22)" }}
                                 onClick={() => deleteCatalogItem(ci)}
-                                disabled={saving}
+                                loading={saving}
                               >
-                                <Trash2 size={14} />
-                              </IconButton>
-                            </HStack>
+                                <IconTrash size={14} />
+                              </ActionIcon>
+                            </Group>
                           )}
-                        </td>
-                      </tr>
+                        </Table.Td>
+                      </Table.Tr>
                     );
                   })}
-                </tbody>
-              </table>
+                </Table.Tbody>
+              </Table>
             )}
-          </Box>
+          </TableScrollContainer>
         )}
 
         {selectedWard && catalogItems.length > 0 && (
-          <Text fontSize="12px" color="#a3aab3">
+          <Text size="xs" c="dimmed">
             Jumlah: {catalogItems.length} item dalam katalog
           </Text>
         )}
-      </VStack>
+      </Stack>
     </AppShell>
   );
 }

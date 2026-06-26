@@ -2,29 +2,34 @@
 
 import { useState, useCallback } from "react";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
-  Button,
+  Stack,
+  Group,
+  Paper,
   Text,
   Badge,
-  Heading,
-  Flex,
   SimpleGrid,
   CloseButton,
-  Spinner,
-} from "@chakra-ui/react";
+  Loader,
+  Flex,
+  Select,
+  Button,
+  TextInput,
+  NumberInput,
+  Table,
+  Alert,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
 import {
-  BarChart3,
-  Calendar,
-  Download,
-  Filter,
-  FileText,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-} from "lucide-react";
+  IconChartBar,
+  IconCalendar,
+  IconDownload,
+  IconFilter,
+  IconFileText,
+  IconTrendingUp,
+  IconTrendingDown,
+  IconMinus,
+} from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly";
@@ -107,18 +112,6 @@ function buildQueryParams(
   if (type === "yearly" && year) params.set("year", year);
   return params.toString();
 }
-
-const inputStyle = {
-  bg: "var(--control)",
-  border: "1px solid var(--control-border)",
-  borderRadius: "10px",
-  color: "var(--text)",
-  padding: "10px 10px",
-  fontSize: "14px",
-  outline: "none",
-  width: "100%",
-  transition: "box-shadow 0.12s ease, border-color 0.12s ease",
-};
 
 export default function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>("monthly");
@@ -212,526 +205,337 @@ export default function ReportsPage() {
     {
       label: "Jumlah Pesanan",
       value: formatNumber(report?.totals.orders || 0),
-      icon: FileText,
+      icon: IconFileText,
       color: "#4f87ff",
     },
     {
       label: "Jumlah Item",
       value: formatNumber(report?.totals.quantity || 0),
-      icon: BarChart3,
+      icon: IconChartBar,
       color: "#4caf50",
     },
     {
       label: "Masa Pejabat",
       value: formatNumber(masaPejabatQty),
-      icon: TrendingUp,
+      icon: IconTrendingUp,
       color: "#f0ad4e",
     },
     {
       label: "Selepas Masa Pejabat",
       value: formatNumber(selepasMasaPejabatQty),
-      icon: TrendingDown,
+      icon: IconTrendingDown,
       color: "#ef5350",
     },
     {
       label: "Wad + MP",
       value: formatNumber(wardMpQty),
-      icon: Minus,
+      icon: IconMinus,
       color: "#4f87ff",
     },
     {
       label: "Bukan Wad + SMP",
       value: formatNumber(bukanWardSmpQty),
-      icon: Minus,
+      icon: IconMinus,
       color: "#a3aab3",
     },
   ];
 
   return (
     <AppShell>
-      <VStack align="stretch" gap={6}>
-        <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack gap={3}>
-            <Box color="#4f87ff">
-              <BarChart3 size={28} />
-            </Box>
-            <Heading size="lg" fontWeight={700}>
+      <Stack gap="lg">
+        <Group justify="space-between" wrap="wrap" gap="md">
+          <Group gap="sm">
+            <ThemeIcon size="lg" variant="light" color="blue">
+              <IconChartBar size={24} />
+            </ThemeIcon>
+            <Title order={2} fw={700}>
               Laporan
-            </Heading>
-          </HStack>
-        </HStack>
+            </Title>
+          </Group>
+        </Group>
 
-        <Box
-          bg="var(--card)"
-          border="1px solid var(--line)"
-          borderRadius="14px"
-          p={5}
-        >
-          <VStack align="stretch" gap={4}>
-            <HStack gap={3} flexWrap="wrap" align="flex-end">
-              <VStack align="stretch" gap={1} minW="160px" flex={1}>
-                <Text fontSize="13px" color="var(--muted)">
-                  Jenis Laporan
-                </Text>
-                <select
-                  value={reportType}
-                  onChange={(e) =>
-                    setReportType(e.target.value as ReportType)
-                  }
-                  style={inputStyle}
-                >
-                  <option value="daily">Harian</option>
-                  <option value="weekly">Mingguan</option>
-                  <option value="monthly">Bulanan</option>
-                  <option value="yearly">Tahunan</option>
-                </select>
-              </VStack>
+        <Paper shadow="sm" p="md" radius="md">
+          <Stack gap="md">
+            <Group gap="md" wrap="wrap" align="flex-end">
+              <Select
+                label="Jenis Laporan"
+                data={[
+                  { value: "daily", label: "Harian" },
+                  { value: "weekly", label: "Mingguan" },
+                  { value: "monthly", label: "Bulanan" },
+                  { value: "yearly", label: "Tahunan" },
+                ]}
+                value={reportType}
+                onChange={(val) => setReportType(val as ReportType)}
+                style={{ minWidth: 160, flex: 1 }}
+              />
 
               {reportType === "daily" && (
-                <VStack align="stretch" gap={1} minW="160px" flex={1}>
-                  <Text fontSize="13px" color="var(--muted)">
-                    Tarikh
-                  </Text>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    style={inputStyle}
-                  />
-                </VStack>
+                <TextInput
+                  label="Tarikh"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.currentTarget.value)}
+                  style={{ minWidth: 160, flex: 1 }}
+                />
               )}
 
               {reportType === "weekly" && (
-                <VStack align="stretch" gap={1} minW="160px" flex={1}>
-                  <Text fontSize="13px" color="var(--muted)">
-                    Minggu
-                  </Text>
-                  <input
-                    type="week"
-                    value={week}
-                    onChange={(e) => setWeek(e.target.value)}
-                    style={inputStyle}
-                  />
-                </VStack>
+                <TextInput
+                  label="Minggu"
+                  type="week"
+                  value={week}
+                  onChange={(e) => setWeek(e.currentTarget.value)}
+                  style={{ minWidth: 160, flex: 1 }}
+                />
               )}
 
               {reportType === "monthly" && (
-                <VStack align="stretch" gap={1} minW="160px" flex={1}>
-                  <Text fontSize="13px" color="var(--muted)">
-                    Bulan
-                  </Text>
-                  <input
-                    type="month"
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    style={inputStyle}
-                  />
-                </VStack>
+                <TextInput
+                  label="Bulan"
+                  type="month"
+                  value={month}
+                  onChange={(e) => setMonth(e.currentTarget.value)}
+                  style={{ minWidth: 160, flex: 1 }}
+                />
               )}
 
               {reportType === "yearly" && (
-                <VStack align="stretch" gap={1} minW="120px" flex={1}>
-                  <Text fontSize="13px" color="var(--muted)">
-                    Tahun
-                  </Text>
-                  <input
-                    type="number"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    min={2000}
-                    max={2100}
-                    style={inputStyle}
-                  />
-                </VStack>
+                <NumberInput
+                  label="Tahun"
+                  value={Number(year)}
+                  onChange={(val) => setYear(String(val ?? getCurrentYear()))}
+                  min={2000}
+                  max={2100}
+                  style={{ minWidth: 120, flex: 1 }}
+                />
               )}
 
               <Button
+                leftSection={<IconFilter size={15} />}
                 onClick={fetchReport}
                 loading={loading}
-                loadingText="Memuatkan..."
-                bg="#4f87ff"
-                color="white"
-                _hover={{ bg: "#3a6fe0" }}
+                loaderProps={{ size: "sm" }}
+                variant="filled"
                 size="sm"
-                minH="38px"
-                px={5}
-                fontWeight={600}
               >
-                <Filter size={15} />
                 Jana Laporan
               </Button>
-            </HStack>
+            </Group>
 
             {report && (
-              <HStack gap={2} flexWrap="wrap">
-                <Badge
-                  bg="rgba(79,135,255,0.15)"
-                  color="#4f87ff"
-                  px={2.5}
-                  py={1}
-                  borderRadius="8px"
-                  fontSize="12px"
-                  fontWeight={600}
-                >
+              <Group gap="xs" wrap="wrap">
+                <Badge color="blue" variant="light">
                   {REPORT_TYPE_LABELS[report.type as ReportType]}
                 </Badge>
-                <Badge
-                  bg="rgba(76,175,80,0.15)"
-                  color="#4caf50"
-                  px={2.5}
-                  py={1}
-                  borderRadius="8px"
-                  fontSize="12px"
-                  fontWeight={600}
-                >
+                <Badge color="green" variant="light">
                   {report.start} hingga {report.end}
                 </Badge>
-              </HStack>
+              </Group>
             )}
-          </VStack>
-        </Box>
+          </Stack>
+        </Paper>
 
         {loading && (
-          <Flex justify="center" py={10}>
-            <VStack gap={3}>
-              <Spinner color="#4f87ff" size="lg" />
-              <Text color="var(--muted)" fontSize="14px">
+          <Flex justify="center" py="xl">
+            <Stack align="center" gap="md">
+              <Loader size="lg" color="blue" />
+              <Text size="sm" c="dimmed">
                 Memuatkan laporan...
               </Text>
-            </VStack>
+            </Stack>
           </Flex>
         )}
 
         {error && (
-          <Box
-            bg="rgba(239,83,80,0.12)"
-            border="1px solid rgba(239,83,80,0.3)"
-            borderRadius="10px"
-            p={4}
-          >
-            <Text color="#ef5350" fontSize="14px">
-              {error}
-            </Text>
-          </Box>
+          <Alert color="red" variant="light">
+            {error}
+          </Alert>
         )}
 
         {report && !loading && (
           <>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+            <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="md">
               {statCards.map((card) => {
                 const Icon = card.icon;
                 return (
-                  <Box
-                    key={card.label}
-                    bg="var(--card)"
-                    border="1px solid var(--line)"
-                    borderRadius="14px"
-                    p={4}
-                  >
-                    <HStack justify="space-between" align="flex-start">
-                      <VStack align="stretch" gap={1}>
-                        <Text fontSize="13px" color="var(--muted)">
+                  <Paper key={card.label} shadow="sm" p="md" radius="md">
+                    <Group justify="space-between" align="flex-start">
+                      <Stack gap={4}>
+                        <Text size="sm" c="dimmed">
                           {card.label}
                         </Text>
-                        <Text
-                          fontSize="24px"
-                          fontWeight={700}
-                          color="var(--text)"
-                        >
+                        <Text size="xl" fw={700}>
                           {card.value}
                         </Text>
-                      </VStack>
-                      <Box
-                        bg={`${card.color}22`}
-                        color={card.color}
-                        p={2.5}
-                        borderRadius="10px"
+                      </Stack>
+                      <ThemeIcon
+                        size="lg"
+                        variant="light"
+                        color="gray"
+                        style={{ backgroundColor: `${card.color}22`, color: card.color }}
                       >
                         <Icon size={20} />
-                      </Box>
-                    </HStack>
-                  </Box>
+                      </ThemeIcon>
+                    </Group>
+                  </Paper>
                 );
               })}
             </SimpleGrid>
 
-            <Box
-              bg="var(--card)"
-              border="1px solid var(--line)"
-              borderRadius="14px"
-              p={5}
-            >
-              <HStack gap={2} mb={4}>
-                <FileText size={18} color="#4f87ff" />
-                <Heading size="md" fontWeight={700}>
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" mb="md">
+                <IconFileText size={18} color="#4f87ff" />
+                <Title order={4} fw={700}>
                   Ringkasan Mengikut Wad
-                </Heading>
-              </HStack>
-              <Box overflowX="auto">
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th>Wad</th>
-                      <th style={{ textAlign: "right" }}>Jumlah Item</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                </Title>
+              </Group>
+              <Table.ScrollContainer minWidth={300}>
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Wad</Table.Th>
+                      <Table.Th style={{ textAlign: "right" }}>Jumlah Item</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
                     {report.totals_by_ward.map((ws) => (
-                      <tr key={ws.ward_id}>
-                        <td>{ws.ward_name}</td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>
+                      <Table.Tr key={ws.ward_id}>
+                        <Table.Td>{ws.ward_name}</Table.Td>
+                        <Table.Td style={{ textAlign: "right", fontWeight: 600 }}>
                           {formatNumber(ws.quantity)}
-                        </td>
-                      </tr>
+                        </Table.Td>
+                      </Table.Tr>
                     ))}
-                    <tr
-                      style={{
-                        fontWeight: 700,
-                        borderTop: "2px solid var(--line)",
-                      }}
-                    >
-                      <td>JUMLAH</td>
-                      <td style={{ textAlign: "right" }}>
+                    <Table.Tr style={{ fontWeight: 700 }}>
+                      <Table.Td>JUMLAH</Table.Td>
+                      <Table.Td style={{ textAlign: "right" }}>
                         {formatNumber(report.totals.quantity)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </Box>
-            </Box>
+                      </Table.Td>
+                    </Table.Tr>
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            </Paper>
 
-            <Box
-              bg="var(--card)"
-              border="1px solid var(--line)"
-              borderRadius="14px"
-              p={5}
-            >
-              <HStack gap={2} mb={4}>
-                <Calendar size={18} color="#f0ad4e" />
-                <Heading size="md" fontWeight={700}>
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" mb="md">
+                <IconCalendar size={18} color="#f0ad4e" />
+                <Title order={4} fw={700}>
                   Masa Pejabat
-                </Heading>
-              </HStack>
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                <Box
-                  bg="rgba(79,135,255,0.06)"
-                  border="1px solid rgba(79,135,255,0.15)"
-                  borderRadius="10px"
-                  p={4}
-                >
-                  <Text
-                    fontSize="14px"
-                    fontWeight={600}
-                    mb={3}
-                    color="#4f87ff"
-                  >
+                </Title>
+              </Group>
+              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(79,135,255,0.06)", border: "1px solid rgba(79,135,255,0.15)" }}>
+                  <Text size="sm" fw={600} mb="sm" c="blue">
                     Masa Pejabat
                   </Text>
-                  <VStack align="stretch" gap={2}>
-                    <HStack justify="space-between">
-                      <Text fontSize="13px" color="var(--muted)">
-                        Bil. Pesanan
-                      </Text>
-                      <Text fontSize="15px" fontWeight={600}>
-                        {formatNumber(masaPejabatQty)}
-                      </Text>
-                    </HStack>
-                    <HStack justify="space-between">
-                      <Text fontSize="13px" color="var(--muted)">
-                        Peratusan
-                      </Text>
-                      <Text fontSize="15px" fontWeight={600}>
+                  <Stack gap="xs">
+                    <Group justify="space-between">
+                      <Text size="sm" c="dimmed">Bil. Pesanan</Text>
+                      <Text size="sm" fw={600}>{formatNumber(masaPejabatQty)}</Text>
+                    </Group>
+                    <Group justify="space-between">
+                      <Text size="sm" c="dimmed">Peratusan</Text>
+                      <Text size="sm" fw={600}>
                         {totalQty > 0
                           ? ((masaPejabatQty / totalQty) * 100).toFixed(1)
                           : "0.0"}
                         %
                       </Text>
-                    </HStack>
-                  </VStack>
-                </Box>
-                <Box
-                  bg="rgba(239,83,80,0.06)"
-                  border="1px solid rgba(239,83,80,0.15)"
-                  borderRadius="10px"
-                  p={4}
-                >
-                  <Text
-                    fontSize="14px"
-                    fontWeight={600}
-                    mb={3}
-                    color="#ef5350"
-                  >
+                    </Group>
+                  </Stack>
+                </Paper>
+                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(239,83,80,0.06)", border: "1px solid rgba(239,83,80,0.15)" }}>
+                  <Text size="sm" fw={600} mb="sm" c="red">
                     Selepas Masa Pejabat
                   </Text>
-                  <VStack align="stretch" gap={2}>
-                    <HStack justify="space-between">
-                      <Text fontSize="13px" color="var(--muted)">
-                        Bil. Pesanan
-                      </Text>
-                      <Text fontSize="15px" fontWeight={600}>
-                        {formatNumber(selepasMasaPejabatQty)}
-                      </Text>
-                    </HStack>
-                    <HStack justify="space-between">
-                      <Text fontSize="13px" color="var(--muted)">
-                        Peratusan
-                      </Text>
-                      <Text fontSize="15px" fontWeight={600}>
+                  <Stack gap="xs">
+                    <Group justify="space-between">
+                      <Text size="sm" c="dimmed">Bil. Pesanan</Text>
+                      <Text size="sm" fw={600}>{formatNumber(selepasMasaPejabatQty)}</Text>
+                    </Group>
+                    <Group justify="space-between">
+                      <Text size="sm" c="dimmed">Peratusan</Text>
+                      <Text size="sm" fw={600}>
                         {totalQty > 0
-                          ? (
-                              (selepasMasaPejabatQty / totalQty) *
-                              100
-                            ).toFixed(1)
+                          ? ((selepasMasaPejabatQty / totalQty) * 100).toFixed(1)
                           : "0.0"}
                         %
                       </Text>
-                    </HStack>
-                  </VStack>
-                </Box>
+                    </Group>
+                  </Stack>
+                </Paper>
               </SimpleGrid>
-            </Box>
+            </Paper>
 
-            <Box
-              bg="var(--card)"
-              border="1px solid var(--line)"
-              borderRadius="14px"
-              p={5}
-            >
-              <HStack gap={2} mb={4}>
-                <BarChart3 size={18} color="#4caf50" />
-                <Heading size="md" fontWeight={700}>
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" mb="md">
+                <IconChartBar size={18} color="#4caf50" />
+                <Title order={4} fw={700}>
                   Pecahan Mengikut Kategori
-                </Heading>
-              </HStack>
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                <Box
-                  bg="rgba(79,135,255,0.06)"
-                  border="1px solid rgba(79,135,255,0.15)"
-                  borderRadius="10px"
-                  p={4}
-                >
-                  <Text
-                    fontSize="14px"
-                    fontWeight={600}
-                    mb={3}
-                    color="#4f87ff"
-                  >
+                </Title>
+              </Group>
+              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(79,135,255,0.06)", border: "1px solid rgba(79,135,255,0.15)" }}>
+                  <Text size="sm" fw={600} mb="sm" c="blue">
                     Wad + Masa Pejabat
                   </Text>
-                  <Text fontSize="24px" fontWeight={700}>
-                    {formatNumber(wardMpQty)}
+                  <Text size="xl" fw={700}>{formatNumber(wardMpQty)}</Text>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {totalQty > 0 ? ((wardMpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
-                  <Text fontSize="12px" color="var(--muted)" mt={1}>
-                    {totalQty > 0
-                      ? ((wardMpQty / totalQty) * 100).toFixed(1)
-                      : "0.0"}{" "}
-                    % daripada jumlah
-                  </Text>
-                </Box>
-                <Box
-                  bg="rgba(240,173,78,0.06)"
-                  border="1px solid rgba(240,173,78,0.15)"
-                  borderRadius="10px"
-                  p={4}
-                >
-                  <Text
-                    fontSize="14px"
-                    fontWeight={600}
-                    mb={3}
-                    color="#f0ad4e"
-                  >
+                </Paper>
+                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(240,173,78,0.06)", border: "1px solid rgba(240,173,78,0.15)" }}>
+                  <Text size="sm" fw={600} mb="sm" c="yellow">
                     Wad + Selepas Masa Pejabat
                   </Text>
-                  <Text fontSize="24px" fontWeight={700}>
-                    {formatNumber(wardSmpQty)}
+                  <Text size="xl" fw={700}>{formatNumber(wardSmpQty)}</Text>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {totalQty > 0 ? ((wardSmpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
-                  <Text fontSize="12px" color="var(--muted)" mt={1}>
-                    {totalQty > 0
-                      ? ((wardSmpQty / totalQty) * 100).toFixed(1)
-                      : "0.0"}{" "}
-                    % daripada jumlah
-                  </Text>
-                </Box>
-                <Box
-                  bg="rgba(76,175,80,0.06)"
-                  border="1px solid rgba(76,175,80,0.15)"
-                  borderRadius="10px"
-                  p={4}
-                >
-                  <Text
-                    fontSize="14px"
-                    fontWeight={600}
-                    mb={3}
-                    color="#4caf50"
-                  >
+                </Paper>
+                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(76,175,80,0.06)", border: "1px solid rgba(76,175,80,0.15)" }}>
+                  <Text size="sm" fw={600} mb="sm" c="green">
                     Bukan Wad + Masa Pejabat
                   </Text>
-                  <Text fontSize="24px" fontWeight={700}>
-                    {formatNumber(bukanWardMpQty)}
+                  <Text size="xl" fw={700}>{formatNumber(bukanWardMpQty)}</Text>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {totalQty > 0 ? ((bukanWardMpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
-                  <Text fontSize="12px" color="var(--muted)" mt={1}>
-                    {totalQty > 0
-                      ? ((bukanWardMpQty / totalQty) * 100).toFixed(1)
-                      : "0.0"}{" "}
-                    % daripada jumlah
-                  </Text>
-                </Box>
-                <Box
-                  bg="rgba(163,170,179,0.06)"
-                  border="1px solid rgba(163,170,179,0.15)"
-                  borderRadius="10px"
-                  p={4}
-                >
-                  <Text
-                    fontSize="14px"
-                    fontWeight={600}
-                    mb={3}
-                    color="var(--muted)"
-                  >
+                </Paper>
+                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(163,170,179,0.06)", border: "1px solid rgba(163,170,179,0.15)" }}>
+                  <Text size="sm" fw={600} mb="sm" c="dimmed">
                     Bukan Wad + Selepas Masa Pejabat
                   </Text>
-                  <Text fontSize="24px" fontWeight={700}>
-                    {formatNumber(bukanWardSmpQty)}
+                  <Text size="xl" fw={700}>{formatNumber(bukanWardSmpQty)}</Text>
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {totalQty > 0 ? ((bukanWardSmpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
-                  <Text fontSize="12px" color="var(--muted)" mt={1}>
-                    {totalQty > 0
-                      ? ((bukanWardSmpQty / totalQty) * 100).toFixed(1)
-                      : "0.0"}{" "}
-                    % daripada jumlah
-                  </Text>
-                </Box>
+                </Paper>
               </SimpleGrid>
-            </Box>
+            </Paper>
 
             {report.recommendations.length > 0 && (
-              <Box
-                bg="var(--card)"
-                border="1px solid var(--line)"
-                borderRadius="14px"
-                p={5}
-              >
-                <HStack gap={2} mb={4}>
-                  <TrendingUp size={18} color="#4caf50" />
-                  <Heading size="md" fontWeight={700}>
+              <Paper shadow="sm" p="md" radius="md">
+                <Group gap="sm" mb="md">
+                  <IconTrendingUp size={18} color="#4caf50" />
+                  <Title order={4} fw={700}>
                     Cadangan Kuota
-                  </Heading>
-                </HStack>
-                <Box overflowX="auto">
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th style={{ textAlign: "right" }}>Purata/Hari</th>
-                        <th style={{ textAlign: "right" }}>
-                          Kuota Semasa (30 hari)
-                        </th>
-                        <th style={{ textAlign: "right" }}>
-                          Cadangan (×1.25)
-                        </th>
-                        <th style={{ textAlign: "right" }}>Delta</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  </Title>
+                </Group>
+                <Table.ScrollContainer minWidth={500}>
+                  <Table striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Item</Table.Th>
+                        <Table.Th style={{ textAlign: "right" }}>Purata/Hari</Table.Th>
+                        <Table.Th style={{ textAlign: "right" }}>Kuota Semasa (30 hari)</Table.Th>
+                        <Table.Th style={{ textAlign: "right" }}>Cadangan (×1.25)</Table.Th>
+                        <Table.Th style={{ textAlign: "right" }}>Delta</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
                       {report.recommendations.slice(0, 50).map((rec) => {
                         const current = rec.avg_per_day * 30;
                         const suggested = rec.recommended_stock;
@@ -748,182 +552,123 @@ export default function ReportsPage() {
                               : "var(--muted)";
                         const DeltaIcon =
                           delta > 0
-                            ? TrendingUp
+                            ? IconTrendingUp
                             : delta < 0
-                              ? TrendingDown
-                              : Minus;
+                              ? IconTrendingDown
+                              : IconMinus;
                         return (
-                          <tr key={rec.item_id}>
-                            <td>{rec.item_name}</td>
-                            <td style={{ textAlign: "right" }}>
+                          <Table.Tr key={rec.item_id}>
+                            <Table.Td>{rec.item_name}</Table.Td>
+                            <Table.Td style={{ textAlign: "right" }}>
                               {rec.avg_per_day}
-                            </td>
-                            <td style={{ textAlign: "right" }}>
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "right" }}>
                               {formatNumber(Math.round(current))}
-                            </td>
-                            <td
-                              style={{
-                                textAlign: "right",
-                                fontWeight: 600,
-                                color: deltaColor,
-                              }}
-                            >
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "right", fontWeight: 600, color: deltaColor }}>
                               {formatNumber(suggested)}
-                            </td>
-                            <td style={{ textAlign: "right" }}>
-                              <Flex
-                                gap={1}
-                                justify="flex-end"
-                                align="center"
-                              >
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "right" }}>
+                              <Group gap={4} justify="flex-end" wrap="nowrap">
                                 <DeltaIcon size={14} color={deltaColor} />
-                                <Text
-                                  fontSize="13px"
-                                  fontWeight={600}
-                                  color={deltaColor}
-                                >
+                                <Text size="sm" fw={600} c={deltaColor}>
                                   {delta > 0 ? "+" : ""}
                                   {formatNumber(delta)} ({deltaPercent}%)
                                 </Text>
-                              </Flex>
-                            </td>
-                          </tr>
+                              </Group>
+                            </Table.Td>
+                          </Table.Tr>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </Box>
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
                 {report.recommendations.length > 50 && (
-                  <Text
-                    fontSize="12px"
-                    color="var(--muted)"
-                    mt={3}
-                    textAlign="center"
-                  >
+                  <Text size="xs" c="dimmed" mt="sm" ta="center">
                     Menunjukkan 50 item teratas daripada{" "}
                     {report.recommendations.length} item
                   </Text>
                 )}
-              </Box>
+              </Paper>
             )}
 
-            <Box>
+            <div>
               <Button
+                leftSection={<IconFileText size={15} />}
                 onClick={fetchWardItems}
                 loading={wardItemsLoading}
-                loadingText="Memuatkan item..."
-                bg="var(--control)"
-                border="1px solid var(--control-border)"
-                color="var(--text)"
-                _hover={{ bg: "var(--control-hover)" }}
+                loaderProps={{ size: "sm" }}
+                variant="light"
                 size="sm"
-                fontWeight={600}
               >
-                <FileText size={15} />
                 Butiran Item
               </Button>
-            </Box>
+            </div>
 
             {wardItemsError && (
-              <Box
-                bg="rgba(239,83,80,0.12)"
-                border="1px solid rgba(239,83,80,0.3)"
-                borderRadius="10px"
-                p={4}
-              >
-                <Text color="#ef5350" fontSize="14px">
-                  {wardItemsError}
-                </Text>
-              </Box>
+              <Alert color="red" variant="light">
+                {wardItemsError}
+              </Alert>
             )}
 
             {showWardItems && wardItems && (
-              <Box
-                bg="var(--card)"
-                border="1px solid var(--line)"
-                borderRadius="14px"
-                p={5}
-              >
-                <HStack
-                  justify="space-between"
-                  mb={4}
-                  flexWrap="wrap"
-                  gap={2}
-                >
-                  <HStack gap={2}>
-                    <Download size={18} color="#4f87ff" />
-                    <Heading size="md" fontWeight={700}>
+              <Paper shadow="sm" p="md" radius="md">
+                <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
+                  <Group gap="sm">
+                    <IconDownload size={18} color="#4f87ff" />
+                    <Title order={4} fw={700}>
                       Butiran Item
-                    </Heading>
-                  </HStack>
-                  <CloseButton
-                    size="sm"
-                    onClick={() => setShowWardItems(false)}
-                    color="var(--muted)"
-                    _hover={{ color: "var(--text)" }}
-                  />
-                </HStack>
+                    </Title>
+                  </Group>
+                  <CloseButton onClick={() => setShowWardItems(false)} />
+                </Group>
                 {wardItems.length === 0 ? (
-                  <Text
-                    color="var(--muted)"
-                    fontSize="14px"
-                    py={4}
-                    textAlign="center"
-                  >
+                  <Text size="sm" c="dimmed" py="md" ta="center">
                     Tiada item ditemui untuk tempoh ini.
                   </Text>
                 ) : (
-                  <Box overflowX="auto">
-                    <table
-                      style={{ width: "100%", borderCollapse: "collapse" }}
-                    >
-                      <thead>
-                        <tr>
-                          <th>Item</th>
-                          <th style={{ textAlign: "right" }}>Bil. Pesanan</th>
-                          <th style={{ textAlign: "right" }}>
-                            Jumlah Kuantiti
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <Table.ScrollContainer minWidth={400}>
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Item</Table.Th>
+                          <Table.Th style={{ textAlign: "right" }}>Bil. Pesanan</Table.Th>
+                          <Table.Th style={{ textAlign: "right" }}>Jumlah Kuantiti</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
                         {wardItems.map((wi) => (
-                          <tr key={wi.item_id}>
-                            <td>{wi.item_name}</td>
-                            <td style={{ textAlign: "right" }}>
+                          <Table.Tr key={wi.item_id}>
+                            <Table.Td>{wi.item_name}</Table.Td>
+                            <Table.Td style={{ textAlign: "right" }}>
                               {formatNumber(wi.order_count)}
-                            </td>
-                            <td
-                              style={{
-                                textAlign: "right",
-                                fontWeight: 600,
-                              }}
-                            >
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "right", fontWeight: 600 }}>
                               {formatNumber(wi.quantity_sum)}
-                            </td>
-                          </tr>
+                            </Table.Td>
+                          </Table.Tr>
                         ))}
-                      </tbody>
-                    </table>
-                  </Box>
+                      </Table.Tbody>
+                    </Table>
+                  </Table.ScrollContainer>
                 )}
-              </Box>
+              </Paper>
             )}
           </>
         )}
 
         {!report && !loading && !error && (
-          <Flex justify="center" alignItems="center" py={16} opacity={0.5}>
-            <VStack gap={3}>
-              <BarChart3 size={48} />
-              <Text fontSize="16px" color="var(--muted)">
+          <Flex justify="center" align="center" py={64} style={{ opacity: 0.5 }}>
+            <Stack align="center" gap="md">
+              <IconChartBar size={48} />
+              <Text size="md" c="dimmed">
                 Pilih parameter dan tekan &quot;Jana Laporan&quot; untuk melihat
                 laporan
               </Text>
-            </VStack>
+            </Stack>
           </Flex>
         )}
-      </VStack>
+      </Stack>
     </AppShell>
   );
 }

@@ -3,23 +3,27 @@
 import { useState, useEffect } from "react";
 import AppShell from "@/components/AppShell";
 import {
-  Box,
   SimpleGrid,
   Text,
   Badge,
-  Heading,
-  Flex,
-  Spinner,
-  VStack,
-} from "@chakra-ui/react";
+  Paper,
+  Stack,
+  Group,
+  Loader,
+  Center,
+  ThemeIcon,
+  Title,
+  Table,
+  TableScrollContainer,
+} from "@mantine/core";
 import {
-  ShoppingBag,
-  Package,
-  Hospital,
-  AlertTriangle,
-  AlertOctagon,
-  Activity,
-} from "lucide-react";
+  IconShoppingBag,
+  IconPackage,
+  IconBuildingHospital,
+  IconAlertTriangle,
+  IconAlertOctagon,
+  IconActivity,
+} from "@tabler/icons-react";
 
 interface ItemStatus {
   item_id: string;
@@ -58,35 +62,27 @@ function StatCard({
   iconColor: string;
 }) {
   return (
-    <Box
-      bg="bg.card"
-      border="1px solid"
-      borderColor="line"
-      borderRadius="14px"
-      p={5}
-    >
-      <Flex alignItems="center" gap={3}>
-        <Box
-          bg={`${iconColor}22`}
+    <Paper shadow="sm" p="md" radius="md" withBorder>
+      <Group gap="sm" align="center">
+        <ThemeIcon
+          size="lg"
+          radius="md"
+          variant="light"
           color={iconColor}
-          p={2.5}
-          borderRadius="10px"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
+          style={{ backgroundColor: `${iconColor}22`, color: iconColor }}
         >
           <Icon size={22} />
-        </Box>
-        <VStack align="start" gap={0}>
-          <Text fontSize="12px" color="text.muted">
+        </ThemeIcon>
+        <Stack gap={0}>
+          <Text size="xs" c="dimmed">
             {label}
           </Text>
-          <Text fontSize="1.4rem" fontWeight={700}>
+          <Text size="xl" fw={700}>
             {value}
           </Text>
-        </VStack>
-      </Flex>
-    </Box>
+        </Stack>
+      </Group>
+    </Paper>
   );
 }
 
@@ -100,50 +96,50 @@ function QuotaTable({
   if (items.length === 0) return null;
 
   const bgColor = type === "exceeded" ? "rgba(239,83,80,0.08)" : "rgba(240,173,78,0.08)";
-  const borderColor = type === "exceeded" ? "bad" : "warn";
-  const Icon = type === "exceeded" ? AlertOctagon : AlertTriangle;
+  const borderColor = type === "exceeded" ? "red.4" : "yellow.4";
+  const Icon = type === "exceeded" ? IconAlertOctagon : IconAlertTriangle;
   const title = type === "exceeded" ? "Kuota Dilampaui" : "Amaran Kuota";
-  const iconColor = type === "exceeded" ? "#ef5350" : "#f0ad4e";
+  const iconColor = type === "exceeded" ? "red" : "yellow";
 
   return (
-    <Box
-      bg={bgColor}
-      border="1px solid"
-      borderColor={borderColor}
-      borderRadius="14px"
-      p={4}
+    <Paper
+      p="md"
+      radius="md"
+      style={{ backgroundColor: bgColor, border: `1px solid var(--mantine-color-${borderColor})` }}
     >
-      <Flex alignItems="center" gap={2} mb={4}>
-        <Icon size={18} color={iconColor} />
-        <Heading fontSize="1rem" fontWeight={600}>
+      <Group gap="xs" mb="md">
+        <ThemeIcon size="sm" variant="light" color={iconColor}>
+          <Icon size={18} />
+        </ThemeIcon>
+        <Title order={5} fw={600}>
           {title}
-        </Heading>
-      </Flex>
-      <Box overflowX="auto">
-        <table style={{width: '100%'}}>
-          <thead>
-            <tr>
-              <th style={{textAlign:'left',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Wad</th>
-              <th style={{textAlign:'left',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Item</th>
-              <th style={{textAlign:'right',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Kuota</th>
-              <th style={{textAlign:'right',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Diguna</th>
-              <th style={{textAlign:'right',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Baki</th>
-            </tr>
-          </thead>
-          <tbody>
+        </Title>
+      </Group>
+      <TableScrollContainer minWidth={400}>
+        <Table striped highlightOnHover withTableBorder>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Wad</Table.Th>
+              <Table.Th>Item</Table.Th>
+              <Table.Th style={{ textAlign: "right" }}>Kuota</Table.Th>
+              <Table.Th style={{ textAlign: "right" }}>Diguna</Table.Th>
+              <Table.Th style={{ textAlign: "right" }}>Baki</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {items.map((item) => (
-              <tr key={item.item_id}>
-                <td style={{padding:'8px',borderBottom:'1px solid var(--line)',fontSize:'13px'}}>{item.wards_using} wad</td>
-                <td style={{padding:'8px',borderBottom:'1px solid var(--line)',fontSize:'13px'}}>{item.item_name}</td>
-                <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'right',fontSize:'13px'}}>{item.total_quota}</td>
-                <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'right',fontSize:'13px'}}>{item.total_used}</td>
-                <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'right',fontSize:'13px'}}>{item.total_quota - item.total_used}</td>
-              </tr>
+              <Table.Tr key={item.item_id}>
+                <Table.Td>{item.wards_using} wad</Table.Td>
+                <Table.Td>{item.item_name}</Table.Td>
+                <Table.Td style={{ textAlign: "right" }}>{item.total_quota}</Table.Td>
+                <Table.Td style={{ textAlign: "right" }}>{item.total_used}</Table.Td>
+                <Table.Td style={{ textAlign: "right" }}>{item.total_quota - item.total_used}</Table.Td>
+              </Table.Tr>
             ))}
-          </tbody>
-        </table>
-      </Box>
-    </Box>
+          </Table.Tbody>
+        </Table>
+      </TableScrollContainer>
+    </Paper>
   );
 }
 
@@ -195,43 +191,43 @@ export default function DashboardPage() {
   return (
     <AppShell>
       {loading && (
-        <Flex justify="center" align="center" minH="400px">
-          <Spinner size="lg" color="brand.500" />
-        </Flex>
+        <Center h={400}>
+          <Loader size="lg" color="blue" />
+        </Center>
       )}
 
       {error && (
-        <Box
-          bg="rgba(239,83,80,0.08)"
-          border="1px solid"
-          borderColor="bad"
-          borderRadius="14px"
-          p={4}
+        <Paper
+          p="md"
+          radius="md"
+          style={{ backgroundColor: "rgba(239,83,80,0.08)", border: "1px solid var(--mantine-color-red-4)" }}
         >
-          <Flex alignItems="center" gap={2}>
-            <AlertOctagon size={18} color="#ef5350" />
-            <Text color="bad">{error}</Text>
-          </Flex>
-        </Box>
+          <Group gap="xs">
+            <ThemeIcon size="sm" variant="light" color="red">
+              <IconAlertOctagon size={18} />
+            </ThemeIcon>
+            <Text c="red.6">{error}</Text>
+          </Group>
+        </Paper>
       )}
 
       {data && (
-        <VStack align="stretch" gap={6}>
-          <Heading fontSize="1.3rem" fontWeight={700}>
+        <Stack gap="lg">
+          <Title order={3} fw={700}>
             Dashboard — {data.month}
-          </Heading>
+          </Title>
 
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+          <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="md">
             <StatCard
               label="Jumlah Pesanan"
               value={data.orders_count}
-              icon={ShoppingBag}
+              icon={IconShoppingBag}
               iconColor="#4f87ff"
             />
             <StatCard
               label="Jumlah Item"
               value={data.items_count}
-              icon={Package}
+              icon={IconPackage}
               iconColor="#4caf50"
             />
             <StatCard
@@ -241,7 +237,7 @@ export default function DashboardPage() {
                   ? `${data.top_ward.ward_name} (${data.top_ward.order_count})`
                   : "Tiada data"
               }
-              icon={Hospital}
+              icon={IconBuildingHospital}
               iconColor="#f0ad4e"
             />
           </SimpleGrid>
@@ -260,61 +256,58 @@ export default function DashboardPage() {
             />
           )}
 
-          <Box
-            bg="bg.card"
-            border="1px solid"
-            borderColor="line"
-            borderRadius="14px"
-            p={4}
-          >
-            <Flex alignItems="center" gap={2} mb={4}>
-              <Activity size={18} color="#4f87ff" />
-              <Heading fontSize="1rem" fontWeight={600}>
+          <Paper shadow="sm" p="md" radius="md" withBorder>
+            <Group gap="xs" mb="md">
+              <ThemeIcon size="sm" variant="light" color="blue">
+                <IconActivity size={18} />
+              </ThemeIcon>
+              <Title order={5} fw={600}>
                 Status Kuota Bulanan
-              </Heading>
-            </Flex>
-            <Box overflowX="auto">
-              <table style={{width: '100%'}}>
-                <thead>
-                  <tr>
-                    <th style={{textAlign:'left',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Item</th>
-                    <th style={{textAlign:'right',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Diguna</th>
-                    <th style={{textAlign:'right',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Kuota</th>
-                    <th style={{textAlign:'right',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>%</th>
-                    <th style={{textAlign:'center',color:'var(--muted)',fontSize:'12px',fontWeight:600,padding:'8px'}}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+              </Title>
+            </Group>
+            <TableScrollContainer minWidth={500}>
+              <Table striped highlightOnHover withTableBorder>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Item</Table.Th>
+                    <Table.Th style={{ textAlign: "right" }}>Diguna</Table.Th>
+                    <Table.Th style={{ textAlign: "right" }}>Kuota</Table.Th>
+                    <Table.Th style={{ textAlign: "right" }}>%</Table.Th>
+                    <Table.Th style={{ textAlign: "center" }}>Status</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
                   {data.itemStatus.map((item) => {
                     const pct =
                       item.total_quota > 0
                         ? Math.round((item.total_used / item.total_quota) * 100)
                         : 0;
                     return (
-                      <tr key={item.item_id}>
-                        <td style={{padding:'8px',borderBottom:'1px solid var(--line)',fontSize:'13px'}}>{item.item_name}</td>
-                        <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'right',fontSize:'13px'}}>{item.total_used}</td>
-                        <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'right',fontSize:'13px'}}>{item.total_quota}</td>
-                        <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'right',fontSize:'13px'}}>
+                      <Table.Tr key={item.item_id}>
+                        <Table.Td>{item.item_name}</Table.Td>
+                        <Table.Td style={{ textAlign: "right" }}>{item.total_used}</Table.Td>
+                        <Table.Td style={{ textAlign: "right" }}>{item.total_quota}</Table.Td>
+                        <Table.Td style={{ textAlign: "right" }}>
                           {item.total_quota > 0 ? `${pct}%` : "—"}
-                        </td>
-                        <td style={{padding:'8px',borderBottom:'1px solid var(--line)',textAlign:'center'}}>
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "center" }}>
                           <Badge
-                            colorPalette={getStatusColor(item.status)}
+                            color={getStatusColor(item.status)}
+                            variant="light"
                             size="sm"
-                            borderRadius="full"
+                            circle
                           >
                             {getStatusLabel(item.status)}
                           </Badge>
-                        </td>
-                      </tr>
+                        </Table.Td>
+                      </Table.Tr>
                     );
                   })}
-                </tbody>
-              </table>
-            </Box>
-          </Box>
-        </VStack>
+                </Table.Tbody>
+              </Table>
+            </TableScrollContainer>
+          </Paper>
+        </Stack>
       )}
     </AppShell>
   );

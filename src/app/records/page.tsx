@@ -2,24 +2,28 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
+  Stack,
+  Group,
+  TextInput,
   Button,
   Text,
   Badge,
   Flex,
-  Heading,
+  Title,
+  Box,
+  Modal,
+  Table,
+  Alert,
+  Loader,
   Switch,
-} from "@chakra-ui/react";
+} from "@mantine/core";
 import {
-  RefreshCw,
-  ArrowUpDown,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-} from "lucide-react";
+  IconRefresh,
+  IconArrowsSort,
+  IconClock,
+  IconCircleCheck,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
 type OrderItem = {
@@ -85,29 +89,18 @@ function SortHeader({
   align?: "left" | "center";
 }) {
   return (
-    <th
+    <Table.Th
       onClick={() => onToggle(sortFor)}
       style={{
-        padding: "10px",
-        borderBottom: "1px solid rgba(231,234,238,0.10)",
-        color: "var(--muted)",
-        fontWeight: 600,
-        fontSize: "13px",
-        textAlign: align,
         cursor: "pointer",
         whiteSpace: "nowrap",
         userSelect: "none",
+        textAlign: align,
       }}
     >
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
+      <Group gap={4} style={{ flexWrap: "nowrap" }}>
         {label}
-        <ArrowUpDown
+        <IconArrowsSort
           size={14}
           style={{
             opacity: sortKey === sortFor ? 1 : 0.4,
@@ -115,8 +108,8 @@ function SortHeader({
               sortKey === sortFor && !sortAsc ? "scaleY(-1)" : undefined,
           }}
         />
-      </span>
-    </th>
+      </Group>
+    </Table.Th>
   );
 }
 
@@ -342,351 +335,211 @@ export default function RecordsPage() {
 
   return (
     <AppShell>
-      <VStack gap={4} align="stretch">
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack gap={2}>
-            <Clock size={22} color="#4f87ff" />
-            <Heading size="lg">Senarai Inden</Heading>
-          </HStack>
+      <Stack gap="md">
+        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
+          <Group gap="sm">
+            <IconClock size={22} color="#4f87ff" />
+            <Title order={2}>Senarai Inden</Title>
+          </Group>
         </Flex>
 
-        <Flex gap={3} flexWrap="wrap" align="center">
-          <HStack gap={2}>
-            <Button size="sm" onClick={prevMonth} variant="ghost">
+        <Flex gap="sm" wrap="wrap" align="center">
+          <Group gap="sm">
+            <Button size="compact-sm" onClick={prevMonth} variant="subtle">
               ←
             </Button>
-            <Text fontWeight={600} whiteSpace="nowrap" fontSize="14px">
+            <Text fw={600} style={{ whiteSpace: "nowrap" }} size="sm">
               {monthLabel(year, month)}
             </Text>
-            <Button size="sm" onClick={nextMonth} variant="ghost">
+            <Button size="compact-sm" onClick={nextMonth} variant="subtle">
               →
             </Button>
-          </HStack>
+          </Group>
           <Button
-            size="sm"
+            size="compact-sm"
             onClick={fetchOrders}
-            display="inline-flex"
-            gap={2}
-            variant="ghost"
+            variant="subtle"
+            leftSection={<IconRefresh size={14} />}
           >
-            <RefreshCw size={14} /> Muat Semula
+            Muat Semula
           </Button>
-          <Box flex={1} minW="200px" maxW="320px">
-            <Input
+          <Box style={{ flex: 1, minWidth: 200, maxWidth: 320 }}>
+            <TextInput
               placeholder="Cari No. Inden, Wad, atau Item..."
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => setSearchText(e.currentTarget.value)}
               size="sm"
             />
           </Box>
         </Flex>
 
         {loading && (
-          <Box py={8} textAlign="center" color="muted">
-            Memuatkan data...
+          <Box py={40} style={{ textAlign: "center" }}>
+            <Loader size="sm" />
+            <Text size="sm" mt="xs" c="dimmed">Memuatkan data...</Text>
           </Box>
         )}
 
         {error && (
-          <Box
-            py={4}
-            px={4}
-            bg="rgba(239,83,80,0.1)"
-            border="1px solid rgba(239,83,80,0.3)"
-            borderRadius="10px"
-            color="red.300"
+          <Alert
+            icon={<IconAlertTriangle size={16} />}
+            color="red"
+            variant="light"
+            radius="md"
           >
             {error}
-          </Box>
+          </Alert>
         )}
 
         {!loading && !error && (
-          <Box overflowX="auto">
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th
-                    style={{
-                      padding: "10px",
-                      borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      color: "var(--muted)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      textAlign: "left",
-                    }}
-                  >
-                    No
-                  </th>
+          <Box style={{ overflowX: "auto" }}>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>No</Table.Th>
                   <SortHeader label="Tarikh" sortFor="order_date" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
                   <SortHeader label="No. Inden" sortFor="order_number" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
                   <SortHeader label="Wad" sortFor="ward_name" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
                   <SortHeader label="Jenis" sortFor="order_type" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
                   <SortHeader label="Item" sortFor="items" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
-                  <th
-                    style={{
-                      padding: "10px",
-                      borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      color: "var(--muted)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      textAlign: "center",
-                    }}
-                  >
-                    Disediakan
-                  </th>
-                  <th
-                    style={{
-                      padding: "10px",
-                      borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      color: "var(--muted)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      textAlign: "center",
-                    }}
-                  >
-                    Masa Pejabat
-                  </th>
-                  <th
-                    style={{
-                      padding: "10px",
-                      borderBottom: "1px solid rgba(231,234,238,0.10)",
-                      color: "var(--muted)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      textAlign: "center",
-                    }}
-                  >
-                    Masa
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  <Table.Th style={{ textAlign: "center" }}>Disediakan</Table.Th>
+                  <Table.Th style={{ textAlign: "center" }}>Masa Pejabat</Table.Th>
+                  <Table.Th style={{ textAlign: "center" }}>Masa</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {filtered.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={9}
-                      style={{
-                        padding: "24px",
-                        textAlign: "center",
-                        color: "var(--muted)",
-                      }}
-                    >
-                      Tiada data ditemui
-                    </td>
-                  </tr>
+                  <Table.Tr>
+                    <Table.Td colSpan={9} style={{ textAlign: "center" }}>
+                      <Text c="dimmed" py="md">Tiada data ditemui</Text>
+                    </Table.Td>
+                  </Table.Tr>
                 )}
                 {filtered.map((order, idx) => {
                   const elapsed = getElapsedMinutes(order);
                   const elapsedGrad = getElapsedGradient(elapsed);
                   return (
-                    <tr
-                      key={order.id}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          "rgba(79,135,255,0.06)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
-                    >
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        }}
-                      >
-                        {idx + 1}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                    <Table.Tr key={order.id}>
+                      <Table.Td>{idx + 1}</Table.Td>
+                      <Table.Td style={{ whiteSpace: "nowrap" }}>
                         {order.order_date}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                          fontWeight: 600,
-                        }}
-                      >
+                      </Table.Td>
+                      <Table.Td style={{ fontWeight: 600 }}>
                         {order.order_number}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        }}
-                      >
-                        {order.ward_name}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                        }}
-                      >
+                      </Table.Td>
+                      <Table.Td>{order.ward_name}</Table.Td>
+                      <Table.Td>
                         <Badge
-                          size="sm"
-                          colorPalette={
+                          color={
                             order.order_type === "FS"
                               ? "blue"
                               : order.order_type === "EMT"
                                 ? "red"
                                 : "orange"
                           }
-                          variant="solid"
-                          borderRadius="full"
+                          variant="filled"
+                          radius="xl"
+                          size="sm"
                         >
                           {ORDER_TYPE_MAP[order.order_type] || order.order_type}
                         </Badge>
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                          maxWidth: "200px",
-                        }}
-                      >
-                        <VStack align="start" gap={0}>
+                      </Table.Td>
+                      <Table.Td style={{ maxWidth: 200 }}>
+                        <Stack gap={0}>
                           {order.items.map((item) => (
-                            <Text key={item.item_id} fontSize="12px" lineHeight="1.4">
+                            <Text key={item.item_id} size="xs" lh={1.4}>
                               {item.item_name} ({item.quantity})
                             </Text>
                           ))}
-                        </VStack>
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                          textAlign: "center",
-                        }}
-                      >
-                        <Switch.Root
-                          size="sm"
+                        </Stack>
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "center" }}>
+                        <Switch
                           checked={order.sudah_disedia}
-                          onCheckedChange={(details) =>
-                            handleToggleReady(order.id, details.checked)
+                          onChange={(event) =>
+                            handleToggleReady(order.id, event.currentTarget.checked)
                           }
                           disabled={togglingReady === order.id}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control>
-                            <Switch.Thumb />
-                          </Switch.Control>
-                        </Switch.Root>
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                          textAlign: "center",
-                        }}
-                      >
-                        <Switch.Root
                           size="sm"
+                          labelPosition="left"
+                        />
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "center" }}>
+                        <Switch
                           checked={order.masa_pejabat}
-                          onCheckedChange={(details) =>
-                            handleTogglePejabat(order.id, details.checked)
+                          onChange={(event) =>
+                            handleTogglePejabat(order.id, event.currentTarget.checked)
                           }
                           disabled={togglingPejabat === order.id}
-                        >
-                          <Switch.HiddenInput />
-                          <Switch.Control>
-                            <Switch.Thumb />
-                          </Switch.Control>
-                        </Switch.Root>
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px",
-                          borderBottom: "1px solid rgba(231,234,238,0.10)",
-                          textAlign: "center",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <Badge
                           size="sm"
-                          colorPalette={elapsedGrad}
-                          variant="subtle"
-                          borderRadius="full"
-                          display="inline-flex"
-                          gap={1}
-                          alignItems="center"
+                          labelPosition="left"
+                        />
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                        <Badge
+                          color={elapsedGrad}
+                          variant="light"
+                          radius="xl"
+                          size="sm"
+                          tt="none"
                         >
-                          {order.sudah_disedia && order.completion_minutes != null ? (
-                            <CheckCircle size={12} />
-                          ) : (
-                            <Clock size={12} />
-                          )}
-                          {formatElapsed(elapsed)}
+                          <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                            {order.sudah_disedia && order.completion_minutes != null ? (
+                              <IconCircleCheck size={12} />
+                            ) : (
+                              <IconClock size={12} />
+                            )}
+                            {formatElapsed(elapsed)}
+                          </Group>
                         </Badge>
-                      </td>
-                    </tr>
+                      </Table.Td>
+                    </Table.Tr>
                   );
                 })}
-              </tbody>
-            </table>
+              </Table.Tbody>
+            </Table>
           </Box>
         )}
 
-        <Text fontSize="12px" color="muted">
+        <Text size="xs" c="dimmed">
           {filtered.length} pesanan dipaparkan
         </Text>
-      </VStack>
+      </Stack>
 
-      {confirmDialog && (
-        <Box
-          position="fixed"
-          inset={0}
-          bg="rgba(0,0,0,0.6)"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          zIndex={9999}
-          p={4}
-          onClick={() => setConfirmDialog(null)}
-        >
-          <Box
-            bg="var(--card)"
-            border="1px solid var(--line)"
-            borderRadius="14px"
-            w="100%"
-            maxW="400px"
-            p={5}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <HStack gap={2} mb={3}>
-              <AlertTriangle size={20} color="var(--warn)" />
-              <Heading size="sm">Sahkan Tindakan</Heading>
-            </HStack>
-            <Text fontSize="14px" color="muted" mb={4}>
-              Adakah anda pasti mahu membatalkan status &quot;Sudah
-              Disediakan&quot; untuk pesanan ini?
-            </Text>
-            <Flex justify="flex-end" gap={2}>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setConfirmDialog(null)}
-              >
-                Batal
-              </Button>
-              <Button
-                size="sm"
-                colorPalette="red"
-                onClick={handleConfirmReady}
-              >
-                Ya, Batalkan
-              </Button>
-            </Flex>
-          </Box>
-        </Box>
-      )}
+      <Modal
+        opened={!!confirmDialog}
+        onClose={() => setConfirmDialog(null)}
+        title="Sahkan Tindakan"
+        size="sm"
+        centered
+      >
+        <Stack gap="md">
+          <Group gap="sm">
+            <IconAlertTriangle size={20} color="var(--mantine-color-yellow)" />
+            <Text fw={600} size="sm">Sahkan Tindakan</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Adakah anda pasti mahu membatalkan status &quot;Sudah
+            Disediakan&quot; untuk pesanan ini?
+          </Text>
+          <Flex justify="flex-end" gap="sm">
+            <Button
+              size="compact-sm"
+              variant="subtle"
+              onClick={() => setConfirmDialog(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              size="compact-sm"
+              color="red"
+              onClick={handleConfirmReady}
+            >
+              Ya, Batalkan
+            </Button>
+          </Flex>
+        </Stack>
+      </Modal>
     </AppShell>
   );
 }

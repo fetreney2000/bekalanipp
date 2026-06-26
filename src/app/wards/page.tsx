@@ -2,18 +2,30 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
+  Stack,
+  Group,
+  TextInput,
   Button,
   Text,
   Badge,
-  IconButton,
+  ActionIcon,
   Flex,
-  Heading,
-} from "@chakra-ui/react";
-import { Plus, Edit, Trash2, Search, Hospital, Save, X } from "lucide-react";
+  Title,
+  Alert,
+  Table,
+  TableScrollContainer,
+  Select,
+} from "@mantine/core";
+import {
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconSearch,
+  IconHospital,
+  IconDeviceFloppy,
+  IconX,
+} from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
 
 interface Ward {
@@ -121,6 +133,7 @@ export default function WardsPage() {
             : w
         )
       );
+      notifications.show({ message: "Wad/jabatan dikemaskini", color: "green" });
       cancelEdit();
     } catch {
       setError("Ralat sambungan");
@@ -148,6 +161,7 @@ export default function WardsPage() {
         return;
       }
       setWards((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      notifications.show({ message: "Wad/jabatan ditambah", color: "green" });
       setAddName("");
       setAddCategory("ward");
       setShowAdd(false);
@@ -170,6 +184,7 @@ export default function WardsPage() {
         return;
       }
       setWards((prev) => prev.filter((w) => w.id !== id));
+      notifications.show({ message: "Wad/jabatan dipadam", color: "red" });
     } catch {
       setError("Ralat sambungan");
     } finally {
@@ -177,280 +192,201 @@ export default function WardsPage() {
     }
   }
 
-  const thStyle: React.CSSProperties = {
-    color: "#a3aab3",
-    fontWeight: 600,
-    fontSize: "13px",
-    padding: "10px",
-    borderBottom: "1px solid rgba(231,234,238,0.10)",
-    textAlign: "left",
-    cursor: "pointer",
-    userSelect: "none",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "10px",
-    borderBottom: "1px solid rgba(231,234,238,0.10)",
-    verticalAlign: "middle",
-  };
+  const categoryOptions = [
+    { value: "ward", label: "Wad" },
+    { value: "not_ward", label: "Bukan Wad" },
+  ];
 
   return (
     <AppShell>
-      <VStack align="stretch" gap={5}>
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack gap={2}>
-            <Hospital size={22} color="#4f87ff" />
-            <Heading size="lg">Urus Wad/Jabatan</Heading>
-          </HStack>
+      <Stack gap="md">
+        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
+          <Group gap="sm">
+            <IconHospital size={22} color="var(--mantine-color-blue-6)" />
+            <Title order={3}>Urus Wad/Jabatan</Title>
+          </Group>
           <Button
-            size="sm"
+            leftSection={<IconPlus size={16} />}
             onClick={() => {
               setShowAdd(!showAdd);
               setError("");
             }}
-            bg="#4f87ff"
-            color="white"
-            _hover={{ bg: "#3d6fcc" }}
           >
-            <Plus size={16} />
             Tambah Wad/Jabatan
           </Button>
         </Flex>
 
         {error && (
-          <Box bg="rgba(239,83,80,0.12)" border="1px solid rgba(239,83,80,0.3)" borderRadius="10px" px={4} py={3}>
-            <Text color="#ef5350" fontSize="sm">{error}</Text>
-          </Box>
+          <Alert color="red" variant="light" title="Ralat">
+            {error}
+          </Alert>
         )}
 
         {showAdd && (
-          <Box bg="#1c1f22" border="1px solid rgba(231,234,238,0.10)" borderRadius="14px" p={4}>
-            <Text fontWeight={600} mb={3}>Tambah Wad/Jabatan Baru</Text>
-            <VStack align="stretch" gap={3}>
-              <Box>
-                <Text fontSize="sm" color="#a3aab3" mb={1}>Nama</Text>
-                <Input
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  placeholder="Nama wad/jabatan"
-                  bg="#123a66"
-                  border="1px solid rgba(79,135,255,0.12)"
-                  color="#e7eaee"
-                  _focus={{ borderColor: "#4f87ff", boxShadow: "0 6px 18px rgba(79,135,255,0.18)" }}
-                  onKeyDown={(e) => e.key === "Enter" && addWard()}
-                />
-              </Box>
-              <Box>
-                <Text fontSize="sm" color="#a3aab3" mb={1}>Kategori</Text>
-                <select
-                  value={addCategory}
-                  onChange={(e) => setAddCategory(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(79,135,255,0.12)",
-                    background: "#123a66",
-                    color: "#e7eaee",
-                    fontSize: "14px",
-                    outline: "none",
-                  }}
-                >
-                  <option value="ward">Wad</option>
-                  <option value="not_ward">Bukan Wad</option>
-                </select>
-              </Box>
-              <HStack justify="flex-end" gap={2}>
+          <Alert variant="light" color="blue" title="Tambah Wad/Jabatan Baru">
+            <Stack gap="sm">
+              <TextInput
+                label="Nama"
+                placeholder="Nama wad/jabatan"
+                value={addName}
+                onChange={(e) => setAddName(e.currentTarget.value)}
+                onKeyDown={(e) => e.key === "Enter" && addWard()}
+              />
+              <Select
+                label="Kategori"
+                data={categoryOptions}
+                value={addCategory}
+                onChange={(val) => setAddCategory(val || "ward")}
+              />
+              <Group justify="flex-end" gap="sm">
                 <Button
-                  size="sm"
-                  bg="rgba(0,0,0,0.04)"
-                  border="1px solid rgba(231,234,238,0.10)"
-                  color="#a3aab3"
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<IconX size={14} />}
                   onClick={() => { setShowAdd(false); setError(""); }}
                 >
-                  <X size={14} /> Batal
+                  Batal
                 </Button>
                 <Button
-                  size="sm"
-                  bg="#4f87ff"
-                  color="white"
-                  _hover={{ bg: "#3d6fcc" }}
+                  leftSection={<IconDeviceFloppy size={14} />}
                   onClick={addWard}
-                  disabled={saving}
+                  loading={saving}
                 >
-                  <Save size={14} /> Simpan
+                  Simpan
                 </Button>
-              </HStack>
-            </VStack>
-          </Box>
+              </Group>
+            </Stack>
+          </Alert>
         )}
 
-        <Box position="relative">
-          <Search size={16} color="#a3aab3" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-          <Input
-            placeholder="Cari wad/jabatan..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            pl={9}
-            bg="#1c1f22"
-            border="1px solid rgba(231,234,238,0.10)"
-            color="#e7eaee"
-            _focus={{ borderColor: "#4f87ff", boxShadow: "0 6px 18px rgba(79,135,255,0.18)" }}
-            maxW="360px"
-          />
-        </Box>
+        <TextInput
+          placeholder="Cari wad/jabatan..."
+          leftSection={<IconSearch size={16} />}
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          maw={360}
+        />
 
-        <Box overflowX="auto">
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th
-                  style={thStyle}
+        <TableScrollContainer minWidth={500}>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th
+                  style={{ cursor: "pointer", userSelect: "none" }}
                   onClick={() => handleSort("name")}
                 >
                   Nama {sortKey === "name" && (sortDir === "asc" ? "▲" : "▼")}
-                </th>
-                <th
-                  style={thStyle}
+                </Table.Th>
+                <Table.Th
+                  style={{ cursor: "pointer", userSelect: "none" }}
                   onClick={() => handleSort("category")}
                 >
                   Kategori {sortKey === "category" && (sortDir === "asc" ? "▲" : "▼")}
-                </th>
-                <th style={{ ...thStyle, textAlign: "right", cursor: "default" }}>
+                </Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>
                   Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={3} style={{ ...tdStyle, textAlign: "center", color: "#a3aab3" }}>
-                    Memuat data...
-                  </td>
-                </tr>
+                <Table.Tr>
+                  <Table.Td colSpan={3}>
+                    <Text c="dimmed" ta="center">Memuat data...</Text>
+                  </Table.Td>
+                </Table.Tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={3} style={{ ...tdStyle, textAlign: "center", color: "#a3aab3" }}>
-                    Tiada wad/jabatan ditemui
-                  </td>
-                </tr>
+                <Table.Tr>
+                  <Table.Td colSpan={3}>
+                    <Text c="dimmed" ta="center">Tiada wad/jabatan ditemui</Text>
+                  </Table.Td>
+                </Table.Tr>
               ) : (
                 filtered.map((w) => (
-                  <tr key={w.id} style={{ transition: "background 0.2s" }}>
-                    <td style={tdStyle}>
+                  <Table.Tr key={w.id}>
+                    <Table.Td>
                       {editingId === w.id ? (
-                        <Input
-                          size="sm"
+                        <TextInput
+                          size="xs"
                           value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          bg="#123a66"
-                          border="1px solid rgba(79,135,255,0.12)"
-                          color="#e7eaee"
-                          _focus={{ borderColor: "#4f87ff" }}
+                          onChange={(e) => setEditName(e.currentTarget.value)}
                           onKeyDown={(e) => e.key === "Enter" && saveEdit(w.id)}
                         />
                       ) : (
-                        <Text fontWeight={500}>{w.name}</Text>
+                        <Text fw={500}>{w.name}</Text>
                       )}
-                    </td>
-                    <td style={tdStyle}>
+                    </Table.Td>
+                    <Table.Td>
                       {editingId === w.id ? (
-                        <select
+                        <Select
+                          size="xs"
+                          data={categoryOptions}
                           value={editCategory}
-                          onChange={(e) => setEditCategory(e.target.value)}
-                          style={{
-                            padding: "6px 8px",
-                            borderRadius: "10px",
-                            border: "1px solid rgba(79,135,255,0.12)",
-                            background: "#123a66",
-                            color: "#e7eaee",
-                            fontSize: "13px",
-                            outline: "none",
-                            width: "auto",
-                          }}
-                        >
-                          <option value="ward">Wad</option>
-                          <option value="not_ward">Bukan Wad</option>
-                        </select>
+                          onChange={(val) => setEditCategory(val || "ward")}
+                        />
                       ) : (
                         <Badge
-                          bg={w.category === "ward" ? "rgba(76,175,80,0.15)" : "rgba(163,170,179,0.15)"}
-                          color={w.category === "ward" ? "#4caf50" : "#a3aab3"}
-                          border="1px solid"
-                          borderColor={w.category === "ward" ? "rgba(76,175,80,0.3)" : "rgba(163,170,179,0.3)"}
-                          px={2.5}
-                          py={0.5}
-                          borderRadius="999px"
-                          fontSize="12px"
-                          fontWeight={600}
+                          color={w.category === "ward" ? "green" : "gray"}
+                          variant="light"
                         >
                           {w.category === "ward" ? "Wad" : "Bukan Wad"}
                         </Badge>
                       )}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: "right" }}>
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}>
                       {editingId === w.id ? (
-                        <HStack justify="flex-end" gap={1}>
-                          <IconButton
-                            aria-label="Simpan"
+                        <Group justify="flex-end" gap="xs">
+                          <ActionIcon
+                            color="green"
+                            variant="filled"
                             size="sm"
-                            bg="#4caf50"
-                            color="white"
-                            _hover={{ bg: "#43a047" }}
                             onClick={() => saveEdit(w.id)}
-                            disabled={saving}
+                            loading={saving}
                           >
-                            <Save size={14} />
-                          </IconButton>
-                          <IconButton
-                            aria-label="Batal"
+                            <IconDeviceFloppy size={14} />
+                          </ActionIcon>
+                          <ActionIcon
+                            color="gray"
+                            variant="subtle"
                             size="sm"
-                            bg="rgba(0,0,0,0.04)"
-                            border="1px solid rgba(231,234,238,0.10)"
-                            color="#a3aab3"
-                            _hover={{ bg: "rgba(0,0,0,0.08)" }}
                             onClick={cancelEdit}
                           >
-                            <X size={14} />
-                          </IconButton>
-                        </HStack>
+                            <IconX size={14} />
+                          </ActionIcon>
+                        </Group>
                       ) : (
-                        <HStack justify="flex-end" gap={1}>
-                          <IconButton
-                            aria-label="Edit"
+                        <Group justify="flex-end" gap="xs">
+                          <ActionIcon
+                            color="blue"
+                            variant="light"
                             size="sm"
-                            bg="rgba(79,135,255,0.12)"
-                            color="#4f87ff"
-                            _hover={{ bg: "rgba(79,135,255,0.22)" }}
                             onClick={() => startEdit(w)}
                           >
-                            <Edit size={14} />
-                          </IconButton>
-                          <IconButton
-                            aria-label="Padam"
+                            <IconEdit size={14} />
+                          </ActionIcon>
+                          <ActionIcon
+                            color="red"
+                            variant="light"
                             size="sm"
-                            bg="rgba(239,83,80,0.12)"
-                            color="#ef5350"
-                            _hover={{ bg: "rgba(239,83,80,0.22)" }}
                             onClick={() => deleteWard(w.id, w.name)}
-                            disabled={saving}
+                            loading={saving}
                           >
-                            <Trash2 size={14} />
-                          </IconButton>
-                        </HStack>
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        </Group>
                       )}
-                    </td>
-                  </tr>
+                    </Table.Td>
+                  </Table.Tr>
                 ))
               )}
-            </tbody>
-          </table>
-        </Box>
+            </Table.Tbody>
+          </Table>
+        </TableScrollContainer>
 
-        <Text fontSize="12px" color="#a3aab3">
+        <Text size="xs" c="dimmed">
           Jumlah: {filtered.length} wad/jabatan
         </Text>
-      </VStack>
+      </Stack>
     </AppShell>
   );
 }

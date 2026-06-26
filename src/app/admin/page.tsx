@@ -2,17 +2,27 @@
 
 import { useState, useEffect } from "react";
 import {
-  Box,
-  VStack,
-  HStack,
-  Input,
-  Button,
+  Stack,
+  Group,
+  Paper,
   Text,
   Badge,
-  Heading,
+  Title,
   Flex,
-} from "@chakra-ui/react";
-import { Shield, ShieldCheck, Database, Settings, LogOut, HardDrive } from "lucide-react";
+  Button,
+  PasswordInput,
+  Alert,
+  ThemeIcon,
+  SimpleGrid,
+} from "@mantine/core";
+import {
+  IconShield,
+  IconShieldCheck,
+  IconDatabase,
+  IconSettings,
+  IconLogout,
+  IconDeviceFloppy,
+} from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
 interface MaintenanceData {
@@ -165,305 +175,223 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <AppShell>
-        <VStack align="stretch" gap={5} maxW="480px" mx="auto">
-          <HStack gap={2} justify="center">
-            <Shield size={24} color="#4f87ff" />
-            <Heading size="lg">Pentadbiran</Heading>
-          </HStack>
+        <Stack gap="lg" maw={480} mx="auto">
+          <Group gap="sm" justify="center">
+            <IconShield size={24} color="#4f87ff" />
+            <Title order={2}>Pentadbiran</Title>
+          </Group>
 
-          <Box
-            bg="#1c1f22"
-            border="1px solid rgba(231,234,238,0.10)"
-            borderRadius="14px"
-            p={6}
-          >
-            <VStack align="stretch" gap={4}>
-              <Box textAlign="center">
-                <ShieldCheck size={40} color="#4f87ff" style={{ margin: "0 auto 12px" }} />
-                <Text fontWeight={600} mb={1}>Kata Laluan Pentadbir</Text>
-                <Text fontSize="sm" color="#a3aab3">Masukkan kata laluan pentadbir untuk meneruskan.</Text>
-              </Box>
+          <Paper shadow="sm" p="xl" radius="md">
+            <Stack gap="md">
+              <Stack align="center" gap="xs">
+                <ThemeIcon size={56} variant="light" color="blue">
+                  <IconShieldCheck size={32} />
+                </ThemeIcon>
+                <Text fw={600}>Kata Laluan Pentadbir</Text>
+                <Text size="sm" c="dimmed">Masukkan kata laluan pentadbir untuk meneruskan.</Text>
+              </Stack>
 
               {loginError && (
-                <Box bg="rgba(239,83,80,0.12)" border="1px solid rgba(239,83,80,0.3)" borderRadius="10px" px={4} py={3}>
-                  <Text color="#ef5350" fontSize="sm">{loginError}</Text>
-                </Box>
+                <Alert color="red" variant="light">
+                  {loginError}
+                </Alert>
               )}
 
-              <Box>
-                <Text fontSize="sm" color="#a3aab3" mb={1}>Kata Laluan</Text>
-                <Input
-                  type="password"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="Masukkan kata laluan..."
-                  bg="#123a66"
-                  border="1px solid rgba(79,135,255,0.12)"
-                  color="#e7eaee"
-                  _focus={{ borderColor: "#4f87ff", boxShadow: "0 6px 18px rgba(79,135,255,0.18)" }}
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                />
-              </Box>
+              <PasswordInput
+                label="Kata Laluan"
+                placeholder="Masukkan kata laluan..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.currentTarget.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              />
 
               <Button
-                bg="#4f87ff"
-                color="white"
-                _hover={{ bg: "#3d6fcc" }}
+                fullWidth
                 onClick={handleLogin}
-                disabled={loginLoading}
-                w="full"
+                loading={loginLoading}
+                leftSection={<IconShieldCheck size={16} />}
               >
-                <ShieldCheck size={16} />
                 {loginLoading ? "Memeriksa..." : "Log Masuk"}
               </Button>
-            </VStack>
-          </Box>
-        </VStack>
+            </Stack>
+          </Paper>
+        </Stack>
       </AppShell>
     );
   }
 
   return (
     <AppShell>
-      <VStack align="stretch" gap={5}>
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack gap={2}>
-            <ShieldCheck size={22} color="#4caf50" />
-            <Heading size="lg">Pentadbiran</Heading>
-            <Badge
-              bg="rgba(76,175,80,0.15)"
-              color="#4caf50"
-              border="1px solid"
-              borderColor="rgba(76,175,80,0.3)"
-              px={2.5}
-              py={0.5}
-              borderRadius="999px"
-              fontSize="12px"
-              fontWeight={600}
-            >
+      <Stack gap="lg">
+        <Flex justify="space-between" align="center" wrap="wrap" gap="md">
+          <Group gap="sm">
+            <ThemeIcon size="lg" variant="light" color="green">
+              <IconShieldCheck size={22} />
+            </ThemeIcon>
+            <Title order={2}>Pentadbiran</Title>
+            <Badge color="green" variant="light">
               Disahkan
             </Badge>
-          </HStack>
+          </Group>
           <Button
             size="sm"
-            bg="rgba(239,83,80,0.12)"
-            color="#ef5350"
-            border="1px solid rgba(239,83,80,0.3)"
-            _hover={{ bg: "rgba(239,83,80,0.22)" }}
+            variant="light"
+            color="red"
+            leftSection={<IconLogout size={14} />}
             onClick={handleLogout}
           >
-            <LogOut size={14} /> Log Keluar
+            Log Keluar
           </Button>
         </Flex>
 
         {dataError && (
-          <Box bg="rgba(239,83,80,0.12)" border="1px solid rgba(239,83,80,0.3)" borderRadius="10px" px={4} py={3}>
-            <Text color="#ef5350" fontSize="sm">{dataError}</Text>
-          </Box>
+          <Alert color="red" variant="light">
+            {dataError}
+          </Alert>
         )}
 
-        <HStack gap={3} mb={2}>
+        <Group gap="md" mb="sm">
           <Button
             size="sm"
-            bg="rgba(79,135,255,0.12)"
-            color="#4f87ff"
-            border="1px solid rgba(79,135,255,0.2)"
-            _hover={{ bg: "rgba(79,135,255,0.22)" }}
+            variant="light"
+            color="blue"
+            leftSection={<IconDatabase size={14} />}
             onClick={fetchData}
-            disabled={loading}
+            loading={loading}
           >
-            <Database size={14} /> Muat Semula Data
+            Muat Semula Data
           </Button>
-        </HStack>
+        </Group>
 
-        <Box
-          bg="#1c1f22"
-          border="1px solid rgba(231,234,238,0.10)"
-          borderRadius="14px"
-          p={5}
-        >
-          <HStack gap={2} mb={4}>
-            <Database size={18} color="#4f87ff" />
-            <Heading size="md">Status Pangkalan Data</Heading>
-          </HStack>
+        <Paper shadow="sm" p="md" radius="md">
+          <Group gap="sm" mb="md">
+            <IconDatabase size={18} color="#4f87ff" />
+            <Title order={4}>Status Pangkalan Data</Title>
+          </Group>
           {loading && !data ? (
-            <Text color="#a3aab3" fontSize="sm">Memuat data...</Text>
+            <Text size="sm" c="dimmed">Memuat data...</Text>
           ) : data ? (
-            <HStack flexWrap="wrap" gap={3}>
+            <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
               {[
-                { label: "Wad/Jabatan", count: data.sizes.wards, icon: "🏥" },
-                { label: "Item/Ubat", count: data.sizes.items, icon: "💊" },
-                { label: "Pesanan", count: data.sizes.orders, icon: "📋" },
-                { label: "Katalog", count: data.sizes.catalog, icon: "📖" },
+                { label: "Wad/Jabatan", count: data.sizes.wards },
+                { label: "Item/Ubat", count: data.sizes.items },
+                { label: "Pesanan", count: data.sizes.orders },
+                { label: "Katalog", count: data.sizes.catalog },
               ].map((s) => (
-                <Box
-                  key={s.label}
-                  bg="#123a66"
-                  border="1px solid rgba(79,135,255,0.12)"
-                  borderRadius="10px"
-                  p={4}
-                  minW="130px"
-                  flex={1}
-                >
-                  <Text fontSize="sm" color="#a3aab3" mb={1}>{s.icon} {s.label}</Text>
-                  <Text fontSize="2xl" fontWeight={700}>{s.count.toLocaleString()}</Text>
-                </Box>
+                <Paper key={s.label} p="md" radius="md" withBorder>
+                  <Text size="sm" c="dimmed" mb={4}>{s.label}</Text>
+                  <Text size="xl" fw={700}>{s.count.toLocaleString()}</Text>
+                </Paper>
               ))}
-            </HStack>
+            </SimpleGrid>
           ) : (
-            <Text color="#a3aab3" fontSize="sm">Tekan &quot;Muat Semula Data&quot; untuk memaparkan statistik.</Text>
+            <Text size="sm" c="dimmed">Tekan &quot;Muat Semula Data&quot; untuk memaparkan statistik.</Text>
           )}
-        </Box>
+        </Paper>
 
-        <Box
-          bg="#1c1f22"
-          border="1px solid rgba(231,234,238,0.10)"
-          borderRadius="14px"
-          p={5}
-        >
-          <HStack gap={2} mb={4}>
-            <Settings size={18} color="#4f87ff" />
-            <Heading size="md">Tetapan Penyelenggaraan</Heading>
-          </HStack>
+        <Paper shadow="sm" p="md" radius="md">
+          <Group gap="sm" mb="md">
+            <IconSettings size={18} color="#4f87ff" />
+            <Title order={4}>Tetapan Penyelenggaraan</Title>
+          </Group>
 
-          <VStack align="stretch" gap={4}>
+          <Stack gap="md">
             {data && (
-              <HStack flexWrap="wrap" gap={3}>
-                <Box flex={1} minW="120px" p={3} bg="#123a66" borderRadius="10px" border="1px solid rgba(79,135,255,0.12)">
-                  <Text fontSize="xs" color="#a3aab3">Sandaran Auto</Text>
+              <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+                <Paper p="md" radius="md" withBorder>
+                  <Text size="xs" c="dimmed">Sandaran Auto</Text>
                   <Badge
-                    bg={data.config.auto_backup ? "rgba(76,175,80,0.15)" : "rgba(163,170,179,0.15)"}
-                    color={data.config.auto_backup ? "#4caf50" : "#a3aab3"}
-                    border="1px solid"
-                    borderColor={data.config.auto_backup ? "rgba(76,175,80,0.3)" : "rgba(163,170,179,0.3)"}
-                    mt={1}
-                    px={2}
-                    py={0.5}
-                    borderRadius="999px"
-                    fontSize="11px"
-                    fontWeight={600}
+                    color={data.config.auto_backup ? "green" : "gray"}
+                    variant="light"
+                    mt={4}
                   >
                     {data.config.auto_backup ? "Aktif" : "Nyahaktif"}
                   </Badge>
-                </Box>
-                <Box flex={1} minW="120px" p={3} bg="#123a66" borderRadius="10px" border="1px solid rgba(79,135,255,0.12)">
-                  <Text fontSize="xs" color="#a3aab3">Selang Sandaran</Text>
-                  <Text fontWeight={600} mt={1}>{data.config.backup_interval_hours} jam</Text>
-                </Box>
-                <Box flex={1} minW="120px" p={3} bg="#123a66" borderRadius="10px" border="1px solid rgba(79,135,255,0.12)">
-                  <Text fontSize="xs" color="#a3aab3">Pengekalan</Text>
-                  <Text fontWeight={600} mt={1}>{data.config.retention_days} hari</Text>
-                </Box>
-              </HStack>
+                </Paper>
+                <Paper p="md" radius="md" withBorder>
+                  <Text size="xs" c="dimmed">Selang Sandaran</Text>
+                  <Text fw={600} mt={4}>{data.config.backup_interval_hours} jam</Text>
+                </Paper>
+                <Paper p="md" radius="md" withBorder>
+                  <Text size="xs" c="dimmed">Pengekalan</Text>
+                  <Text fw={600} mt={4}>{data.config.retention_days} hari</Text>
+                </Paper>
+              </SimpleGrid>
             )}
 
-            <Box borderTop="1px solid rgba(231,234,238,0.10)" pt={4}>
-              <Text fontWeight={600} mb={3}>Tukar Kata Laluan Pentadbir</Text>
+            <Paper p="md" radius="md" withBorder>
+              <Text fw={600} mb="md">Tukar Kata Laluan Pentadbir</Text>
               {passwordMsg && (
-                <Box
-                  bg={passwordMsg.includes("berjaya") ? "rgba(76,175,80,0.12)" : "rgba(239,83,80,0.12)"}
-                  border={`1px solid ${passwordMsg.includes("berjaya") ? "rgba(76,175,80,0.3)" : "rgba(239,83,80,0.3)"}`}
-                  borderRadius="10px"
-                  px={4}
-                  py={3}
-                  mb={3}
+                <Alert
+                  color={passwordMsg.includes("berjaya") ? "green" : "red"}
+                  variant="light"
+                  mb="md"
                 >
-                  <Text
-                    color={passwordMsg.includes("berjaya") ? "#4caf50" : "#ef5350"}
-                    fontSize="sm"
-                  >
-                    {passwordMsg}
-                  </Text>
-                </Box>
+                  {passwordMsg}
+                </Alert>
               )}
-              <VStack align="stretch" gap={3} maxW="400px">
-                <Box>
-                  <Text fontSize="sm" color="#a3aab3" mb={1}>Kata Laluan Baru</Text>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Kata laluan baru..."
-                    bg="#123a66"
-                    border="1px solid rgba(79,135,255,0.12)"
-                    color="#e7eaee"
-                    _focus={{ borderColor: "#4f87ff" }}
-                  />
-                </Box>
-                <Box>
-                  <Text fontSize="sm" color="#a3aab3" mb={1}>Sahkan Kata Laluan</Text>
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Sahkan kata laluan..."
-                    bg="#123a66"
-                    border="1px solid rgba(79,135,255,0.12)"
-                    color="#e7eaee"
-                    _focus={{ borderColor: "#4f87ff" }}
-                    onKeyDown={(e) => e.key === "Enter" && changePassword()}
-                  />
-                </Box>
-                <Button
-                  size="sm"
-                  bg="#4f87ff"
-                  color="white"
-                  _hover={{ bg: "#3d6fcc" }}
-                  onClick={changePassword}
-                  disabled={passwordSaving}
-                  alignSelf="flex-start"
-                >
-                  <Settings size={14} /> Kemaskini Kata Laluan
-                </Button>
-              </VStack>
-            </Box>
-          </VStack>
-        </Box>
+              <Stack gap="sm" maw={400}>
+                <PasswordInput
+                  label="Kata Laluan Baru"
+                  placeholder="Kata laluan baru..."
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.currentTarget.value)}
+                />
+                <PasswordInput
+                  label="Sahkan Kata Laluan"
+                  placeholder="Sahkan kata laluan..."
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === "Enter" && changePassword()}
+                />
+                <div>
+                  <Button
+                    size="sm"
+                    leftSection={<IconSettings size={14} />}
+                    onClick={changePassword}
+                    loading={passwordSaving}
+                  >
+                    Kemaskini Kata Laluan
+                  </Button>
+                </div>
+              </Stack>
+            </Paper>
+          </Stack>
+        </Paper>
 
-        <Box
-          bg="#1c1f22"
-          border="1px solid rgba(231,234,238,0.10)"
-          borderRadius="14px"
-          p={5}
-        >
-          <HStack gap={2} mb={3}>
-            <HardDrive size={18} color="#4f87ff" />
-            <Heading size="md">Pengurusan Sandaran</Heading>
-          </HStack>
-          <Box bg="#123a66" border="1px solid rgba(79,135,255,0.12)" borderRadius="10px" p={4}>
-            <VStack align="stretch" gap={3}>
-              <Text fontSize="sm" color="#e7eaee">
+        <Paper shadow="sm" p="md" radius="md">
+          <Group gap="sm" mb="md">
+            <IconDeviceFloppy size={18} color="#4f87ff" />
+            <Title order={4}>Pengurusan Sandaran</Title>
+          </Group>
+          <Paper p="md" radius="md" withBorder>
+            <Stack gap="md">
+              <Text size="sm">
                 Sistem ini menggunakan MongoDB Atlas sebagai pangkalan data. MongoDB Atlas menyediakan sandaran automatik yang terbina dalam:
               </Text>
-              <VStack align="stretch" gap={2} pl={4}>
-                <HStack gap={2}>
-                  <Badge bg="rgba(76,175,80,0.15)" color="#4caf50" border="1px solid" borderColor="rgba(76,175,80,0.3)" px={2} py={0.5} borderRadius="999px" fontSize="11px" fontWeight={600}>
-                    Aktif
-                  </Badge>
-                  <Text fontSize="sm" color="#a3aab3">Sandaran Harian - Atlas M10+</Text>
-                </HStack>
-                <HStack gap={2}>
-                  <Badge bg="rgba(79,135,255,0.15)" color="#4f87ff" border="1px solid" borderColor="rgba(79,135,255,0.3)" px={2} py={0.5} borderRadius="999px" fontSize="11px" fontWeight={600}>
-                    Terbina Dalam
-                  </Badge>
-                  <Text fontSize="sm" color="#a3aab3">Point-in-time recovery tersedia</Text>
-                </HStack>
-                <HStack gap={2}>
-                  <Badge bg="rgba(240,173,78,0.15)" color="#f0ad4e" border="1px solid" borderColor="rgba(240,173,78,0.3)" px={2} py={0.5} borderRadius="999px" fontSize="11px" fontWeight={600}>
-                    Manual
-                  </Badge>
-                  <Text fontSize="sm" color="#a3aab3">Pulihan boleh dilakukan melalui MongoDB Atlas Console</Text>
-                </HStack>
-              </VStack>
+              <Stack gap="xs" ml="md">
+                <Group gap="sm">
+                  <Badge color="green" variant="light">Aktif</Badge>
+                  <Text size="sm" c="dimmed">Sandaran Harian - Atlas M10+</Text>
+                </Group>
+                <Group gap="sm">
+                  <Badge color="blue" variant="light">Terbina Dalam</Badge>
+                  <Text size="sm" c="dimmed">Point-in-time recovery tersedia</Text>
+                </Group>
+                <Group gap="sm">
+                  <Badge color="yellow" variant="light">Manual</Badge>
+                  <Text size="sm" c="dimmed">Pulihan boleh dilakukan melalui MongoDB Atlas Console</Text>
+                </Group>
+              </Stack>
               {data && (
-                <Text fontSize="xs" color="#a3aab3" mt={2}>
+                <Text size="xs" c="dimmed">
                   Sandaran seterusnya: {new Date(data.nextBackup).toLocaleString("ms-MY")}
                 </Text>
               )}
-            </VStack>
-          </Box>
-        </Box>
-      </VStack>
+            </Stack>
+          </Paper>
+        </Paper>
+      </Stack>
     </AppShell>
   );
 }

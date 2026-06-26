@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import "./globals.css";
-import { Provider } from "./provider";
+import { Providers } from "./provider";
 
 export const metadata: Metadata = {
   title: "Bekalan Farmasi",
@@ -13,12 +14,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ms" suppressHydrationWarning>
+    <html lang="ms" {...mantineHtmlProps}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <ColorSchemeScript />
       </head>
       <body>
-        <Provider>{children}</Provider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
