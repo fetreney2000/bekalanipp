@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     const wards = await db.collection("wards").find({}).sort({ name: 1 }).toArray();
-    const catalogEntries = await db.collection("catalog").find({}).toArray();
+    const catalogEntries = await db.collection("ward_catalog").find({}).toArray();
 
     const ordersThisMonth = await db
       .collection("orders")
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const itemsCount = allItems.length;
 
     const itemStatus: {
-      item_id: string;
+      item_id: number;
       item_name: string;
       total_used: number;
       total_quota: number;
@@ -53,25 +53,32 @@ export async function GET(request: NextRequest) {
     }[] = [];
 
     for (const item of allItems) {
-      const itemCatalog = catalogEntries.filter((c) => c.item_id === item._id.toString());
+      const itemCatalog = catalogEntries.filter((c: any) => c.item_id === item.id);
       const wardsUsing = itemCatalog.length;
       let totalQuota = 0;
       for (const cat of itemCatalog) {
-        totalQuota += cat.monthly_quota || 0;
+        totalQuota += (cat as any).monthly_quota || 0;
       }
 
       const usageAgg = await db
-        .collection("orders")
+        .collection("order_items")
         .aggregate([
           {
-            $match: {
-              order_date: { $gte: startOfMonth, $lte: endOfMonth },
-              "items.item_id": item._id.toString(),
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              foreignField: "id",
+              as: "order",
             },
           },
-          { $unwind: "$items" },
-          { $match: { "items.item_id": item._id.toString() } },
-          { $group: { _id: null, total: { $sum: "$items.quantity" } } },
+          { $unwind: "$order" },
+          {
+            $match: {
+              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+              item_id: item.id,
+            },
+          },
+          { $group: { _id: null, total: { $sum: "$quantity" } } },
         ])
         .toArray();
 
@@ -86,7 +93,7 @@ export async function GET(request: NextRequest) {
       }
 
       itemStatus.push({
-        item_id: item._id.toString(),
+        item_id: item.id,
         item_name: item.name,
         total_used: totalUsed,
         total_quota: totalQuota,
@@ -110,12 +117,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const wardUsage: { ward_id: string; ward_name: string; order_count: number }[] = [];
+    const wardUsage: { ward_id: number; ward_name: string; order_count: number }[] = [];
 
     for (const ward of wards) {
-      const wardOrders = ordersThisMonth.filter((o) => o.ward_id === ward._id.toString());
+      const wardOrders = ordersThisMonth.filter((o: any) => o.ward_id === ward.id);
       wardUsage.push({
-        ward_id: ward._id.toString(),
+        ward_id: ward.id,
         ward_name: ward.name,
         order_count: wardOrders.length,
       });

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { z } from "zod";
-import { ObjectId } from "mongodb";
 
 const masaPejabatSchema = z.object({
   masa_pejabat: z.boolean(),
@@ -13,8 +12,9 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const numberId = Number(id);
 
-    if (!ObjectId.isValid(id)) {
+    if (isNaN(numberId)) {
       return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
     }
 
@@ -33,7 +33,7 @@ export async function PATCH(
     const result = await db
       .collection("orders")
       .findOneAndUpdate(
-        { _id: new ObjectId(id) },
+        { id: numberId },
         {
           $set: {
             masa_pejabat: parsed.data.masa_pejabat,
@@ -52,7 +52,7 @@ export async function PATCH(
 
     return NextResponse.json({
       ok: true,
-      id,
+      id: numberId,
       masa_pejabat: result.masa_pejabat,
     });
   } catch (error) {

@@ -1,36 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 
-interface ReportSummary {
-  item_id: string;
-  item_name: string;
-  quantity: number;
-}
-
-interface WardSummary {
-  ward_id: string;
-  ward_name: string;
-  quantity: number;
-}
-
-interface MasaSummary {
-  masa_pejabat: boolean;
-  quantity: number;
-}
-
-interface MasaCatSummary {
-  ward_category: string;
-  masa_pejabat: boolean;
-  quantity: number;
-}
-
-interface Recommendation {
-  item_id: string;
-  item_name: string;
-  avg_per_day: number;
-  recommended_stock: number;
-}
-
 function getDateRange(
   type: string,
   date?: string | null,
@@ -113,98 +83,209 @@ export async function GET(request: NextRequest) {
       .find({ order_date: { $gte: start, $lte: end } })
       .toArray();
 
+    const orderIds = orders.map((o: any) => o.id);
+    const allOrderItems = orderIds.length > 0
+      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
+      : [];
+
+    const orderItemsByOrder = new Map<number, any[]>();
+    for (const oi of allOrderItems) {
+      const oid = oi.order_id;
+      if (!orderItemsByOrder.has(oid)) orderItemsByOrder.set(oid, []);
+      orderItemsByOrder.get(oid)!.push(oi);
+    }
+
     const items = await db.collection("items").find({}).toArray();
     const wards = await db.collection("wards").find({}).toArray();
 
-    const itemMap = new Map(items.map((i) => [i._id.toString(), i.name]));
+    const itemMap = new Map(items.map((i: any) => [i.id, i.name]));
     const wardMap = new Map(
-      wards.map((w) => [w._id.toString(), { name: w.name, category: w.category }])
+      wards.map((w: any) => [w.id, { name: w.name, category: w.category }])
     );
 
-    const summaryMap = new Map<string, number>();
-    const wardSummaryMap = new Map<string, number>();
-    const masaMap = new Map<string, number>();
-    const masaCatMap = new Map<string, number>();
+    const summaryMap = new Map<string, { ward_id: number; ward_name: string; order_type: string; order_count: number; bil_item: number; jumlah_item: number }>();
+    const wardSummaryMap = new Map<number, { ward_id: number; ward_name: string; order_count: number; bil_item: number; jumlah_item: number }>();
+    const masaMap = new Map<string, { order_count: number; bil_item: number; jumlah_item: number }>();
+    const masaCatMap = new Map<string, { order_count: number; bil_item: number; jumlah_item: number }>();
 
     let totalQuantity = 0;
-    const totalOrders = orders.length;
+    let totalOrderCount = 0;
+    let totalBilItem = 0;
 
     for (const order of orders) {
-      const wardInfo = wardMap.get(order.ward_id);
+      const wardInfo = wardMap.get(Number(order.ward_id));
       const isMasaPejabat = order.masa_pejabat || false;
-      const masaKey = isMasaPejabat ? "pejabat" : "bukan_pejabat";
+      const masaKey = isMasaPejabat ? "masa_pejabat" : "selepas_masa_pejabat";
+      const wardId = Number(order.ward_id);
+      const orderType = order.order_type;
 
-      for (const item of order.items || []) {
-        const itemId = item.item_id;
-        const qty = item.quantity;
+      const orderItems = orderItemsByOrder.get(order.id) || [];
+
+      const summaryKey = `${wardId}_${orderType}`;
+      if (!summaryMap.has(summaryKey)) {
+        summaryMap.set(summaryKey, {
+          ward_id: wardId,
+          ward_name: wardInfo?.name || "Unknown",
+          order_type: orderType,
+          order_count: 0,
+          bil_item: 0,
+          jumlah_item: 0,
+        });
+      }
+      const summaryEntry = summaryMap.get(summaryKey)!;
+      summaryEntry.order_count += 1;
+
+      if (!wardSummaryMap.has(wardId)) {
+        wardSummaryMap.set(wardId, {
+          ward_id: wardId,
+          ward_name: wardInfo?.name || "Unknown",
+          order_count: 0,
+          bil_item: 0,
+          jumlah_item: 0,
+        });
+      }
+      const wardEntry = wardSummaryMap.get(wardId)!;
+      wardEntry.order_count += 1;
+
+      if (!masaMap.has(masaKey)) {
+        masaMap.set(masaKey, { order_count: 0, bil_item: 0, jumlah_item: 0 });
+      }
+
+      const cat = wardInfo?.category || "unknown";
+      const masaCatKey = `${cat}_${masaKey}`;
+      if (!masaCatMap.has(masaCatKey)) {
+        masaCatMap.set(masaCatKey, { order_count: 0, bil_item: 0, jumlah_item: 0 });
+      }
+
+      for (const oi of orderItems) {
+        const qty = oi.quantity;
         totalQuantity += qty;
+        totalBilItem += 1;
 
-        summaryMap.set(itemId, (summaryMap.get(itemId) || 0) + qty);
-        wardSummaryMap.set(
-          order.ward_id,
-          (wardSummaryMap.get(order.ward_id) || 0) + qty
-        );
+        summaryEntry.bil_item += 1;
+        summaryEntry.jumlah_item += qty;
+        wardEntry.bil_item += 1;
+        wardEntry.jumlah_item += qty;
 
-        masaMap.set(masaKey, (masaMap.get(masaKey) || 0) + qty);
+        const masaStats = masaMap.get(masaKey)!;
+        masaStats.bil_item += 1;
+        masaStats.jumlah_item += qty;
 
-        const cat = wardInfo?.category || "unknown";
-        const masaCatKey = `${cat}_${masaKey}`;
-        masaCatMap.set(masaCatKey, (masaCatMap.get(masaCatKey) || 0) + qty);
+        const masaCatStats = masaCatMap.get(masaCatKey)!;
+        masaCatStats.bil_item += 1;
+        masaCatStats.jumlah_item += qty;
       }
     }
 
-    const summary: ReportSummary[] = Array.from(summaryMap.entries())
-      .map(([itemId, quantity]) => ({
-        item_id: itemId,
-        item_name: itemMap.get(itemId) || "Unknown",
-        quantity,
-      }))
-      .sort((a, b) => b.quantity - a.quantity);
+    totalOrderCount = orders.length;
 
-    const totals_by_ward: WardSummary[] = Array.from(wardSummaryMap.entries())
-      .map(([wardId, quantity]) => ({
-        ward_id: wardId,
-        ward_name: wardMap.get(wardId)?.name || "Unknown",
-        quantity,
-      }))
-      .sort((a, b) => b.quantity - a.quantity);
+    const summary = Array.from(summaryMap.values())
+      .sort((a, b) => a.ward_name.localeCompare(b.ward_name) || a.order_type.localeCompare(b.order_type));
 
-    const totals_by_masa: MasaSummary[] = Array.from(masaMap.entries()).map(
-      ([key, quantity]) => ({
-        masa_pejabat: key === "pejabat",
-        quantity,
-      })
-    );
+    const totals_by_ward = Array.from(wardSummaryMap.values())
+      .sort((a, b) => a.ward_name.localeCompare(b.ward_name));
 
-    const totals_by_masa_by_cat: MasaCatSummary[] = Array.from(
-      masaCatMap.entries()
-    ).map(([key, quantity]) => {
-      const parts = key.split("_");
-      const masaKey = parts[parts.length - 1];
-      const cat = parts.slice(0, -1).join("_");
-      return {
-        ward_category: cat,
-        masa_pejabat: masaKey === "pejabat",
-        quantity,
+    const totals_by_masa: Record<string, { order_count: number; bil_item: number; jumlah_item: number }> = {
+      masa_pejabat: masaMap.get("masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+      selepas_masa_pejabat: masaMap.get("selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+    };
+
+    const totals_by_masa_by_cat: Record<string, Record<string, { order_count: number; bil_item: number; jumlah_item: number }>> = {
+      ward: {
+        masa_pejabat: masaCatMap.get("ward_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+        selepas_masa_pejabat: masaCatMap.get("ward_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+      },
+      not_ward: {
+        masa_pejabat: masaCatMap.get("not_ward_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+        selepas_masa_pejabat: masaCatMap.get("not_ward_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+      },
+    };
+
+    // Recommendations based on monthly usage
+    const catalogEntries = await db.collection("ward_catalog").find({ monthly_quota: { $ne: null } }).toArray();
+    const monthlyUsage: Record<string, { ward_name: string; item_name: string; current_quota: number; values: number[] }> = {};
+
+    for (const catEntry of catalogEntries) {
+      const wardId = catEntry.ward_id;
+      const itemId = catEntry.item_id;
+      const quota = catEntry.monthly_quota;
+
+      const wardDoc = wards.find((w: any) => w.id === wardId);
+      const itemDoc = items.find((i: any) => i.id === itemId);
+
+      const key = `${wardId}:${itemId}`;
+      monthlyUsage[key] = {
+        ward_name: wardDoc?.name || "Unknown",
+        item_name: itemDoc?.name || "Unknown",
+        current_quota: quota,
+        values: [],
       };
-    });
+    }
 
-    const dayCount = Math.max(
-      1,
-      Math.round(
-        (new Date(end).getTime() - new Date(start).getTime()) / 86400000
-      ) + 1
-    );
+    const monthlyOrderItems = await db
+      .collection("order_items")
+      .aggregate([
+        {
+          $lookup: {
+            from: "orders",
+            localField: "order_id",
+            foreignField: "id",
+            as: "order",
+          },
+        },
+        { $unwind: "$order" },
+        {
+          $lookup: {
+            from: "wards",
+            localField: "order.ward_id",
+            foreignField: "id",
+            as: "ward",
+          },
+        },
+        { $unwind: { path: "$ward", preserveNullAndEmptyArrays: true } },
+        { $group: { _id: { ward_id: "$order.ward_id", item_id: "$item_id", ym: { $substr: ["$order.order_date", 0, 7] } }, qty: { $sum: "$quantity" } } },
+      ])
+      .toArray();
 
-    const recommendations: Recommendation[] = summary.map((s) => {
-      const avgPerDay = s.quantity / dayCount;
-      return {
-        item_id: s.item_id,
-        item_name: s.item_name,
-        avg_per_day: Math.round(avgPerDay * 100) / 100,
-        recommended_stock: Math.ceil(avgPerDay * 30),
-      };
-    });
+    for (const moi of monthlyOrderItems) {
+      const key = `${moi._id.ward_id}:${moi._id.item_id}`;
+      if (!monthlyUsage[key]) {
+        const wardDoc = wards.find((w: any) => w.id === moi._id.ward_id);
+        const itemDoc = items.find((i: any) => i.id === moi._id.item_id);
+        const catEntry = catalogEntries.find((c: any) => c.ward_id === moi._id.ward_id && c.item_id === moi._id.item_id);
+        monthlyUsage[key] = {
+          ward_name: wardDoc?.name || "Unknown",
+          item_name: itemDoc?.name || "Unknown",
+          current_quota: catEntry?.monthly_quota || 0,
+          values: [],
+        };
+      }
+      monthlyUsage[key].values.push(moi.qty);
+    }
+
+    const recommendations = [];
+    for (const x of Object.values(monthlyUsage)) {
+      if (x.values.length < 1 || x.current_quota <= 0) continue;
+      const mean = x.values.reduce((a, b) => a + b, 0) / x.values.length;
+      const target = Math.max(1, Math.ceil(mean * 1.25));
+      const delta = target - x.current_quota;
+
+      let recommendation = "Kekalkan kuota.";
+      if (delta > 0) recommendation = `Naikkan kuota +${delta} (cadangan: ${target}).`;
+      if (delta < 0) recommendation = `Turunkan kuota ${delta} (cadangan: ${target}).`;
+
+      recommendations.push({
+        ward_name: x.ward_name,
+        item_name: x.item_name,
+        current_quota: x.current_quota,
+        mean_monthly: mean,
+        recommendation,
+        recommended_quota: target,
+        delta,
+      });
+    }
+
+    recommendations.sort((a, b) => (a.ward_name + a.item_name).localeCompare(b.ward_name + b.item_name));
 
     return NextResponse.json({
       type,
@@ -212,7 +293,7 @@ export async function GET(request: NextRequest) {
       end,
       summary,
       totals_by_ward,
-      totals: { orders: totalOrders, quantity: totalQuantity },
+      totals: { order_count: totalOrderCount, bil_item: totalBilItem, jumlah_item: totalQuantity },
       totals_by_masa,
       totals_by_masa_by_cat,
       recommendations,

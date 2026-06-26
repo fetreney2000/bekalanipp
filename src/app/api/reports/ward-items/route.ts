@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 
 interface WardItemResult {
-  item_id: string;
+  item_id: number;
   item_name: string;
   order_count: number;
   quantity_sum: number;
@@ -90,30 +90,43 @@ export async function GET(request: NextRequest) {
       order_date: { $gte: start, $lte: end },
     };
     if (wardId) {
-      filter.ward_id = wardId;
+      filter.ward_id = Number(wardId);
     }
 
     const orders = await db.collection("orders").find(filter).toArray();
+    const orderIds = orders.map((o: any) => o.id);
+
+    const allOrderItems = orderIds.length > 0
+      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
+      : [];
 
     const itemStats = new Map<
-      string,
+      number,
       { order_count: number; quantity_sum: number }
     >();
 
-    for (const order of orders) {
-      for (const item of order.items || []) {
-        const existing = itemStats.get(item.item_id) || {
-          order_count: 0,
-          quantity_sum: 0,
-        };
-        existing.order_count += 1;
-        existing.quantity_sum += item.quantity;
-        itemStats.set(item.item_id, existing);
-      }
+    const orderItemCount = new Map<number, Set<number>>();
+
+    for (const oi of allOrderItems) {
+      const itemId = oi.item_id;
+      const existing = itemStats.get(itemId) || {
+        order_count: 0,
+        quantity_sum: 0,
+      };
+      existing.quantity_sum += oi.quantity;
+
+      if (!orderItemCount.has(itemId)) orderItemCount.set(itemId, new Set());
+      orderItemCount.get(itemId)!.add(oi.order_id);
+
+      itemStats.set(itemId, existing);
+    }
+
+    for (const [itemId, stats] of itemStats) {
+      stats.order_count = orderItemCount.get(itemId)?.size || 0;
     }
 
     const items = await db.collection("items").find({}).toArray();
-    const itemMap = new Map(items.map((i) => [i._id.toString(), i.name]));
+    const itemMap = new Map(items.map((i) => [i.id, i.name]));
 
     const result: WardItemResult[] = Array.from(itemStats.entries())
       .map(([itemId, stats]) => ({

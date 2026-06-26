@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json(
       items.map((item) => ({
-        id: item._id.toString(),
+        id: item.id,
         name: item.name,
       }))
     );
@@ -54,12 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await db
-      .collection("items")
-      .insertOne({ name: parsed.data.name });
+    const counter = await db.collection("counters").findOneAndUpdate(
+      { _id: "items" } as any,
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: "after" }
+    );
+    const nextId = counter?.seq ?? 1;
+
+    await db.collection("items").insertOne({
+      id: nextId,
+      name: parsed.data.name,
+    });
 
     return NextResponse.json(
-      { id: result.insertedId.toString(), name: parsed.data.name },
+      { id: nextId, name: parsed.data.name },
       { status: 201 }
     );
   } catch (error) {

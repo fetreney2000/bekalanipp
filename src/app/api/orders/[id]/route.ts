@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { z } from "zod";
-import { ObjectId } from "mongodb";
 
 const orderItemSchema = z.object({
-  item_id: z.string().min(1),
+  item_id: z.number().int(),
   quantity: z.number().int().min(1),
 });
 
@@ -13,10 +12,33 @@ const orderUpdateSchema = z.object({
   order_number: z.string().min(1),
   order_type: z.string().min(1),
   masa_pejabat: z.boolean().optional().default(false),
-  masa_diterima: z.boolean().optional().default(false),
+  masa_diterima: z.string().optional().nullable(),
   sudah_disedia: z.boolean().optional().default(false),
   items: z.array(orderItemSchema).min(1, "Sekurang-kurangnya satu item diperlukan"),
 });
+
+async function getOrderItems(db: Awaited<ReturnType<typeof connectToDatabase>>["db"], orderId: number) {
+  const orderItemsDocs = await db
+    .collection("order_items")
+    .find({ order_id: orderId })
+    .toArray();
+  return Promise.all(
+    orderItemsDocs.map(async (item: any) => {
+      let itemName = "Unknown";
+      if (item.item_id != null) {
+        const itemDoc = await db
+          .collection("items")
+          .findOne({ id: Number(item.item_id) });
+        itemName = itemDoc?.name || "Unknown";
+      }
+      return {
+        item_id: item.item_id,
+        item_name: itemName,
+        quantity: item.quantity,
+      };
+    })
+  );
+}
 
 export async function GET(
   _request: NextRequest,
@@ -24,13 +46,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const numberId = Number(id);
 
-    if (!ObjectId.isValid(id)) {
+    if (isNaN(numberId)) {
       return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
-    const order = await db.collection("orders").findOne({ _id: new ObjectId(id) });
+    const order = await db.collection("orders").findOne({ id: numberId });
 
     if (!order) {
       return NextResponse.json(
@@ -40,37 +63,22 @@ export async function GET(
     }
 
     let wardName = "Unknown";
-    if (order.ward_id && ObjectId.isValid(order.ward_id)) {
-      const ward = await db.collection("wards").findOne({ _id: new ObjectId(order.ward_id) });
+    if (order.ward_id != null) {
+      const ward = await db.collection("wards").findOne({ id: Number(order.ward_id) });
       wardName = ward?.name || "Unknown";
     }
 
-    const enrichedItems = await Promise.all(
-      (order.items || []).map(async (item: { item_id: string; quantity: number }) => {
-        let itemName = "Unknown";
-        if (item.item_id && ObjectId.isValid(item.item_id)) {
-          const itemDoc = await db
-            .collection("items")
-            .findOne({ _id: new ObjectId(item.item_id) });
-          itemName = itemDoc?.name || "Unknown";
-        }
-        return {
-          item_id: item.item_id,
-          item_name: itemName,
-          quantity: item.quantity,
-        };
-      })
-    );
+    const enrichedItems = await getOrderItems(db, numberId);
 
     return NextResponse.json({
-      id: order._id.toString(),
+      id: order.id,
       ward_id: order.ward_id,
       ward_name: wardName,
       order_date: order.order_date,
       order_number: order.order_number,
       order_type: order.order_type,
       masa_pejabat: order.masa_pejabat || false,
-      masa_diterima: order.masa_diterima || false,
+      masa_diterima: order.masa_diterima || null,
       sudah_disedia: order.sudah_disedia || false,
       completion_minutes: order.completion_minutes || null,
       masa_selesai: order.masa_selesai || null,
@@ -93,8 +101,9 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const numberId = Number(id);
 
-    if (!ObjectId.isValid(id)) {
+    if (isNaN(numberId)) {
       return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
     }
 
@@ -113,7 +122,7 @@ export async function PUT(
 
     const existingOrder = await db
       .collection("orders")
-      .findOne({ _id: new ObjectId(id) });
+      .findOne({ id: numberId });
     if (!existingOrder) {
       return NextResponse.json(
         { error: "Pesanan tidak ditemui" },
@@ -123,7 +132,7 @@ export async function PUT(
 
     const duplicateCheck = await db.collection("orders").findOne({
       order_number: data.order_number,
-      _id: { $ne: new ObjectId(id) },
+      id: { $ne: numberId },
     });
     if (duplicateCheck) {
       return NextResponse.json(
@@ -133,40 +142,27 @@ export async function PUT(
     }
 
     for (const orderItem of data.items) {
-      if (!ObjectId.isValid(orderItem.item_id)) {
-        return NextResponse.json(
-          { error: "ID item tidak sah" },
-          { status: 400 }
-        );
-      }
-
-      const catalogEntry = await db.collection("catalog").findOne({
+      const catalogEntry = await db.collection("ward_catalog").findOne({
         ward_id: existingOrder.ward_id,
         item_id: orderItem.item_id,
       });
 
       if (!catalogEntry) {
-        let itemName = orderItem.item_id;
-        if (ObjectId.isValid(orderItem.item_id)) {
-          const itemDoc = await db
-            .collection("items")
-            .findOne({ _id: new ObjectId(orderItem.item_id) });
-          itemName = itemDoc?.name || orderItem.item_id;
-        }
+        const itemDoc = await db
+          .collection("items")
+          .findOne({ id: Number(orderItem.item_id) });
+        const itemName = itemDoc?.name || String(orderItem.item_id);
         return NextResponse.json(
           { error: `Item "${itemName}" tidak tersedia dalam katalog wad ini.` },
           { status: 400 }
         );
       }
 
-      if (orderItem.quantity > catalogEntry.max_per_order) {
-        let itemName = orderItem.item_id;
-        if (ObjectId.isValid(orderItem.item_id)) {
-          const itemDoc = await db
-            .collection("items")
-            .findOne({ _id: new ObjectId(orderItem.item_id) });
-          itemName = itemDoc?.name || orderItem.item_id;
-        }
+      if (catalogEntry.max_per_order > 0 && orderItem.quantity > catalogEntry.max_per_order) {
+        const itemDoc = await db
+          .collection("items")
+          .findOne({ id: Number(orderItem.item_id) });
+        const itemName = itemDoc?.name || String(orderItem.item_id);
         return NextResponse.json(
           {
             error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).`,
@@ -175,69 +171,82 @@ export async function PUT(
         );
       }
 
-      const [yearStr, monthStr] = data.order_date.split("-");
-      const year = parseInt(yearStr);
-      const m = parseInt(monthStr);
-      const startOfMonth = `${yearStr}-${monthStr}-01`;
-      const lastDay = new Date(year, m, 0).getDate();
-      const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
+      if (catalogEntry.monthly_quota != null) {
+        const [yearStr, monthStr] = data.order_date.split("-");
+        const year = parseInt(yearStr);
+        const m = parseInt(monthStr);
+        const startOfMonth = `${yearStr}-${monthStr}-01`;
+        const lastDay = new Date(year, m, 0).getDate();
+        const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
-      const usageAgg = await db
-        .collection("orders")
-        .aggregate([
-          {
-            $match: {
-              ward_id: existingOrder.ward_id,
-              order_date: { $gte: startOfMonth, $lte: endOfMonth },
-              "items.item_id": orderItem.item_id,
-              _id: { $ne: new ObjectId(id) },
+        const monthOrderItems = await db
+          .collection("order_items")
+          .aggregate([
+            {
+              $lookup: {
+                from: "orders",
+                localField: "order_id",
+                foreignField: "id",
+                as: "order",
+              },
             },
-          },
-          { $unwind: "$items" },
-          { $match: { "items.item_id": orderItem.item_id } },
-          { $group: { _id: null, total: { $sum: "$items.quantity" } } },
-        ])
-        .toArray();
+            { $unwind: "$order" },
+            {
+              $match: {
+                "order.ward_id": existingOrder.ward_id,
+                "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+                "order.id": { $ne: numberId },
+                item_id: orderItem.item_id,
+              },
+            },
+            { $group: { _id: null, total: { $sum: "$quantity" } } },
+          ])
+          .toArray();
 
-      const monthUsed = usageAgg[0]?.total || 0;
-      const newTotal = monthUsed + orderItem.quantity;
+        const monthUsed = monthOrderItems[0]?.total || 0;
+        const newTotal = monthUsed + orderItem.quantity;
 
-      if (newTotal > catalogEntry.monthly_quota) {
-        let itemName = orderItem.item_id;
-        if (ObjectId.isValid(orderItem.item_id)) {
+        if (newTotal > catalogEntry.monthly_quota) {
           const itemDoc = await db
             .collection("items")
-            .findOne({ _id: new ObjectId(orderItem.item_id) });
-          itemName = itemDoc?.name || orderItem.item_id;
+            .findOne({ id: Number(orderItem.item_id) });
+          const itemName = itemDoc?.name || String(orderItem.item_id);
+          return NextResponse.json(
+            {
+              error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.`,
+            },
+            { status: 400 }
+          );
         }
-        return NextResponse.json(
-          {
-            error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.`,
-          },
-          { status: 400 }
-        );
       }
     }
 
     const now = new Date().toISOString();
     await db.collection("orders").updateOne(
-      { _id: new ObjectId(id) },
+      { id: numberId },
       {
         $set: {
           order_date: data.order_date,
           order_number: data.order_number,
           order_type: data.order_type,
           masa_pejabat: data.masa_pejabat,
-          masa_diterima: data.masa_diterima,
+          masa_diterima: data.masa_diterima || null,
           sudah_disedia: data.sudah_disedia,
-          items: data.items.map((i) => ({
-            item_id: i.item_id,
-            quantity: i.quantity,
-          })),
           updated_at: now,
         },
       }
     );
+
+    await db.collection("order_items").deleteMany({ order_id: numberId });
+    if (data.items.length > 0) {
+      await db.collection("order_items").insertMany(
+        data.items.map((i) => ({
+          order_id: numberId,
+          item_id: i.item_id,
+          quantity: i.quantity,
+        }))
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -255,16 +264,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const numberId = Number(id);
 
-    if (!ObjectId.isValid(id)) {
+    if (isNaN(numberId)) {
       return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
 
+    await db.collection("order_items").deleteMany({ order_id: numberId });
+
     const result = await db
       .collection("orders")
-      .deleteOne({ _id: new ObjectId(id) });
+      .deleteOne({ id: numberId });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

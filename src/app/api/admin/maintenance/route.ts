@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const wardsCount = await db.collection("wards").countDocuments();
     const itemsCount = await db.collection("items").countDocuments();
     const ordersCount = await db.collection("orders").countDocuments();
-    const catalogCount = await db.collection("catalog").countDocuments();
+    const catalogCount = await db.collection("ward_catalog").countDocuments();
 
     const nextBackup = new Date();
     nextBackup.setDate(nextBackup.getDate() + 1);
