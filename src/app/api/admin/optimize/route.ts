@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     await db.collection("wards").aggregate([{ $match: {} }, { $out: "wards" }]).toArray().catch(() => {});
     await db.collection("items").aggregate([{ $match: {} }, { $out: "items" }]).toArray().catch(() => {});
     await db.collection("orders").aggregate([{ $match: {} }, { $out: "orders" }]).toArray().catch(() => {});
-    await db.collection("catalog").aggregate([{ $match: {} }, { $out: "catalog" }]).toArray().catch(() => {});
+    await db.collection("ward_catalog").aggregate([{ $match: {} }, { $out: "ward_catalog" }]).toArray().catch(() => {});
 
     return NextResponse.json({
       ok: true,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { z } from "zod";
-import { ObjectId } from "mongodb";
 
 const wardSchema = z.object({
   name: z.string().min(1, "Nama wad/jabatan diperlukan"),
@@ -19,7 +18,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json(
       wards.map((w) => ({
-        id: w._id.toString(),
+        id: w.id,
         name: w.name,
         category: w.category,
       }))
@@ -55,14 +54,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await db.collection("wards").insertOne({
+    const counter = await db.collection("counters").findOneAndUpdate(
+      { _id: "wards" } as any,
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: "after" }
+    );
+    const nextId = counter?.seq ?? 1;
+
+    await db.collection("wards").insertOne({
+      id: nextId,
       name: parsed.data.name,
       category: parsed.data.category,
     });
 
     return NextResponse.json(
       {
-        id: result.insertedId.toString(),
+        id: nextId,
         name: parsed.data.name,
         category: parsed.data.category,
       },

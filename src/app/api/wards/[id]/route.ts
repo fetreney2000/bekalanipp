@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { z } from "zod";
-import { ObjectId } from "mongodb";
 
 const wardUpdateSchema = z.object({
   name: z.string().min(1, "Nama wad/jabatan diperlukan"),
@@ -14,8 +13,9 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const numberId = Number(id);
 
-    if (!ObjectId.isValid(id)) {
+    if (isNaN(numberId)) {
       return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
     }
 
@@ -33,7 +33,7 @@ export async function PUT(
 
     const existing = await db
       .collection("wards")
-      .findOne({ name: parsed.data.name, _id: { $ne: new ObjectId(id) } });
+      .findOne({ name: parsed.data.name, id: { $ne: numberId } });
     if (existing) {
       return NextResponse.json(
         { error: "Nama wad/jabatan sudah wujud." },
@@ -44,7 +44,7 @@ export async function PUT(
     const result = await db
       .collection("wards")
       .findOneAndUpdate(
-        { _id: new ObjectId(id) },
+        { id: numberId },
         { $set: { name: parsed.data.name, category: parsed.data.category } },
         { returnDocument: "after" }
       );
@@ -57,7 +57,7 @@ export async function PUT(
     }
 
     return NextResponse.json({
-      id: result._id.toString(),
+      id: result.id,
       name: result.name,
       category: result.category,
     });
@@ -76,14 +76,15 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const numberId = Number(id);
 
-    if (!ObjectId.isValid(id)) {
+    if (isNaN(numberId)) {
       return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
 
-    const ward = await db.collection("wards").findOne({ _id: new ObjectId(id) });
+    const ward = await db.collection("wards").findOne({ id: numberId });
     if (!ward) {
       return NextResponse.json(
         { error: "Wad/jabatan tidak ditemui" },
@@ -93,7 +94,7 @@ export async function DELETE(
 
     const orderCount = await db
       .collection("orders")
-      .countDocuments({ ward_id: id });
+      .countDocuments({ ward_id: numberId });
     if (orderCount > 0) {
       return NextResponse.json(
         {
@@ -104,8 +105,8 @@ export async function DELETE(
       );
     }
 
-    await db.collection("catalog").deleteMany({ ward_id: id });
-    await db.collection("wards").deleteOne({ _id: new ObjectId(id) });
+    await db.collection("ward_catalog").deleteMany({ ward_id: numberId });
+    await db.collection("wards").deleteOne({ id: numberId });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

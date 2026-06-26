@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { z } from "zod";
-import { ObjectId } from "mongodb";
 
 const catalogUpsertSchema = z.object({
-  item_id: z.string().min(1),
+  item_id: z.number().int(),
   max_per_order: z.number().int().min(0),
   monthly_quota: z.number().int().min(0),
 });
@@ -15,30 +14,29 @@ export async function GET(
 ) {
   try {
     const { wardId } = await params;
+    const numberWardId = Number(wardId);
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month");
 
-    if (!ObjectId.isValid(wardId)) {
+    if (isNaN(numberWardId)) {
       return NextResponse.json({ error: "ID wad tidak sah" }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
 
-    const ward = await db.collection("wards").findOne({ _id: new ObjectId(wardId) });
+    const ward = await db.collection("wards").findOne({ id: numberWardId });
     if (!ward) {
       return NextResponse.json({ error: "Wad/jabatan tidak ditemui" }, { status: 404 });
     }
 
     const catalogEntries = await db
-      .collection("catalog")
-      .find({ ward_id: wardId })
+      .collection("ward_catalog")
+      .find({ ward_id: numberWardId })
       .toArray();
 
     const items = await Promise.all(
       catalogEntries.map(async (entry) => {
-        const item = ObjectId.isValid(entry.item_id)
-          ? await db.collection("items").findOne({ _id: new ObjectId(entry.item_id) })
-          : null;
+        const item = await db.collection("items").findOne({ id: entry.item_id });
         const result: Record<string, unknown> = {
           ward_id: entry.ward_id,
           item_id: entry.item_id,
@@ -60,7 +58,7 @@ export async function GET(
             .aggregate([
               {
                 $match: {
-                  ward_id: wardId,
+                  ward_id: String(numberWardId),
                   order_date: { $gte: startOfMonth, $lte: endOfMonth },
                   "items.item_id": entry.item_id,
                 },
@@ -94,6 +92,7 @@ export async function POST(
 ) {
   try {
     const { wardId } = await params;
+    const numberWardId = Number(wardId);
     const body = await request.json();
     const parsed = catalogUpsertSchema.safeParse(body);
 
@@ -104,16 +103,13 @@ export async function POST(
       );
     }
 
-    if (!ObjectId.isValid(wardId)) {
+    if (isNaN(numberWardId)) {
       return NextResponse.json({ error: "ID wad tidak sah" }, { status: 400 });
-    }
-    if (!ObjectId.isValid(parsed.data.item_id)) {
-      return NextResponse.json({ error: "ID item tidak sah" }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
 
-    const ward = await db.collection("wards").findOne({ _id: new ObjectId(wardId) });
+    const ward = await db.collection("wards").findOne({ id: numberWardId });
     if (!ward) {
       return NextResponse.json(
         { error: "Wad/jabatan tidak ditemui" },
@@ -121,7 +117,7 @@ export async function POST(
       );
     }
 
-    const item = await db.collection("items").findOne({ _id: new ObjectId(parsed.data.item_id) });
+    const item = await db.collection("items").findOne({ id: parsed.data.item_id });
     if (!item) {
       return NextResponse.json(
         { error: "Item tidak ditemui" },
@@ -129,11 +125,11 @@ export async function POST(
       );
     }
 
-    await db.collection("catalog").updateOne(
-      { ward_id: wardId, item_id: parsed.data.item_id },
+    await db.collection("ward_catalog").updateOne(
+      { ward_id: numberWardId, item_id: parsed.data.item_id },
       {
         $set: {
-          ward_id: wardId,
+          ward_id: numberWardId,
           item_id: parsed.data.item_id,
           max_per_order: parsed.data.max_per_order,
           monthly_quota: parsed.data.monthly_quota,

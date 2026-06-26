@@ -17,6 +17,8 @@ export async function PUT(
 ) {
   try {
     const { wardId, itemId } = await params;
+    const numberWardId = Number(wardId);
+    const numberItemId = Number(itemId);
     const body = await request.json();
     const parsed = catalogUpdateSchema.safeParse(body);
 
@@ -29,8 +31,8 @@ export async function PUT(
 
     const { db } = await connectToDatabase();
 
-    const result = await db.collection("catalog").findOneAndUpdate(
-      { ward_id: wardId, item_id: itemId },
+    const result = await db.collection("ward_catalog").findOneAndUpdate(
+      { ward_id: numberWardId, item_id: numberItemId },
       {
         $set: {
           max_per_order: parsed.data.max_per_order,
@@ -66,11 +68,13 @@ export async function DELETE(
 ) {
   try {
     const { wardId, itemId } = await params;
+    const numberWardId = Number(wardId);
+    const numberItemId = Number(itemId);
     const { db } = await connectToDatabase();
 
     const result = await db
-      .collection("catalog")
-      .deleteOne({ ward_id: wardId, item_id: itemId });
+      .collection("ward_catalog")
+      .deleteOne({ ward_id: numberWardId, item_id: numberItemId });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

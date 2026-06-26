@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const filter: Record<string, unknown> = { order_number: orderNumber };
     if (excludeId) {
-      filter._id = { $ne: excludeId };
+      filter.id = { $ne: Number(excludeId) };
     }
 
     const exists = await db.collection("orders").findOne(filter);

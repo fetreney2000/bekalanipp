@@ -15,7 +15,8 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
   }
 
   const client = await MongoClient.connect(MONGODB_URI);
-  const db = client.db("bekalan");
+  const dbName = MONGODB_URI.split("/").pop()?.split("?")[0] || "bekalanipp";
+  const db = client.db(dbName);
 
   cachedClient = client;
   cachedDb = db;
