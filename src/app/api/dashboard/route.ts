@@ -42,119 +42,134 @@ export async function GET(request: NextRequest) {
     const allItems = await db.collection("items").find({}).sort({ name: 1 }).toArray();
     const itemsCount = allItems.length;
 
-    // Get total unique item count from orders this month
     const orderIds = ordersThisMonth.map((o: any) => o.id);
-    const allOrderItems = orderIds.length > 0
-      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
-      : [];
 
-    const uniqueItemIds = new Set(allOrderItems.map((oi: any) => oi.item_id));
-
-    // Calculate item usage for items with quotas using a single aggregation
-    const quotaCatalogItems = catalogEntries.filter((c: any) => c.monthly_quota != null && c.monthly_quota > 0);
-    const uniqueQuotaItemIds = [...new Set(quotaCatalogItems.map((c: any) => c.item_id))];
-
-    // Batch compute usage per item for items with quotas
-    const usageAggResults = orderIds.length > 0 && uniqueQuotaItemIds.length > 0
-      ? await db.collection("order_items").aggregate([
-          {
-            $lookup: {
-              from: "orders",
-              localField: "order_id",
-              foreignField: "id",
-              as: "order",
-            },
-          },
-          { $unwind: "$order" },
-          {
-            $match: {
-              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
-              item_id: { $in: uniqueQuotaItemIds },
-            },
-          },
-          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
-        ]).toArray()
-      : [];
-
-    const usageMap = new Map<number, number>();
-    for (const r of usageAggResults) {
-      usageMap.set(r._id, r.total || 0);
+    const wardMap = new Map<number, string>();
+    for (const w of wards) {
+      wardMap.set(w.id, w.name);
     }
 
-    const itemStatus: {
-      item_id: number;
-      item_name: string;
-      total_used: number;
-      total_quota: number;
-      wards_using: number;
-      status: string;
-    }[] = [];
+    const itemMap = new Map<number, string>();
+    for (const i of allItems) {
+      itemMap.set(i.id, i.name);
+    }
 
-    for (const item of allItems) {
-      const itemCatalog = catalogEntries.filter((c: any) => c.item_id === item.id);
-      const wardsUsing = itemCatalog.length;
-      let totalQuota = 0;
-      for (const cat of itemCatalog) {
-        totalQuota += (cat as any).monthly_quota || 0;
+    const wardsWithQuota = catalogEntries.filter(
+      (c: any) => c.monthly_quota != null && c.monthly_quota > 0
+    );
+
+    const uniqueOrderItemPairs: { ward_id: number; item_id: number }[] = [];
+    if (orderIds.length > 0) {
+      const allOrderItems = await db
+        .collection("order_items")
+        .find({ order_id: { $in: orderIds } })
+        .toArray();
+
+      const orderMap = new Map<number, any>();
+      for (const o of ordersThisMonth) {
+        orderMap.set(o.id, o);
       }
 
-      const totalUsed = usageMap.get(item.id) || 0;
-
-      let status = "normal";
-      if (totalQuota > 0) {
-        const ratio = totalUsed / totalQuota;
-        if (ratio > 1) status = "melebihi";
-        else if (ratio >= 0.8) status = "hampir_habis";
-        else if (ratio >= 0.5) status = "sederhana";
+      const usageMap = new Map<string, number>();
+      for (const oi of allOrderItems) {
+        const order = orderMap.get(oi.order_id);
+        if (!order) continue;
+        const key = `${order.ward_id}:${oi.item_id}`;
+        usageMap.set(key, (usageMap.get(key) || 0) + (oi.quantity || 0));
       }
 
-      itemStatus.push({
-        item_id: item.id,
-        item_name: item.name,
-        total_used: totalUsed,
-        total_quota: totalQuota,
-        wards_using: wardsUsing,
-        status,
+      const itemStatus: { ward_name: string; item_name: string; quota: number; used: number }[] = [];
+
+      for (const cat of wardsWithQuota) {
+        const wardName = wardMap.get(cat.ward_id) || "Unknown";
+        const itemName = itemMap.get(cat.item_id) || "Unknown";
+        const key = `${cat.ward_id}:${cat.item_id}`;
+        const used = usageMap.get(key) || 0;
+
+        itemStatus.push({
+          ward_name: wardName,
+          item_name: itemName,
+          quota: cat.monthly_quota,
+          used,
+        });
+      }
+
+      itemStatus.sort((a, b) =>
+        a.ward_name.localeCompare(b.ward_name) || a.item_name.localeCompare(b.item_name)
+      );
+
+      const warnings: typeof itemStatus = [];
+      const exceeded: typeof itemStatus = [];
+
+      for (const item of itemStatus) {
+        if (item.quota > 0 && item.used >= item.quota) {
+          exceeded.push(item);
+        } else if (item.quota > 0 && item.used >= item.quota * 0.8) {
+          warnings.push(item);
+        }
+      }
+
+      const wardUsage: { ward_id: number; ward_name: string; order_count: number }[] = [];
+      for (const ward of wards) {
+        const wardOrders = ordersThisMonth.filter((o: any) => o.ward_id === ward.id);
+        wardUsage.push({
+          ward_id: ward.id,
+          ward_name: ward.name,
+          order_count: wardOrders.length,
+        });
+      }
+      wardUsage.sort((a, b) => b.order_count - a.order_count);
+      const topWard = wardUsage[0] || null;
+
+      return NextResponse.json({
+        month: monthStr,
+        itemStatus,
+        warnings,
+        exceeded,
+        orders_count: ordersCount,
+        items_count: itemsCount,
+        top_ward: topWard,
       });
     }
 
-    const warnings: string[] = [];
-    const exceeded: string[] = [];
+    const itemStatus: { ward_name: string; item_name: string; quota: number; used: number }[] = [];
 
-    for (const item of itemStatus) {
-      if (item.status === "melebihi") {
-        exceeded.push(
-          `${item.item_name}: ${item.total_used}/${item.total_quota} telah dilampaui`
-        );
-      } else if (item.status === "hampir_habis") {
-        warnings.push(
-          `${item.item_name}: ${item.total_used}/${item.total_quota} hampir mencapai had`
-        );
-      }
+    for (const cat of wardsWithQuota) {
+      const wardName = wardMap.get(cat.ward_id) || "Unknown";
+      const itemName = itemMap.get(cat.item_id) || "Unknown";
+
+      itemStatus.push({
+        ward_name: wardName,
+        item_name: itemName,
+        quota: cat.monthly_quota,
+        used: 0,
+      });
     }
 
-    const wardUsage: { ward_id: number; ward_name: string; order_count: number }[] = [];
+    itemStatus.sort((a, b) =>
+      a.ward_name.localeCompare(b.ward_name) || a.item_name.localeCompare(b.item_name)
+    );
 
+    const wardUsage2: { ward_id: number; ward_name: string; order_count: number }[] = [];
     for (const ward of wards) {
       const wardOrders = ordersThisMonth.filter((o: any) => o.ward_id === ward.id);
-      wardUsage.push({
+      wardUsage2.push({
         ward_id: ward.id,
         ward_name: ward.name,
         order_count: wardOrders.length,
       });
     }
-
-    wardUsage.sort((a, b) => b.order_count - a.order_count);
-    const topWard = wardUsage[0] || null;
+    wardUsage2.sort((a, b) => b.order_count - a.order_count);
+    const topWard2 = wardUsage2[0] || null;
 
     return NextResponse.json({
       month: monthStr,
       itemStatus,
-      warnings,
-      exceeded,
+      warnings: [],
+      exceeded: [],
       orders_count: ordersCount,
       items_count: itemsCount,
-      top_ward: topWard,
+      top_ward: topWard2,
     });
   } catch (error) {
     console.error("GET /api/dashboard error:", error);
