@@ -17,6 +17,7 @@ import {
   Alert,
   Loader,
   Select,
+  NumberInput,
 } from "@mantine/core";
 import {
   IconEdit,
@@ -324,44 +325,20 @@ export default function OrdersPage() {
         </Flex>
 
         <Flex gap="sm" wrap="wrap" align="flex-end">
-          <Box>
-            <Text size="xs" c="dimmed" mb={4}>
-              Dari Tarikh
-            </Text>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "8px",
-                border: "1px solid var(--mantine-color-default-border)",
-                background: "var(--mantine-color-body)",
-                color: "var(--mantine-color-bright)",
-                fontSize: "14px",
-                maxWidth: "180px",
-              }}
-            />
-          </Box>
-          <Box>
-            <Text size="xs" c="dimmed" mb={4}>
-              Ke Tarikh
-            </Text>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "8px",
-                border: "1px solid var(--mantine-color-default-border)",
-                background: "var(--mantine-color-body)",
-                color: "var(--mantine-color-bright)",
-                fontSize: "14px",
-                maxWidth: "180px",
-              }}
-            />
-          </Box>
+          <TextInput
+            label="Dari Tarikh"
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            w={180}
+          />
+          <TextInput
+            label="Ke Tarikh"
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            w={180}
+          />
           <Button
             size="compact-sm"
             onClick={fetchOrders}
@@ -640,25 +617,13 @@ export default function OrdersPage() {
                     <Text style={{ flex: 1 }} size="sm">
                       {item.item_name}
                     </Text>
-                    <input
-                      type="number"
+                    <NumberInput
                       value={item.quantity}
-                      onChange={(e) =>
-                        updateItemQuantity(
-                          idx,
-                          Math.max(1, parseInt(e.target.value) || 1)
-                        )
-                      }
+                      onChange={(val) => updateItemQuantity(idx, Math.max(1, typeof val === "number" ? val : 1))}
                       min={1}
-                      style={{
-                        width: 70,
-                        padding: "4px 8px",
-                        borderRadius: "6px",
-                        border: "1px solid var(--mantine-color-default-border)",
-                        background: "var(--mantine-color-body)",
-                        color: "var(--mantine-color-bright)",
-                        fontSize: "13px",
-                      }}
+                      w={70}
+                      size="xs"
+                      hideControls
                     />
                     <ActionIcon
                       variant="subtle"
