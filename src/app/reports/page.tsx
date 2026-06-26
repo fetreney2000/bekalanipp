@@ -19,6 +19,7 @@ import {
   Alert,
   ThemeIcon,
   Title,
+  Box,
 } from "@mantine/core";
 import {
   IconChartBar,
@@ -549,7 +550,7 @@ export default function ReportsPage() {
                             ? "#4caf50"
                             : delta < 0
                               ? "#ef5350"
-                              : "var(--muted)";
+                              : "dimmed";
                         const DeltaIcon =
                           delta > 0
                             ? IconTrendingUp
@@ -592,7 +593,7 @@ export default function ReportsPage() {
               </Paper>
             )}
 
-            <div>
+            <Box>
               <Button
                 leftSection={<IconFileText size={15} />}
                 onClick={fetchWardItems}
@@ -603,7 +604,7 @@ export default function ReportsPage() {
               >
                 Butiran Item
               </Button>
-            </div>
+            </Box>
 
             {wardItemsError && (
               <Alert color="red" variant="light">

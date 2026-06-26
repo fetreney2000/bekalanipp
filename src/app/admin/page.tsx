@@ -14,6 +14,7 @@ import {
   Alert,
   ThemeIcon,
   SimpleGrid,
+  Box,
 } from "@mantine/core";
 import {
   IconShield,
@@ -344,7 +345,7 @@ export default function AdminPage() {
                   onChange={(e) => setConfirmPassword(e.currentTarget.value)}
                   onKeyDown={(e) => e.key === "Enter" && changePassword()}
                 />
-                <div>
+                <Box>
                   <Button
                     size="sm"
                     leftSection={<IconSettings size={14} />}
@@ -353,7 +354,7 @@ export default function AdminPage() {
                   >
                     Kemaskini Kata Laluan
                   </Button>
-                </div>
+                </Box>
               </Stack>
             </Paper>
           </Stack>

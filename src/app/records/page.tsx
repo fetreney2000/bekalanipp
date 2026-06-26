@@ -73,46 +73,6 @@ function getMonthRange(year: number, month: number) {
   };
 }
 
-function SortHeader({
-  label,
-  sortFor,
-  sortKey,
-  sortAsc,
-  onToggle,
-  align = "left",
-}: {
-  label: string;
-  sortFor: SortKey;
-  sortKey: SortKey;
-  sortAsc: boolean;
-  onToggle: (key: SortKey) => void;
-  align?: "left" | "center";
-}) {
-  return (
-    <Table.Th
-      onClick={() => onToggle(sortFor)}
-      style={{
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        userSelect: "none",
-        textAlign: align,
-      }}
-    >
-      <Group gap={4} style={{ flexWrap: "nowrap" }}>
-        {label}
-        <IconArrowsSort
-          size={14}
-          style={{
-            opacity: sortKey === sortFor ? 1 : 0.4,
-            transform:
-              sortKey === sortFor && !sortAsc ? "scaleY(-1)" : undefined,
-          }}
-        />
-      </Group>
-    </Table.Th>
-  );
-}
-
 function getElapsedMinutes(order: Order): number {
   if (order.sudah_disedia && order.completion_minutes != null) {
     return order.completion_minutes;
@@ -397,11 +357,51 @@ export default function RecordsPage() {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>No</Table.Th>
-                  <SortHeader label="Tarikh" sortFor="order_date" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
-                  <SortHeader label="No. Inden" sortFor="order_number" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
-                  <SortHeader label="Wad" sortFor="ward_name" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
-                  <SortHeader label="Jenis" sortFor="order_type" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
-                  <SortHeader label="Item" sortFor="items" sortKey={sortKey} sortAsc={sortAsc} onToggle={toggleSort} />
+                  <Table.Th
+                    onClick={() => toggleSort("order_date")}
+                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                  >
+                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                      Tarikh
+                      <IconArrowsSort size={14} style={{ opacity: sortKey === "order_date" ? 1 : 0.4, transform: sortKey === "order_date" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                    </Group>
+                  </Table.Th>
+                  <Table.Th
+                    onClick={() => toggleSort("order_number")}
+                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                  >
+                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                      No. Inden
+                      <IconArrowsSort size={14} style={{ opacity: sortKey === "order_number" ? 1 : 0.4, transform: sortKey === "order_number" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                    </Group>
+                  </Table.Th>
+                  <Table.Th
+                    onClick={() => toggleSort("ward_name")}
+                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                  >
+                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                      Wad
+                      <IconArrowsSort size={14} style={{ opacity: sortKey === "ward_name" ? 1 : 0.4, transform: sortKey === "ward_name" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                    </Group>
+                  </Table.Th>
+                  <Table.Th
+                    onClick={() => toggleSort("order_type")}
+                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                  >
+                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                      Jenis
+                      <IconArrowsSort size={14} style={{ opacity: sortKey === "order_type" ? 1 : 0.4, transform: sortKey === "order_type" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                    </Group>
+                  </Table.Th>
+                  <Table.Th
+                    onClick={() => toggleSort("items")}
+                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                  >
+                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                      Item
+                      <IconArrowsSort size={14} style={{ opacity: sortKey === "items" ? 1 : 0.4, transform: sortKey === "items" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                    </Group>
+                  </Table.Th>
                   <Table.Th style={{ textAlign: "center" }}>Disediakan</Table.Th>
                   <Table.Th style={{ textAlign: "center" }}>Masa Pejabat</Table.Th>
                   <Table.Th style={{ textAlign: "center" }}>Masa</Table.Th>
