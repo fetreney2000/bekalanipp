@@ -39,9 +39,47 @@ export async function GET(request: NextRequest) {
       .toArray();
 
     const ordersCount = ordersThisMonth.length;
-
     const allItems = await db.collection("items").find({}).sort({ name: 1 }).toArray();
     const itemsCount = allItems.length;
+
+    // Get total unique item count from orders this month
+    const orderIds = ordersThisMonth.map((o: any) => o.id);
+    const allOrderItems = orderIds.length > 0
+      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
+      : [];
+
+    const uniqueItemIds = new Set(allOrderItems.map((oi: any) => oi.item_id));
+
+    // Calculate item usage for items with quotas using a single aggregation
+    const quotaCatalogItems = catalogEntries.filter((c: any) => c.monthly_quota != null && c.monthly_quota > 0);
+    const uniqueQuotaItemIds = [...new Set(quotaCatalogItems.map((c: any) => c.item_id))];
+
+    // Batch compute usage per item for items with quotas
+    const usageAggResults = orderIds.length > 0 && uniqueQuotaItemIds.length > 0
+      ? await db.collection("order_items").aggregate([
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              foreignField: "id",
+              as: "order",
+            },
+          },
+          { $unwind: "$order" },
+          {
+            $match: {
+              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+              item_id: { $in: uniqueQuotaItemIds },
+            },
+          },
+          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
+        ]).toArray()
+      : [];
+
+    const usageMap = new Map<number, number>();
+    for (const r of usageAggResults) {
+      usageMap.set(r._id, r.total || 0);
+    }
 
     const itemStatus: {
       item_id: number;
@@ -60,29 +98,7 @@ export async function GET(request: NextRequest) {
         totalQuota += (cat as any).monthly_quota || 0;
       }
 
-      const usageAgg = await db
-        .collection("order_items")
-        .aggregate([
-          {
-            $lookup: {
-              from: "orders",
-              localField: "order_id",
-              foreignField: "id",
-              as: "order",
-            },
-          },
-          { $unwind: "$order" },
-          {
-            $match: {
-              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
-              item_id: item.id,
-            },
-          },
-          { $group: { _id: null, total: { $sum: "$quantity" } } },
-        ])
-        .toArray();
-
-      const totalUsed = usageAgg[0]?.total || 0;
+      const totalUsed = usageMap.get(item.id) || 0;
 
       let status = "normal";
       if (totalQuota > 0) {
