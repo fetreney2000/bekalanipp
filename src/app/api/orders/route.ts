@@ -13,7 +13,7 @@ const orderCreateSchema = z.object({
   order_number: z.string().min(1),
   order_type: z.string().min(1),
   masa_pejabat: z.boolean().optional().default(false),
-  masa_diterima: z.boolean().optional().default(false),
+  masa_diterima: z.string().nullable().optional().default(null),
   sudah_disedia: z.boolean().optional().default(false),
   items: z.array(orderItemSchema).min(1, "Sekurang-kurangnya satu item diperlukan"),
 });
