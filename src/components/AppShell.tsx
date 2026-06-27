@@ -20,6 +20,7 @@ import {
   IconHospital,
   IconPill,
   IconBook2,
+  IconCopyright,
 } from "@tabler/icons-react";
 import { useState } from "react";
 
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/wards", label: "Senarai Wad/Jabatan", icon: IconHospital },
   { href: "/items", label: "Senarai Item/Ubat", icon: IconPill },
   { href: "/catalog", label: "Katalog Wad/Jabatan", icon: IconBook2 },
+  { href: "/hakcipta", label: "Hakcipta", icon: IconCopyright },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
