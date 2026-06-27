@@ -162,6 +162,17 @@ export default function OrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
+  useEffect(() => {
+    if (orders.length > 0 && !selectedOrder) {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      if (id) {
+        const order = orders.find((o) => o.id === id);
+        if (order) openModal(order);
+      }
+    }
+  }, [orders]);
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortAsc(!sortAsc);
