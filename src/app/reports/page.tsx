@@ -77,6 +77,7 @@ interface ItemOrder {
   order_id: number;
   order_number: string;
   order_date: string;
+  order_type: string;
   ward_name: string;
   quantity: number;
   masa_pejabat: boolean;
@@ -144,6 +145,11 @@ export default function ReportsPage() {
   const [itemOrdersLoading, setItemOrdersLoading] = useState(false);
   const [itemOrdersModal, setItemOrdersModal] = useState(false);
 
+  const [selectedWard, setSelectedWard] = useState<WardSummary | null>(null);
+  const [wardOrders, setWardOrders] = useState<ItemOrder[]>([]);
+  const [wardOrdersLoading, setWardOrdersLoading] = useState(false);
+  const [wardOrdersModal, setWardOrdersModal] = useState(false);
+
   const qs = buildQueryParams(reportType, date, week, month, year);
 
   const fetchReport = useCallback(async () => {
@@ -196,6 +202,22 @@ export default function ReportsPage() {
     }
   }, [qs]);
 
+  const fetchWardOrders = useCallback(async (ward: WardSummary) => {
+    setSelectedWard(ward);
+    setWardOrdersModal(true);
+    setWardOrdersLoading(true);
+    try {
+      const res = await fetch(`/api/reports/ward-orders?ward_id=${ward.ward_id}&${qs}`);
+      if (!res.ok) throw new Error("Gagal memuatkan pesanan wad");
+      const data = await res.json();
+      setWardOrders(data.orders || []);
+    } catch {
+      setWardOrders([]);
+    } finally {
+      setWardOrdersLoading(false);
+    }
+  }, [qs]);
+
   const mp = report?.totals_by_masa.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
   const smp = report?.totals_by_masa.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
   const wMp = report?.totals_by_masa_by_cat.ward?.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
@@ -209,7 +231,8 @@ export default function ReportsPage() {
   const bukanWadTotalItems = nwMp.jumlah_item + nwSmp.jumlah_item;
 
   const pesananCards = [
-    { label: "Masa Pejabat", value: mp.order_count, icon: IconClock, color: "cyan" },
+    { label: "Jumlah Pesanan", value: report?.totals.order_count || 0, icon: IconShoppingBag, color: "cyan" },
+    { label: "Masa Pejabat", value: mp.order_count, icon: IconClock, color: "teal" },
     { label: "Selepas Masa Pejabat", value: smp.order_count, icon: IconClockOff, color: "red" },
     { label: "Wad", value: wadTotalOrders, icon: IconBuildingHospital, color: "blue" },
     { label: "Bukan Wad", value: bukanWadTotalOrders, icon: IconBuildingSkyscraper, color: "gray" },
@@ -220,7 +243,8 @@ export default function ReportsPage() {
   ];
 
   const itemCards = [
-    { label: "Masa Pejabat", value: mp.jumlah_item, icon: IconClock, color: "cyan" },
+    { label: "Jumlah Item", value: report?.totals.jumlah_item || 0, icon: IconPackage, color: "green" },
+    { label: "Masa Pejabat", value: mp.jumlah_item, icon: IconClock, color: "teal" },
     { label: "Selepas Masa Pejabat", value: smp.jumlah_item, icon: IconClockOff, color: "red" },
     { label: "Wad", value: wadTotalItems, icon: IconBuildingHospital, color: "blue" },
     { label: "Bukan Wad", value: bukanWadTotalItems, icon: IconBuildingSkyscraper, color: "gray" },
@@ -417,7 +441,11 @@ export default function ReportsPage() {
                   </Table.Thead>
                   <Table.Tbody>
                     {report.totals_by_ward.map((ws) => (
-                      <Table.Tr key={ws.ward_id}>
+                      <Table.Tr
+                        key={ws.ward_id}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => fetchWardOrders(ws)}
+                      >
                         <Table.Td>{ws.ward_name}</Table.Td>
                         <Table.Td ta="right">{formatNumber(ws.order_count)}</Table.Td>
                         <Table.Td ta="right" fw={600}>{formatNumber(ws.jumlah_item)}</Table.Td>
@@ -529,6 +557,65 @@ export default function ReportsPage() {
                     <Table.Td fw={500}>{o.order_number}</Table.Td>
                     <Table.Td>{o.order_date}</Table.Td>
                     <Table.Td>{o.ward_name}</Table.Td>
+                    <Table.Td ta="right" fw={600}>{o.quantity}</Table.Td>
+                    <Table.Td>
+                      <Badge color={o.masa_pejabat ? "cyan" : "red"} variant="light" size="sm">
+                        {o.masa_pejabat ? "Ya" : "Tidak"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={o.sudah_disedia ? "green" : "yellow"} variant="light" size="sm">
+                        {o.sudah_disedia ? "Selesai" : "Menunggu"}
+                      </Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </Modal>
+
+      <Modal
+        opened={wardOrdersModal}
+        onClose={() => {
+          setWardOrdersModal(false);
+          setSelectedWard(null);
+          setWardOrders([]);
+        }}
+        title={`Pesanan: ${selectedWard?.ward_name || ""}`}
+        size="xl"
+        centered
+      >
+        {wardOrdersLoading ? (
+          <Flex justify="center" py="md">
+            <Loader size="sm" />
+          </Flex>
+        ) : wardOrders.length === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">
+            Tiada pesanan ditemui untuk wad ini.
+          </Text>
+        ) : (
+          <Table.ScrollContainer minWidth={500}>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>No. Inden</Table.Th>
+                  <Table.Th>Tarikh</Table.Th>
+                  <Table.Th>Jenis</Table.Th>
+                  <Table.Th ta="right">Jumlah Kuantiti</Table.Th>
+                  <Table.Th>MP</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {wardOrders.map((o) => (
+                  <Table.Tr key={o.order_id}>
+                    <Table.Td fw={500}>{o.order_number}</Table.Td>
+                    <Table.Td>{o.order_date}</Table.Td>
+                    <Table.Td>
+                      <Badge color="blue" variant="light" size="sm">{o.order_type}</Badge>
+                    </Table.Td>
                     <Table.Td ta="right" fw={600}>{o.quantity}</Table.Td>
                     <Table.Td>
                       <Badge color={o.masa_pejabat ? "cyan" : "red"} variant="light" size="sm">

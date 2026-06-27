@@ -7,7 +7,6 @@ import {
   Group,
   NavLink,
   Text,
-  Badge,
   Stack,
   Box,
   Burger,
@@ -21,7 +20,6 @@ import {
   IconHospital,
   IconPill,
   IconBook2,
-  IconShield,
 } from "@tabler/icons-react";
 import { useState } from "react";
 
@@ -103,16 +101,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Text size="xs" c="dimmed" mr="auto">
             Ahmad Fetre Bin Mohammad Zime - 2026
           </Text>
-          <Link href="/admin">
-            <Group
-              gap={4}
-              px="xs"
-              py={4}
-              style={{ borderRadius: 4, cursor: "pointer" }}
-            >
-              <IconShield size={14} />
-            </Group>
-          </Link>
         </Group>
       </MantineAppShell.Footer>
     </MantineAppShell>
