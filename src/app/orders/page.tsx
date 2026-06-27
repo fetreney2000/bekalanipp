@@ -162,17 +162,6 @@ export default function OrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  useEffect(() => {
-    if (orders.length > 0 && !selectedOrder) {
-      const params = new URLSearchParams(window.location.search);
-      const id = params.get("id");
-      if (id) {
-        const order = orders.find((o) => o.id === id);
-        if (order) openModal(order);
-      }
-    }
-  }, [orders]);
-
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortAsc(!sortAsc);
@@ -213,7 +202,7 @@ export default function OrdersPage() {
     return list.slice(0, 500);
   }, [orders, searchText, sortKey, sortAsc]);
 
-  const openModal = async (order: Order) => {
+  const openModal = useCallback(async (order: Order) => {
     setSelectedOrder(order);
     setModalLoading(true);
     setModalError(null);
@@ -236,7 +225,16 @@ export default function OrdersPage() {
     } finally {
       setModalLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    if (id && orders.length > 0 && !selectedOrder) {
+      const order = orders.find((o) => o.id === id);
+      if (order) openModal(order);
+    }
+  }, [orders, selectedOrder, openModal]);
 
   const closeModal = () => {
     setSelectedOrder(null);
