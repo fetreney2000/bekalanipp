@@ -23,6 +23,7 @@ import {
   rem,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import Holidays from "date-holidays";
 import {
   IconPackage,
   IconPlus,
@@ -68,6 +69,24 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function isOfficeHour(): boolean {
+  const now = new Date();
+  const myTime = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kuching" })
+  );
+  const day = myTime.getDay();
+  if (day === 0 || day === 6) return false;
+
+  const hd = new Holidays("MY", "12");
+  const year = myTime.getFullYear();
+  const month = String(myTime.getMonth() + 1).padStart(2, "0");
+  const date = String(myTime.getDate()).padStart(2, "0");
+  if (hd.isHoliday(`${year}-${month}-${date}`)) return false;
+
+  const mins = myTime.getHours() * 60 + myTime.getMinutes();
+  return mins >= 480 && mins < 1020;
+}
+
 export default function SupplyPage() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
@@ -76,7 +95,7 @@ export default function SupplyPage() {
   const [orderNumber, setOrderNumber] = useState("");
   const [orderType, setOrderType] = useState<string | null>("FS");
   const [masaDiterima, setMasaDiterima] = useState(nowTimeStr());
-  const [masaPejabat, setMasaPejabat] = useState(true);
+  const [masaPejabat, setMasaPejabat] = useState(isOfficeHour());
   const [orderRows, setOrderRows] = useState<OrderRow[]>([
     { id: 1, item_id: null, quantity: 1 },
   ]);
@@ -234,7 +253,7 @@ export default function SupplyPage() {
       setOrderDate(todayStr());
       setOrderType("FS");
       setMasaDiterima(nowTimeStr());
-      setMasaPejabat(true);
+      setMasaPejabat(isOfficeHour());
       setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
       setNextRowId(2);
       setErrors({});
