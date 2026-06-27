@@ -59,12 +59,6 @@ type SortKey =
   | "sudah_disedia"
   | "masa_pejabat";
 
-const ORDER_TYPE_MAP: Record<string, string> = {
-  FS: "Floor Stock",
-  EMT: "Emergency Trolley",
-  AOH: "Selepas Waktu Pejabat",
-};
-
 function getMonthRange(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -418,7 +412,7 @@ export default function RecordsPage() {
                           radius="xl"
                           size="sm"
                         >
-                          {ORDER_TYPE_MAP[order.order_type] || order.order_type}
+                          {order.order_type}
                         </Badge>
                       </Table.Td>
                       <Table.Td style={{ textAlign: "center" }}>

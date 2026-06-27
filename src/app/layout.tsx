@@ -4,8 +4,8 @@ import "./globals.css";
 import { Providers } from "./provider";
 
 export const metadata: Metadata = {
-  title: "Bekalan Farmasi",
-  description: "Sistem Bekalan Ubat - Hospital Keningau",
+  title: "Bekalan FS, AOH & EMT Jabatan Farmasi Hospital Keningau",
+  description: "Sistem Bekalan FS, AOH & EMT Jabatan Farmasi Hospital Keningau",
 };
 
 export default function RootLayout({

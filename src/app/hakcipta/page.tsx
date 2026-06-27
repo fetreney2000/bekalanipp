@@ -44,10 +44,10 @@ export default function HakciptaPage() {
 
             <Stack gap="xs" ta="center">
               <Title order={3} fw={700}>
-                Sistem Pengurusan Bekalan Farmasi
+                Sistem Pengurusan Bekalan Floor Stock, EMT & AOH
               </Title>
               <Text size="sm" c="dimmed">
-                Hospital Keningau
+                Jabatan Farmasi Hospital Keningau
               </Text>
             </Stack>
 
@@ -109,7 +109,7 @@ export default function HakciptaPage() {
               <Group gap="xs" justify="center">
                 <IconHeart size={14} color="red" />
                 <Text size="xs" c="dimmed">
-                  Dibangunkan dengan penuh dedikasi untuk Hospital Keningau
+                  Dibangunkan dengan penuh dedikasi untuk Jabatan Farmasi Hospital Keningau
                 </Text>
               </Group>
               <Text size="xs" c="dimmed">
