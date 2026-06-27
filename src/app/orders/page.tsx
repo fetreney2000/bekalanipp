@@ -59,12 +59,6 @@ type SortKey =
   | "masa_pejabat"
   | "sudah_disedia";
 
-const ORDER_TYPE_MAP: Record<string, string> = {
-  FS: "Floor Stock",
-  EMT: "Emergency Trolley",
-  AOH: "Selepas Waktu Pejabat",
-};
-
 const ORDER_TYPE_COLOR: Record<string, string> = {
   FS: "blue",
   EMT: "red",
@@ -478,7 +472,7 @@ export default function OrdersPage() {
                         radius="xl"
                         size="sm"
                       >
-                        {ORDER_TYPE_MAP[order.order_type] || order.order_type}
+                        {order.order_type}
                       </Badge>
                     </Table.Td>
                     <Table.Td>{order.ward_name}</Table.Td>
