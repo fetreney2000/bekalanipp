@@ -25,6 +25,7 @@ import {
   IconAlertTriangle,
 } from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
+import { useRouter } from "next/navigation";
 
 type OrderItem = {
   item_id: string;
@@ -54,7 +55,6 @@ type SortKey =
   | "order_number"
   | "ward_name"
   | "order_type"
-  | "items"
   | "sudah_disedia"
   | "masa_pejabat";
 
@@ -117,6 +117,7 @@ function monthLabel(year: number, month: number): string {
 }
 
 export default function RecordsPage() {
+  const router = useRouter();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -275,9 +276,6 @@ export default function RecordsPage() {
       if (sortKey === "ward_name") {
         va = a.ward_name;
         vb = b.ward_name;
-      } else if (sortKey === "items") {
-        va = a.items.map((i) => i.item_name).join(", ");
-        vb = b.items.map((i) => i.item_name).join(", ");
       } else {
         va = (a as Record<string, unknown>)[sortKey] as string | boolean;
         vb = (b as Record<string, unknown>)[sortKey] as string | boolean;
@@ -393,15 +391,7 @@ export default function RecordsPage() {
                       <IconArrowsSort size={14} style={{ opacity: sortKey === "order_type" ? 1 : 0.4, transform: sortKey === "order_type" && !sortAsc ? "scaleY(-1)" : undefined }} />
                     </Group>
                   </Table.Th>
-                  <Table.Th
-                    onClick={() => toggleSort("items")}
-                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
-                  >
-                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                      Item
-                      <IconArrowsSort size={14} style={{ opacity: sortKey === "items" ? 1 : 0.4, transform: sortKey === "items" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                    </Group>
-                  </Table.Th>
+                  <Table.Th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Bil. Item</Table.Th>
                   <Table.Th style={{ textAlign: "center" }}>Disediakan</Table.Th>
                   <Table.Th style={{ textAlign: "center" }}>Masa Pejabat</Table.Th>
                   <Table.Th style={{ textAlign: "center" }}>Masa</Table.Th>
@@ -419,7 +409,7 @@ export default function RecordsPage() {
                   const elapsed = getElapsedMinutes(order);
                   const elapsedGrad = getElapsedGradient(elapsed);
                   return (
-                    <Table.Tr key={order.id}>
+                    <Table.Tr key={order.id} style={{ cursor: "pointer" }} onClick={() => router.push(`/orders?id=${order.id}`)}>
                       <Table.Td>{idx + 1}</Table.Td>
                       <Table.Td style={{ whiteSpace: "nowrap" }}>
                         {order.order_date}
@@ -444,16 +434,10 @@ export default function RecordsPage() {
                           {ORDER_TYPE_MAP[order.order_type] || order.order_type}
                         </Badge>
                       </Table.Td>
-                      <Table.Td style={{ maxWidth: 200 }}>
-                        <Stack gap={0}>
-                          {order.items.map((item) => (
-                            <Text key={item.item_id} size="xs" lh={1.4}>
-                              {item.item_name} ({item.quantity})
-                            </Text>
-                          ))}
-                        </Stack>
-                      </Table.Td>
                       <Table.Td style={{ textAlign: "center" }}>
+                        {order.items.length}
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                         <Switch
                           checked={order.sudah_disedia}
                           onChange={(event) =>
@@ -464,7 +448,7 @@ export default function RecordsPage() {
                           labelPosition="left"
                         />
                       </Table.Td>
-                      <Table.Td style={{ textAlign: "center" }}>
+                      <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                         <Switch
                           checked={order.masa_pejabat}
                           onChange={(event) =>
