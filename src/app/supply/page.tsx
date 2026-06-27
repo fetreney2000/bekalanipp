@@ -138,6 +138,13 @@ export default function SupplyPage() {
     [catalogItems]
   );
 
+  const getAvailableItems = useCallback((currentRowId: number) => {
+    const selectedIds = new Set(
+      orderRows.filter((r) => r.id !== currentRowId && r.item_id).map((r) => String(r.item_id))
+    );
+    return catalogData.filter((item) => !selectedIds.has(item.value));
+  }, [catalogData, orderRows]);
+
   const handleWardChange = (value: string | null) => {
     setSelectedWardId(value);
     const numId = Number(value);
@@ -417,7 +424,7 @@ export default function SupplyPage() {
                       <Table.Td style={{ minWidth: 200 }}>
                         <Select
                           placeholder="Cari item..."
-                          data={catalogData}
+                          data={getAvailableItems(row.id)}
                           searchable
                           value={row.item_id ? String(row.item_id) : null}
                           onChange={(value) => {
