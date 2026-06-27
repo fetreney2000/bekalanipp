@@ -181,6 +181,22 @@ export async function GET(request: NextRequest) {
 
     totalOrderCount = orders.length;
 
+    let completedWithin120 = 0;
+    let completedOver120 = 0;
+    for (const order of orders) {
+      if (order.sudah_disedia && order.masa_selesai && order.created_at) {
+        const created = new Date(order.created_at).getTime();
+        const finished = new Date(order.masa_selesai).getTime();
+        const mins = Math.round((finished - created) / 60000);
+        if (mins <= 120) {
+          completedWithin120 += 1;
+        } else {
+          completedOver120 += 1;
+        }
+      }
+    }
+    const totalCompleted = completedWithin120 + completedOver120;
+
     const summary = Array.from(summaryMap.values())
       .sort((a, b) => a.ward_name.localeCompare(b.ward_name) || a.order_type.localeCompare(b.order_type));
 
@@ -198,8 +214,8 @@ export async function GET(request: NextRequest) {
         selepas_masa_pejabat: masaCatMap.get("ward_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
       },
       not_ward: {
-        masa_pejabat: masaCatMap.get("not_ward_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
-        selepas_masa_pejabat: masaCatMap.get("not_ward_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+        masa_pejabat: masaCatMap.get("bukan wad_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+        selepas_masa_pejabat: masaCatMap.get("bukan wad_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
       },
     };
 
@@ -298,6 +314,12 @@ export async function GET(request: NextRequest) {
       totals: { order_count: totalOrderCount, bil_item: totalBilItem, jumlah_item: totalQuantity },
       totals_by_masa,
       totals_by_masa_by_cat,
+      timing: {
+        completed_within_120: completedWithin120,
+        completed_over_120: completedOver120,
+        total_completed: totalCompleted,
+        percentage_within_120: totalCompleted > 0 ? Math.round((completedWithin120 / totalCompleted) * 100) : 0,
+      },
       recommendations,
     });
   } catch (error) {

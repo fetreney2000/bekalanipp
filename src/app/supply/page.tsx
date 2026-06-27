@@ -175,7 +175,7 @@ export default function SupplyPage() {
 
   const getUsagePct = (itemId: number | null) => {
     const cat = getCatalogInfo(itemId);
-    if (!cat || cat.monthly_quota === 0) return null;
+    if (!cat || !cat.monthly_quota) return null;
     return Math.round((cat.month_used / cat.monthly_quota) * 100);
   };
 
