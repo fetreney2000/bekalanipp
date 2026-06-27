@@ -42,7 +42,7 @@ type Order = {
   order_number: string;
   order_type: string;
   masa_pejabat: boolean;
-  masa_diterima: boolean;
+  masa_diterima: string | null;
   sudah_disedia: boolean;
   completion_minutes: number | null;
   masa_selesai: string | null;
@@ -130,7 +130,7 @@ export default function OrdersPage() {
     order_number: "",
     order_type: "FS",
     masa_pejabat: false,
-    masa_diterima: false,
+    masa_diterima: "" as string | null,
   });
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -465,14 +465,8 @@ export default function OrdersPage() {
                     <Table.Td style={{ whiteSpace: "nowrap" }}>
                       {order.order_date}
                     </Table.Td>
-                    <Table.Td style={{ textAlign: "center" }}>
-                      {order.masa_diterima ? (
-                        <Badge color="blue" variant="filled" size="sm">
-                          Ya
-                        </Badge>
-                      ) : (
-                        <Text c="dimmed" size="sm">-</Text>
-                      )}
+                    <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                      {order.masa_diterima || <Text c="dimmed" size="sm">-</Text>}
                     </Table.Td>
                     <Table.Td style={{ fontWeight: 600 }}>
                       {order.order_number}
@@ -600,17 +594,14 @@ export default function OrdersPage() {
                   })
                 }
               />
-              <Select
+              <TextInput
                 label="Masa Diterima"
-                data={[
-                  { value: "false", label: "Tidak" },
-                  { value: "true", label: "Ya" },
-                ]}
-                value={String(editForm.masa_diterima)}
-                onChange={(val) =>
+                type="time"
+                value={editForm.masa_diterima || ""}
+                onChange={(e) =>
                   setEditForm({
                     ...editForm,
-                    masa_diterima: val === "true",
+                    masa_diterima: e.target.value || null,
                   })
                 }
               />
