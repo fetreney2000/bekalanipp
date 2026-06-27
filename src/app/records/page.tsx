@@ -17,6 +17,8 @@ import {
   Loader,
   Switch,
   Select,
+  NumberInput,
+  ActionIcon,
 } from "@mantine/core";
 import {
   IconRefresh,
@@ -24,9 +26,9 @@ import {
   IconClock,
   IconCircleCheck,
   IconAlertTriangle,
+  IconTrash,
 } from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
-import { useRouter } from "next/navigation";
 
 type OrderItem = {
   item_id: string;
@@ -59,6 +61,18 @@ type SortKey =
   | "sudah_disedia"
   | "masa_pejabat";
 
+const ORDER_TYPE_DATA = [
+  { value: "FS", label: "Floor Stock" },
+  { value: "EMT", label: "Emergency Trolley" },
+  { value: "AOH", label: "Selepas Waktu Pejabat" },
+];
+
+const ORDER_TYPE_COLOR: Record<string, string> = {
+  FS: "blue",
+  EMT: "red",
+  AOH: "orange",
+};
+
 function getMonthRange(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -83,7 +97,6 @@ function getElapsedMinutes(order: Order): number {
 }
 
 function getElapsedGradient(mins: number): string {
-  if (mins <= 0) return "green";
   if (mins <= 60) return "green";
   if (mins <= 120) return "yellow";
   return "red";
@@ -94,7 +107,6 @@ function formatElapsed(mins: number): string {
 }
 
 export default function RecordsPage() {
-  const router = useRouter();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -111,6 +123,22 @@ export default function RecordsPage() {
     value: boolean;
   } | null>(null);
   const [, setTick] = useState(0);
+
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSuccess, setModalSuccess] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    order_date: "",
+    order_number: "",
+    order_type: "FS",
+    masa_pejabat: false,
+    masa_diterima: "" as string | null,
+  });
+  const [editItems, setEditItems] = useState<OrderItem[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const range = useMemo(() => getMonthRange(year, month), [year, month]);
 
@@ -133,12 +161,6 @@ export default function RecordsPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
-
-  useEffect(() => {
-    const handler = () => fetchOrders();
-    window.addEventListener("idle:refresh-records", handler);
-    return () => window.removeEventListener("idle:refresh-records", handler);
   }, [fetchOrders]);
 
   useEffect(() => {
@@ -250,12 +272,94 @@ export default function RecordsPage() {
     return list;
   }, [orders, searchText, sortKey, sortAsc]);
 
+  const openDetailModal = useCallback(async (order: Order) => {
+    setSelectedOrder(order);
+    setModalLoading(true);
+    setModalError(null);
+    setModalSuccess(null);
+    setConfirmDelete(false);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`);
+      if (!res.ok) throw new Error("Gagal memuatkan butiran");
+      const data = await res.json();
+      setEditForm({
+        order_date: data.order_date,
+        order_number: data.order_number,
+        order_type: data.order_type,
+        masa_pejabat: data.masa_pejabat,
+        masa_diterima: data.masa_diterima,
+      });
+      setEditItems(data.items || []);
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : "Ralat");
+    } finally {
+      setModalLoading(false);
+    }
+  }, []);
+
+  const closeModal = () => {
+    setSelectedOrder(null);
+    setConfirmDelete(false);
+    setModalError(null);
+    setModalSuccess(null);
+  };
+
+  const handleSave = async () => {
+    if (!selectedOrder) return;
+    setSaving(true);
+    setModalError(null);
+    setModalSuccess(null);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editForm,
+          sudah_disedia: selectedOrder.sudah_disedia,
+          items: editItems.map((i) => ({
+            item_id: i.item_id,
+            quantity: i.quantity,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
+      setModalSuccess("Berjaya disimpan");
+      fetchOrders();
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : "Ralat");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedOrder) return;
+    setDeleting(true);
+    setModalError(null);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal memadam");
+      }
+      closeModal();
+      fetchOrders();
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : "Ralat");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <AppShell>
       <Stack gap="md">
         <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
           <Group gap="sm">
-            <IconClock size={22} color="cyan.6" />
+            <IconClock size={22} />
             <Title order={2}>Senarai Inden</Title>
           </Group>
         </Flex>
@@ -387,7 +491,7 @@ export default function RecordsPage() {
                   const elapsed = getElapsedMinutes(order);
                   const elapsedGrad = getElapsedGradient(elapsed);
                   return (
-                    <Table.Tr key={order.id} style={{ cursor: "pointer" }} onClick={() => router.push(`/orders?id=${order.id}`)}>
+                    <Table.Tr key={order.id} style={{ cursor: "pointer" }} onClick={() => openDetailModal(order)}>
                       <Table.Td>{idx + 1}</Table.Td>
                       <Table.Td style={{ whiteSpace: "nowrap" }}>
                         {order.order_date}
@@ -401,13 +505,7 @@ export default function RecordsPage() {
                       <Table.Td>{order.ward_name}</Table.Td>
                       <Table.Td>
                         <Badge
-                          color={
-                            order.order_type === "FS"
-                              ? "blue"
-                              : order.order_type === "EMT"
-                                ? "red"
-                                : "orange"
-                          }
+                          color={ORDER_TYPE_COLOR[order.order_type] || "gray"}
                           variant="filled"
                           radius="xl"
                           size="sm"
@@ -467,7 +565,7 @@ export default function RecordsPage() {
         )}
 
         <Text size="xs" c="dimmed">
-          {filtered.length} pesanan dipaparkan
+          {filtered.length} inden dipaparkan
         </Text>
       </Stack>
 
@@ -485,7 +583,7 @@ export default function RecordsPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Adakah anda pasti mahu membatalkan status &quot;Sudah
-            Disediakan&quot; untuk pesanan ini?
+            Disediakan&quot; untuk inden ini?
           </Text>
           <Flex justify="flex-end" gap="sm">
             <Button
@@ -504,6 +602,165 @@ export default function RecordsPage() {
             </Button>
           </Flex>
         </Stack>
+      </Modal>
+
+      <Modal
+        opened={!!selectedOrder}
+        onClose={closeModal}
+        title="Butiran Inden"
+        size="md"
+        centered
+      >
+        {modalLoading ? (
+          <Box py={40} style={{ textAlign: "center" }}>
+            <Loader size="sm" />
+            <Text size="sm" mt="xs" c="dimmed">Memuatkan butiran...</Text>
+          </Box>
+        ) : (
+          <Stack gap="md">
+            {modalError && (
+              <Alert color="red" variant="light" radius="md">
+                {modalError}
+              </Alert>
+            )}
+
+            {modalSuccess && (
+              <Alert color="green" variant="light" radius="md">
+                {modalSuccess}
+              </Alert>
+            )}
+
+            <TextInput
+              label="Tarikh Inden"
+              type="date"
+              value={editForm.order_date}
+              onChange={(e) =>
+                setEditForm({ ...editForm, order_date: e.target.value })
+              }
+            />
+
+            <TextInput
+              label="No. Inden"
+              value={editForm.order_number}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  order_number: e.currentTarget.value,
+                })
+              }
+            />
+
+            <Select
+              label="Jenis"
+              data={ORDER_TYPE_DATA}
+              value={editForm.order_type}
+              onChange={(val) =>
+                setEditForm({ ...editForm, order_type: val || "FS" })
+              }
+            />
+
+            <Group grow>
+              <Select
+                label="Masa Pejabat"
+                data={[
+                  { value: "false", label: "Tidak" },
+                  { value: "true", label: "Ya" },
+                ]}
+                value={String(editForm.masa_pejabat)}
+                onChange={(val) =>
+                  setEditForm({
+                    ...editForm,
+                    masa_pejabat: val === "true",
+                  })
+                }
+              />
+              <TextInput
+                label="Masa Diterima"
+                type="time"
+                value={editForm.masa_diterima || ""}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    masa_diterima: e.target.value || null,
+                  })
+                }
+              />
+            </Group>
+
+            <Box>
+              <Text size="sm" fw={500} mb={8}>Item</Text>
+              <Stack gap="xs">
+                {editItems.map((item, idx) => (
+                  <Flex
+                    key={idx}
+                    gap="sm"
+                    align="center"
+                    p="xs"
+                    style={{
+                      borderRadius: "8px",
+                      background: "var(--mantine-color-gray-light)",
+                    }}
+                  >
+                    <Text style={{ flex: 1 }} size="sm">
+                      {item.item_name}
+                    </Text>
+                    <NumberInput
+                      value={item.quantity}
+                      onChange={(val) => {
+                        const v = typeof val === "number" ? val : 1;
+                        setEditItems((prev) =>
+                          prev.map((it, i) => (i === idx ? { ...it, quantity: Math.max(1, v) } : it))
+                        );
+                      }}
+                      min={1}
+                      w={70}
+                      size="xs"
+                      hideControls
+                    />
+                  </Flex>
+                ))}
+                {editItems.length === 0 && (
+                  <Text c="dimmed" size="sm" ta="center" py="xs">
+                    Tiada item
+                  </Text>
+                )}
+              </Stack>
+            </Box>
+
+            <Flex
+              justify="space-between"
+              align="center"
+              pt="sm"
+              style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
+            >
+              <Group gap="sm">
+                {confirmDelete ? (
+                  <Group gap="sm">
+                    <Text size="sm" c="red">Pasti padam?</Text>
+                    <Button size="compact-sm" color="red" onClick={handleDelete} loading={deleting}>
+                      Ya, Padam
+                    </Button>
+                    <Button size="compact-sm" variant="subtle" onClick={() => setConfirmDelete(false)}>
+                      Batal
+                    </Button>
+                  </Group>
+                ) : (
+                  <ActionIcon variant="subtle" color="red" size="sm" onClick={() => setConfirmDelete(true)}>
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                )}
+              </Group>
+              <Group gap="sm">
+                <Button size="compact-sm" variant="subtle" onClick={closeModal}>
+                  Tutup
+                </Button>
+                <Button size="compact-sm" onClick={handleSave} loading={saving}>
+                  Simpan
+                </Button>
+              </Group>
+            </Flex>
+          </Stack>
+        )}
       </Modal>
     </AppShell>
   );

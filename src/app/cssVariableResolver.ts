@@ -5,9 +5,9 @@ export const shadcnCssVariableResolver: CSSVariablesResolver = () => ({
     // variables that do not depend on color scheme
     '--mantine-heading-font-weight': '600',
     '--mantine-primary-color-filled-hover': alpha('var(--mantine-primary-color-filled)', 0.9),
-    '--mantine-primary-color-light': 'var(--mantine-color-stone-light)',
-    '--mantine-primary-color-light-hover': 'var(--mantine-color-stone-light-hover)',
-    '--mantine-primary-color-light-color': 'var(--mantine-color-stone-light-color)',
+    '--mantine-primary-color-light': 'var(--mantine-color-violet-light)',
+    '--mantine-primary-color-light-hover': 'var(--mantine-color-violet-light-hover)',
+    '--mantine-primary-color-light-color': 'var(--mantine-color-violet-light-color)',
   },
   light: {
     // all variables that depend on light color scheme
