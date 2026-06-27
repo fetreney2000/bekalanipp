@@ -446,8 +446,8 @@ export default function SupplyPage() {
                         />
                       </Table.Td>
                       <Table.Td style={{ fontSize: 13 }}>{cat ? cat.max_per_order : "—"}</Table.Td>
-                      <Table.Td style={{ fontSize: 13 }}>{cat ? cat.monthly_quota : "—"}</Table.Td>
-                      <Table.Td style={{ fontSize: 13 }}>{cat ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Table.Td>
+                      <Table.Td style={{ fontSize: 13 }}>{cat && cat.monthly_quota > 0 ? cat.monthly_quota : "—"}</Table.Td>
+                      <Table.Td style={{ fontSize: 13 }}>{cat && cat.monthly_quota > 0 ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Table.Td>
                       <Table.Td style={{ textAlign: "center" }}>
                         {pct !== null ? (
                           <Badge color={getUsageBadgeColor(pct)} variant="light" size="sm">
@@ -485,7 +485,7 @@ export default function SupplyPage() {
             onClick={handleSubmit}
             loading={submitting}
           >
-            {submitting ? "Menghantar..." : "Hantar Pesanan"}
+            {submitting ? "Menyimpan..." : "Simpan Inden"}
           </Button>
         </Flex>
       </Stack>
