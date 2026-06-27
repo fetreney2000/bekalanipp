@@ -32,6 +32,9 @@ import {
   IconBuildingSkyscraper,
   IconShoppingBag,
   IconPackage,
+  IconClockCheck,
+  IconTrendingUp,
+  IconTrendingDown,
 } from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
@@ -63,6 +66,12 @@ interface UsageReport {
   totals: { order_count: number; bil_item: number; jumlah_item: number };
   totals_by_masa: Record<string, { order_count: number; bil_item: number; jumlah_item: number }>;
   totals_by_masa_by_cat: Record<string, Record<string, { order_count: number; bil_item: number; jumlah_item: number }>>;
+  timing: {
+    completed_within_120: number;
+    completed_over_120: number;
+    total_completed: number;
+    percentage_within_120: number;
+  };
   recommendations: unknown[];
 }
 
@@ -369,6 +378,50 @@ export default function ReportsPage() {
 
         {report && !loading && (
           <>
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                <IconClockCheck size={18} color="cyan.6" />
+                <Title order={4} fw={700}>
+                  Prestasi Masa Inden
+                </Title>
+              </Group>
+              <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
+                <Paper shadow="sm" p="md" radius="md" withBorder>
+                  <Group gap="sm" align="center">
+                    <ThemeIcon size="lg" radius="md" variant="light" color="green">
+                      <IconTrendingUp size={22} />
+                    </ThemeIcon>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Inden Dibekal &le; 120 Minit</Text>
+                      <Text size="xl" fw={700}>{formatNumber(report.timing.completed_within_120)}</Text>
+                    </Stack>
+                  </Group>
+                </Paper>
+                <Paper shadow="sm" p="md" radius="md" withBorder>
+                  <Group gap="sm" align="center">
+                    <ThemeIcon size="lg" radius="md" variant="light" color="red">
+                      <IconTrendingDown size={22} />
+                    </ThemeIcon>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Inden Dibekal &gt; 120 Minit</Text>
+                      <Text size="xl" fw={700}>{formatNumber(report.timing.completed_over_120)}</Text>
+                    </Stack>
+                  </Group>
+                </Paper>
+                <Paper shadow="sm" p="md" radius="md" withBorder>
+                  <Group gap="sm" align="center">
+                    <ThemeIcon size="lg" radius="md" variant="light" color="teal">
+                      <IconClockCheck size={22} />
+                    </ThemeIcon>
+                    <Stack gap={0}>
+                      <Text size="xs" c="dimmed">Peratus &le; 120 Minit</Text>
+                      <Text size="xl" fw={700}>{report.timing.percentage_within_120}%</Text>
+                    </Stack>
+                  </Group>
+                </Paper>
+              </SimpleGrid>
+            </Paper>
+
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconShoppingBag size={18} color="cyan.6" />
