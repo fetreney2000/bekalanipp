@@ -202,7 +202,7 @@ export default function ReportsPage() {
     setItemOrdersLoading(true);
     try {
       const res = await fetch(`/api/reports/item-orders?item_id=${item.item_id}&${qs}`);
-      if (!res.ok) throw new Error("Gagal memuatkan pesanan");
+      if (!res.ok) throw new Error("Gagal memuatkan inden");
       const data = await res.json();
       setItemOrders(data.orders || []);
     } catch {
@@ -218,7 +218,7 @@ export default function ReportsPage() {
     setWardOrdersLoading(true);
     try {
       const res = await fetch(`/api/reports/ward-orders?ward_id=${ward.ward_id}&${qs}`);
-      if (!res.ok) throw new Error("Gagal memuatkan pesanan wad");
+      if (!res.ok) throw new Error("Gagal memuatkan inden wad");
       const data = await res.json();
       setWardOrders(data.orders || []);
     } catch {
@@ -240,8 +240,8 @@ export default function ReportsPage() {
   const wadTotalItems = wMp.jumlah_item + wSmp.jumlah_item;
   const bukanWadTotalItems = nwMp.jumlah_item + nwSmp.jumlah_item;
 
-  const pesananCards = [
-    { label: "Jumlah Pesanan", value: report?.totals.order_count || 0, icon: IconShoppingBag, color: "cyan" },
+  const indenCards = [
+    { label: "Jumlah Inden", value: report?.totals.order_count || 0, icon: IconShoppingBag, color: "cyan" },
     { label: "Masa Pejabat", value: mp.order_count, icon: IconClock, color: "teal" },
     { label: "Selepas Masa Pejabat", value: smp.order_count, icon: IconClockOff, color: "red" },
     { label: "Wad", value: wadTotalOrders, icon: IconBuildingHospital, color: "blue" },
@@ -451,11 +451,11 @@ export default function ReportsPage() {
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconShoppingBag size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
-                  Jumlah Pesanan
+                  Jumlah Inden
                 </Title>
               </Group>
               <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
-                {pesananCards.map((card) => {
+                {indenCards.map((card) => {
                   const Icon = card.icon;
                   return (
                     <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
@@ -577,7 +577,7 @@ export default function ReportsPage() {
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Wad</Table.Th>
-                      <Table.Th ta="right">Bil. Pesanan</Table.Th>
+                      <Table.Th ta="right">Bil. Inden</Table.Th>
                       <Table.Th ta="right">Bil. Item</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
@@ -624,7 +624,7 @@ export default function ReportsPage() {
                     <Table.Thead>
                       <Table.Tr>
                         <Table.Th>Item</Table.Th>
-                        <Table.Th ta="right">Bil. Pesanan</Table.Th>
+                        <Table.Th ta="right">Bil. Inden</Table.Th>
                         <Table.Th ta="right">Jumlah Kuantiti</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
@@ -668,7 +668,7 @@ export default function ReportsPage() {
           setSelectedItem(null);
           setItemOrders([]);
         }}
-        title={`Pesanan: ${selectedItem?.item_name || ""}`}
+        title={`Inden: ${selectedItem?.item_name || ""}`}
         size="lg"
         centered
       >
@@ -678,7 +678,7 @@ export default function ReportsPage() {
           </Flex>
         ) : itemOrders.length === 0 ? (
           <Text size="sm" c="dimmed" ta="center" py="md">
-            Tiada pesanan ditemui untuk item ini.
+            Tiada inden ditemui untuk item ini.
           </Text>
         ) : (
           <Table.ScrollContainer minWidth={300}>
@@ -725,7 +725,7 @@ export default function ReportsPage() {
           setSelectedWard(null);
           setWardOrders([]);
         }}
-        title={`Pesanan: ${selectedWard?.ward_name || ""}`}
+        title={`Inden: ${selectedWard?.ward_name || ""}`}
         size="xl"
         centered
       >
@@ -735,7 +735,7 @@ export default function ReportsPage() {
           </Flex>
         ) : wardOrders.length === 0 ? (
           <Text size="sm" c="dimmed" ta="center" py="md">
-            Tiada pesanan ditemui untuk wad ini.
+            Tiada inden ditemui untuk wad ini.
           </Text>
         ) : (
           <Table.ScrollContainer minWidth={500}>
