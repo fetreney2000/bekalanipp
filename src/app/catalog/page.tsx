@@ -53,7 +53,7 @@ export default function CatalogPage() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [selectedWard, setSelectedWard] = useState("");
-  const [currentMonth, setCurrentMonth] = useState(() => {
+  const [currentMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
@@ -252,13 +252,6 @@ export default function CatalogPage() {
             searchable
             clearable
             maw={300}
-          />
-          <TextInput
-            label="Bulan"
-            type="month"
-            value={currentMonth}
-            onChange={(e) => setCurrentMonth(e.currentTarget.value)}
-            w={180}
           />
           {selectedWard && (
             <Button

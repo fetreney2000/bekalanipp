@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Stack,
   Group,
@@ -8,7 +8,6 @@ import {
   Text,
   Badge,
   SimpleGrid,
-  CloseButton,
   Loader,
   Flex,
   Select,
@@ -20,17 +19,15 @@ import {
   ThemeIcon,
   Title,
   Box,
+  Modal,
 } from "@mantine/core";
 import {
   IconChartBar,
-  IconCalendar,
-  IconDownload,
   IconFilter,
   IconFileText,
-  IconTrendingUp,
-  IconTrendingDown,
-  IconMinus,
+  IconPill,
 } from "@tabler/icons-react";
+import { BarChart, PieChart } from "@mantine/charts";
 import AppShell from "@/components/AppShell";
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly";
@@ -52,24 +49,6 @@ interface WardSummary {
   jumlah_item: number;
 }
 
-interface MasaSummary {
-  masa_pejabat: boolean;
-  quantity: number;
-}
-
-interface MasaCatSummary {
-  ward_category: string;
-  masa_pejabat: boolean;
-  quantity: number;
-}
-
-interface Recommendation {
-  item_id: string;
-  item_name: string;
-  avg_per_day: number;
-  recommended_stock: number;
-}
-
 interface UsageReport {
   type: string;
   start: string;
@@ -79,14 +58,24 @@ interface UsageReport {
   totals: { order_count: number; bil_item: number; jumlah_item: number };
   totals_by_masa: Record<string, { order_count: number; bil_item: number; jumlah_item: number }>;
   totals_by_masa_by_cat: Record<string, Record<string, { order_count: number; bil_item: number; jumlah_item: number }>>;
-  recommendations: Recommendation[];
+  recommendations: unknown[];
 }
 
 interface WardItemResult {
-  item_id: string;
+  item_id: number;
   item_name: string;
   order_count: number;
   quantity_sum: number;
+}
+
+interface ItemOrder {
+  order_id: number;
+  order_number: string;
+  order_date: string;
+  ward_name: string;
+  quantity: number;
+  masa_pejabat: boolean;
+  sudah_disedia: boolean;
 }
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = {
@@ -142,18 +131,21 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [wardItems, setWardItems] = useState<WardItemResult[] | null>(null);
+  const [wardItems, setWardItems] = useState<WardItemResult[]>([]);
   const [wardItemsLoading, setWardItemsLoading] = useState(false);
-  const [wardItemsError, setWardItemsError] = useState<string | null>(null);
-  const [showWardItems, setShowWardItems] = useState(false);
+
+  const [selectedItem, setSelectedItem] = useState<WardItemResult | null>(null);
+  const [itemOrders, setItemOrders] = useState<ItemOrder[]>([]);
+  const [itemOrdersLoading, setItemOrdersLoading] = useState(false);
+  const [itemOrdersModal, setItemOrdersModal] = useState(false);
+
+  const qs = buildQueryParams(reportType, date, week, month, year);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setWardItems(null);
-    setShowWardItems(false);
+    setWardItems([]);
     try {
-      const qs = buildQueryParams(reportType, date, week, month, year);
       const res = await fetch(`/api/reports/usage?${qs}`);
       if (!res.ok) throw new Error("Gagal memuatkan laporan");
       const data = await res.json();
@@ -163,79 +155,84 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [reportType, date, week, month, year]);
+  }, [qs]);
 
   const fetchWardItems = useCallback(async () => {
     setWardItemsLoading(true);
-    setWardItemsError(null);
     try {
-      const qs = buildQueryParams(reportType, date, week, month, year);
       const res = await fetch(`/api/reports/ward-items?${qs}`);
       if (!res.ok) throw new Error("Gagal memuatkan item wad");
       const data = await res.json();
       setWardItems(data.items || []);
-      setShowWardItems(true);
-    } catch (err: unknown) {
-      setWardItemsError(
-        err instanceof Error ? err.message : "Ralat tidak diketahui"
-      );
+    } catch {
+      setWardItems([]);
     } finally {
       setWardItemsLoading(false);
     }
-  }, [reportType, date, week, month, year]);
+  }, [qs]);
 
-  const masaPejabatQty =
-    report?.totals_by_masa.masa_pejabat?.jumlah_item || 0;
-  const selepasMasaPejabatQty =
-    report?.totals_by_masa.selepas_masa_pejabat?.jumlah_item || 0;
-  const totalQty = report?.totals.jumlah_item || 0;
+  useEffect(() => {
+    if (report) fetchWardItems();
+  }, [report, fetchWardItems]);
 
-  const wardMpQty =
-    report?.totals_by_masa_by_cat.ward?.masa_pejabat?.jumlah_item || 0;
-  const wardSmpQty =
-    report?.totals_by_masa_by_cat.ward?.selepas_masa_pejabat?.jumlah_item || 0;
-  const bukanWardMpQty =
-    report?.totals_by_masa_by_cat.not_ward?.masa_pejabat?.jumlah_item || 0;
-  const bukanWardSmpQty =
-    report?.totals_by_masa_by_cat.not_ward?.selepas_masa_pejabat?.jumlah_item || 0;
+  const fetchItemOrders = useCallback(async (item: WardItemResult) => {
+    setSelectedItem(item);
+    setItemOrdersModal(true);
+    setItemOrdersLoading(true);
+    try {
+      const res = await fetch(`/api/reports/item-orders?item_id=${item.item_id}&${qs}`);
+      if (!res.ok) throw new Error("Gagal memuatkan pesanan");
+      const data = await res.json();
+      setItemOrders(data.orders || []);
+    } catch {
+      setItemOrders([]);
+    } finally {
+      setItemOrdersLoading(false);
+    }
+  }, [qs]);
 
-  const statCards = [
-    {
-      label: "Jumlah Pesanan",
-      value: formatNumber(report?.totals.order_count || 0),
-      icon: IconFileText,
-      color: "cyan",
-    },
-    {
-      label: "Jumlah Item",
-      value: formatNumber(report?.totals.jumlah_item || 0),
-      icon: IconChartBar,
-      color: "green",
-    },
-    {
-      label: "Masa Pejabat",
-      value: formatNumber(masaPejabatQty),
-      icon: IconTrendingUp,
-      color: "yellow",
-    },
-    {
-      label: "Selepas Masa Pejabat",
-      value: formatNumber(selepasMasaPejabatQty),
-      icon: IconTrendingDown,
-      color: "red",
-    },
-    {
-      label: "Wad + MP",
-      value: formatNumber(wardMpQty),
-      icon: IconMinus,
-      color: "cyan",
-    },
-    {
-      label: "Bukan Wad + SMP",
-      value: formatNumber(bukanWardSmpQty),
-      icon: IconMinus,
-      color: "gray",
-    },
+  const mp = report?.totals_by_masa.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+  const smp = report?.totals_by_masa.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+  const wMp = report?.totals_by_masa_by_cat.ward?.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+  const wSmp = report?.totals_by_masa_by_cat.ward?.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+  const nwMp = report?.totals_by_masa_by_cat.not_ward?.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+  const nwSmp = report?.totals_by_masa_by_cat.not_ward?.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+
+  const wadTotal = wMp.order_count + wSmp.order_count;
+  const bukanWadTotal = nwMp.order_count + nwSmp.order_count;
+  const wadItemTotal = wMp.jumlah_item + wSmp.jumlah_item;
+  const bukanWadItemTotal = nwMp.jumlah_item + nwSmp.jumlah_item;
+
+  const pesananChartData = [
+    { name: "Masa Pejabat", value: mp.order_count, color: "cyan.6" },
+    { name: "Selepas MP", value: smp.order_count, color: "red.6" },
+    { name: "Wad", value: wadTotal, color: "blue.6" },
+    { name: "Bukan Wad", value: bukanWadTotal, color: "gray.6" },
+    { name: "Wad + MP", value: wMp.order_count, color: "teal.6" },
+    { name: "Wad + SMP", value: wSmp.order_count, color: "yellow.6" },
+    { name: "Bukan Wad + MP", value: nwMp.order_count, color: "orange.6" },
+    { name: "Bukan Wad + SMP", value: nwSmp.order_count, color: "pink.6" },
+  ];
+
+  const itemChartData = [
+    { name: "Masa Pejabat", value: mp.jumlah_item, color: "cyan.6" },
+    { name: "Selepas MP", value: smp.jumlah_item, color: "red.6" },
+    { name: "Wad", value: wadItemTotal, color: "blue.6" },
+    { name: "Bukan Wad", value: bukanWadItemTotal, color: "gray.6" },
+    { name: "Wad + MP", value: wMp.jumlah_item, color: "teal.6" },
+    { name: "Wad + SMP", value: wSmp.jumlah_item, color: "yellow.6" },
+    { name: "Bukan Wad + MP", value: nwMp.jumlah_item, color: "orange.6" },
+    { name: "Bukan Wad + SMP", value: nwSmp.jumlah_item, color: "pink.6" },
+  ];
+
+  const mpPieData = [
+    { name: "Masa Pejabat", value: mp.jumlah_item, color: "cyan.6" },
+    { name: "Selepas MP", value: smp.jumlah_item, color: "red.6" },
+  ];
+
+  const catPieData = [
+    { name: "Wad", value: wadItemTotal, color: "blue.6" },
+    { name: "Bukan Wad", value: bukanWadItemTotal, color: "gray.6" },
   ];
 
   return (
@@ -243,7 +240,7 @@ export default function ReportsPage() {
       <Stack gap="lg">
         <Group justify="space-between" wrap="wrap" gap="md">
           <Group gap="sm">
-            <ThemeIcon size="lg" variant="light" color="blue">
+            <ThemeIcon size="lg" variant="light" color="cyan">
               <IconChartBar size={24} />
             </ThemeIcon>
             <Title order={2} fw={700}>
@@ -323,7 +320,7 @@ export default function ReportsPage() {
 
             {report && (
               <Group gap="xs" wrap="wrap">
-                <Badge color="blue" variant="light">
+                <Badge color="cyan" variant="light">
                   {REPORT_TYPE_LABELS[report.type as ReportType]}
                 </Badge>
                 <Badge color="green" variant="light">
@@ -337,7 +334,7 @@ export default function ReportsPage() {
         {loading && (
           <Flex justify="center" py="xl">
             <Stack align="center" gap="md">
-              <Loader size="lg" color="blue" />
+              <Loader size="lg" color="cyan" />
               <Text size="sm" c="dimmed">
                 Memuatkan laporan...
               </Text>
@@ -353,32 +350,83 @@ export default function ReportsPage() {
 
         {report && !loading && (
           <>
-            <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="md">
-              {statCards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <Paper key={card.label} shadow="sm" p="md" radius="md">
-                    <Group justify="space-between" align="flex-start">
-                      <Stack gap={4}>
-                        <Text size="sm" c="dimmed">
-                          {card.label}
-                        </Text>
-                        <Text size="xl" fw={700}>
-                          {card.value}
-                        </Text>
-                      </Stack>
-                      <ThemeIcon
-                        size="lg"
-                        variant="light"
-                        color={card.color}
-                      >
-                        <Icon size={20} />
-                      </ThemeIcon>
-                    </Group>
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" mb="md">
+                <IconFileText size={18} color="cyan.6" />
+                <Title order={4} fw={700}>
+                  Ringkasan Jumlah
+                </Title>
+              </Group>
+
+              <Title order={5} fw={600} style={{ marginBottom: "var(--mantine-spacing-sm)" }}>
+                Jumlah Pesanan
+              </Title>
+              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                {pesananChartData.map((item) => (
+                  <Paper key={item.name} p="sm" radius="sm" withBorder>
+                    <Text size="xs" c="dimmed">{item.name}</Text>
+                    <Text size="lg" fw={700}>{formatNumber(item.value)}</Text>
                   </Paper>
-                );
-              })}
-            </SimpleGrid>
+                ))}
+              </SimpleGrid>
+
+              <Title order={5} fw={600} style={{ marginBottom: "var(--mantine-spacing-sm)" }}>
+                Jumlah Item
+              </Title>
+              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                {itemChartData.map((item) => (
+                  <Paper key={item.name} p="sm" radius="sm" withBorder>
+                    <Text size="xs" c="dimmed">{item.name}</Text>
+                    <Text size="lg" fw={700}>{formatNumber(item.value)}</Text>
+                  </Paper>
+                ))}
+              </SimpleGrid>
+
+              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" style={{ marginTop: "var(--mantine-spacing-md)" }}>
+                <Box>
+                  <Text size="sm" fw={600} mb="xs">Jumlah Pesanan</Text>
+                  <BarChart
+                    h={220}
+                    data={pesananChartData}
+                    dataKey="name"
+                    series={[{ name: "value", color: "cyan.6" }]}
+                    tickLine="none"
+                    gridAxis="x"
+                    withTooltip
+                  />
+                </Box>
+                <Box>
+                  <Text size="sm" fw={600} mb="xs">Jumlah Item</Text>
+                  <BarChart
+                    h={220}
+                    data={itemChartData}
+                    dataKey="name"
+                    series={[{ name: "value", color: "green.6" }]}
+                    tickLine="none"
+                    gridAxis="x"
+                    withTooltip
+                  />
+                </Box>
+                <Box>
+                  <Text size="sm" fw={600} mb="xs">Masa Pejabat vs Selepas MP</Text>
+                  <PieChart
+                    h={220}
+                    data={mpPieData}
+                    withTooltip
+                    labelsType="percent"
+                  />
+                </Box>
+                <Box>
+                  <Text size="sm" fw={600} mb="xs">Wad vs Bukan Wad</Text>
+                  <PieChart
+                    h={220}
+                    data={catPieData}
+                    withTooltip
+                    labelsType="percent"
+                  />
+                </Box>
+              </SimpleGrid>
+            </Paper>
 
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" mb="md">
@@ -387,28 +435,27 @@ export default function ReportsPage() {
                   Ringkasan Mengikut Wad
                 </Title>
               </Group>
-              <Table.ScrollContainer minWidth={300}>
+              <Table.ScrollContainer minWidth={400}>
                 <Table striped highlightOnHover>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Wad</Table.Th>
-                      <Table.Th style={{ textAlign: "right" }}>Jumlah Item</Table.Th>
+                      <Table.Th ta="right">Bil. Pesanan</Table.Th>
+                      <Table.Th ta="right">Bil. Item</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {report.totals_by_ward.map((ws) => (
                       <Table.Tr key={ws.ward_id}>
                         <Table.Td>{ws.ward_name}</Table.Td>
-                        <Table.Td style={{ textAlign: "right", fontWeight: 600 }}>
-                          {formatNumber(ws.jumlah_item)}
-                        </Table.Td>
+                        <Table.Td ta="right">{formatNumber(ws.order_count)}</Table.Td>
+                        <Table.Td ta="right" fw={600}>{formatNumber(ws.jumlah_item)}</Table.Td>
                       </Table.Tr>
                     ))}
-                    <Table.Tr style={{ fontWeight: 700 }}>
+                    <Table.Tr fw={700}>
                       <Table.Td>JUMLAH</Table.Td>
-                      <Table.Td style={{ textAlign: "right" }}>
-                        {formatNumber(report.totals.jumlah_item)}
-                      </Table.Td>
+                      <Table.Td ta="right">{formatNumber(report.totals.order_count)}</Table.Td>
+                      <Table.Td ta="right">{formatNumber(report.totals.jumlah_item)}</Table.Td>
                     </Table.Tr>
                   </Table.Tbody>
                 </Table>
@@ -417,240 +464,46 @@ export default function ReportsPage() {
 
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" mb="md">
-                <IconCalendar size={18} color="yellow.6" />
+                <IconPill size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
-                  Masa Pejabat
+                  Butiran Item
                 </Title>
               </Group>
-              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-                <Paper p="md" radius="md" variant="light" color="cyan">
-                  <Text size="sm" fw={600} mb="sm" c="cyan">
-                    Masa Pejabat
-                  </Text>
-                  <Stack gap="xs">
-                    <Group justify="space-between">
-                      <Text size="sm" c="dimmed">Bil. Pesanan</Text>
-                      <Text size="sm" fw={600}>{formatNumber(masaPejabatQty)}</Text>
-                    </Group>
-                    <Group justify="space-between">
-                      <Text size="sm" c="dimmed">Peratusan</Text>
-                      <Text size="sm" fw={600}>
-                        {totalQty > 0
-                          ? ((masaPejabatQty / totalQty) * 100).toFixed(1)
-                          : "0.0"}
-                        %
-                      </Text>
-                    </Group>
-                  </Stack>
-                </Paper>
-                <Paper p="md" radius="md" variant="light" color="red">
-                  <Text size="sm" fw={600} mb="sm" c="red">
-                    Selepas Masa Pejabat
-                  </Text>
-                  <Stack gap="xs">
-                    <Group justify="space-between">
-                      <Text size="sm" c="dimmed">Bil. Pesanan</Text>
-                      <Text size="sm" fw={600}>{formatNumber(selepasMasaPejabatQty)}</Text>
-                    </Group>
-                    <Group justify="space-between">
-                      <Text size="sm" c="dimmed">Peratusan</Text>
-                      <Text size="sm" fw={600}>
-                        {totalQty > 0
-                          ? ((selepasMasaPejabatQty / totalQty) * 100).toFixed(1)
-                          : "0.0"}
-                        %
-                      </Text>
-                    </Group>
-                  </Stack>
-                </Paper>
-              </SimpleGrid>
-            </Paper>
-
-            <Paper shadow="sm" p="md" radius="md">
-              <Group gap="sm" mb="md">
-                <IconChartBar size={18} color="green.6" />
-                <Title order={4} fw={700}>
-                  Pecahan Mengikut Kategori
-                </Title>
-              </Group>
-              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-                <Paper p="md" radius="md" variant="light" color="cyan">
-                  <Text size="sm" fw={600} mb="sm" c="cyan">
-                    Wad + Masa Pejabat
-                  </Text>
-                  <Text size="xl" fw={700}>{formatNumber(wardMpQty)}</Text>
-                  <Text size="xs" c="dimmed" mt={4}>
-                    {totalQty > 0 ? ((wardMpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
-                  </Text>
-                </Paper>
-                <Paper p="md" radius="md" variant="light" color="yellow">
-                  <Text size="sm" fw={600} mb="sm" c="yellow">
-                    Wad + Selepas Masa Pejabat
-                  </Text>
-                  <Text size="xl" fw={700}>{formatNumber(wardSmpQty)}</Text>
-                  <Text size="xs" c="dimmed" mt={4}>
-                    {totalQty > 0 ? ((wardSmpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
-                  </Text>
-                </Paper>
-                <Paper p="md" radius="md" variant="light" color="green">
-                  <Text size="sm" fw={600} mb="sm" c="green">
-                    Bukan Wad + Masa Pejabat
-                  </Text>
-                  <Text size="xl" fw={700}>{formatNumber(bukanWardMpQty)}</Text>
-                  <Text size="xs" c="dimmed" mt={4}>
-                    {totalQty > 0 ? ((bukanWardMpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
-                  </Text>
-                </Paper>
-                <Paper p="md" radius="md" variant="light" color="gray">
-                  <Text size="sm" fw={600} mb="sm" c="dimmed">
-                    Bukan Wad + Selepas Masa Pejabat
-                  </Text>
-                  <Text size="xl" fw={700}>{formatNumber(bukanWardSmpQty)}</Text>
-                  <Text size="xs" c="dimmed" mt={4}>
-                    {totalQty > 0 ? ((bukanWardSmpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
-                  </Text>
-                </Paper>
-              </SimpleGrid>
-            </Paper>
-
-            {report.recommendations.length > 0 && (
-              <Paper shadow="sm" p="md" radius="md">
-                <Group gap="sm" mb="md">
-                  <IconTrendingUp size={18} color="green.6" />
-                  <Title order={4} fw={700}>
-                    Cadangan Kuota
-                  </Title>
-                </Group>
-                <Table.ScrollContainer minWidth={500}>
+              {wardItemsLoading ? (
+                <Flex justify="center" py="md">
+                  <Loader size="sm" />
+                </Flex>
+              ) : wardItems.length === 0 ? (
+                <Text size="sm" c="dimmed" py="md" ta="center">
+                  Tiada item ditemui untuk tempoh ini.
+                </Text>
+              ) : (
+                <Table.ScrollContainer minWidth={400}>
                   <Table striped highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
                         <Table.Th>Item</Table.Th>
-                        <Table.Th style={{ textAlign: "right" }}>Purata/Hari</Table.Th>
-                        <Table.Th style={{ textAlign: "right" }}>Kuota Semasa (30 hari)</Table.Th>
-                        <Table.Th style={{ textAlign: "right" }}>Cadangan (×1.25)</Table.Th>
-                        <Table.Th style={{ textAlign: "right" }}>Delta</Table.Th>
+                        <Table.Th ta="right">Bil. Pesanan</Table.Th>
+                        <Table.Th ta="right">Jumlah Kuantiti</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {report.recommendations.slice(0, 50).map((rec) => {
-                        const current = rec.avg_per_day * 30;
-                        const suggested = rec.recommended_stock;
-                        const delta = suggested - current;
-                        const deltaPercent =
-                          current > 0
-                            ? ((delta / current) * 100).toFixed(1)
-                            : "0.0";
-                        const deltaColor =
-                          delta > 0
-                            ? "green"
-                            : delta < 0
-                              ? "red"
-                              : "dimmed";
-                        const DeltaIcon =
-                          delta > 0
-                            ? IconTrendingUp
-                            : delta < 0
-                              ? IconTrendingDown
-                              : IconMinus;
-                        return (
-                          <Table.Tr key={rec.item_id}>
-                            <Table.Td>{rec.item_name}</Table.Td>
-                            <Table.Td style={{ textAlign: "right" }}>
-                              {rec.avg_per_day}
-                            </Table.Td>
-                            <Table.Td style={{ textAlign: "right" }}>
-                              {formatNumber(Math.round(current))}
-                            </Table.Td>
-                            <Table.Td style={{ textAlign: "right", fontWeight: 600, color: deltaColor }}>
-                              {formatNumber(suggested)}
-                            </Table.Td>
-                            <Table.Td style={{ textAlign: "right" }}>
-                              <Group gap={4} justify="flex-end" wrap="nowrap">
-                                <DeltaIcon size={14} color={deltaColor} />
-                                <Text size="sm" fw={600} c={deltaColor}>
-                                  {delta > 0 ? "+" : ""}
-                                  {formatNumber(delta)} ({deltaPercent}%)
-                                </Text>
-                              </Group>
-                            </Table.Td>
-                          </Table.Tr>
-                        );
-                      })}
+                      {wardItems.map((wi) => (
+                        <Table.Tr
+                          key={wi.item_id}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => fetchItemOrders(wi)}
+                        >
+                          <Table.Td fw={500}>{wi.item_name}</Table.Td>
+                          <Table.Td ta="right">{formatNumber(wi.order_count)}</Table.Td>
+                          <Table.Td ta="right" fw={600}>{formatNumber(wi.quantity_sum)}</Table.Td>
+                        </Table.Tr>
+                      ))}
                     </Table.Tbody>
                   </Table>
                 </Table.ScrollContainer>
-                {report.recommendations.length > 50 && (
-                  <Text size="xs" c="dimmed" mt="sm" ta="center">
-                    Menunjukkan 50 item teratas daripada{" "}
-                    {report.recommendations.length} item
-                  </Text>
-                )}
-              </Paper>
-            )}
-
-            <Box>
-              <Button
-                leftSection={<IconFileText size={15} />}
-                onClick={fetchWardItems}
-                loading={wardItemsLoading}
-                loaderProps={{ size: "sm" }}
-                variant="light"
-                size="sm"
-              >
-                Butiran Item
-              </Button>
-            </Box>
-
-            {wardItemsError && (
-              <Alert color="red" variant="light">
-                {wardItemsError}
-              </Alert>
-            )}
-
-            {showWardItems && wardItems && (
-              <Paper shadow="sm" p="md" radius="md">
-                <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
-                  <Group gap="sm">
-                    <IconDownload size={18} color="cyan.6" />
-                    <Title order={4} fw={700}>
-                      Butiran Item
-                    </Title>
-                  </Group>
-                  <CloseButton onClick={() => setShowWardItems(false)} />
-                </Group>
-                {wardItems.length === 0 ? (
-                  <Text size="sm" c="dimmed" py="md" ta="center">
-                    Tiada item ditemui untuk tempoh ini.
-                  </Text>
-                ) : (
-                  <Table.ScrollContainer minWidth={400}>
-                    <Table striped highlightOnHover>
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>Item</Table.Th>
-                          <Table.Th style={{ textAlign: "right" }}>Bil. Pesanan</Table.Th>
-                          <Table.Th style={{ textAlign: "right" }}>Jumlah Kuantiti</Table.Th>
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {wardItems.map((wi) => (
-                          <Table.Tr key={wi.item_id}>
-                            <Table.Td>{wi.item_name}</Table.Td>
-                            <Table.Td style={{ textAlign: "right" }}>
-                              {formatNumber(wi.order_count)}
-                            </Table.Td>
-                            <Table.Td style={{ textAlign: "right", fontWeight: 600 }}>
-                              {formatNumber(wi.quantity_sum)}
-                            </Table.Td>
-                          </Table.Tr>
-                        ))}
-                      </Table.Tbody>
-                    </Table>
-                  </Table.ScrollContainer>
-                )}
-              </Paper>
-            )}
+              )}
+            </Paper>
           </>
         )}
 
@@ -666,6 +519,63 @@ export default function ReportsPage() {
           </Flex>
         )}
       </Stack>
+
+      <Modal
+        opened={itemOrdersModal}
+        onClose={() => {
+          setItemOrdersModal(false);
+          setSelectedItem(null);
+          setItemOrders([]);
+        }}
+        title={`Pesanan: ${selectedItem?.item_name || ""}`}
+        size="lg"
+        centered
+      >
+        {itemOrdersLoading ? (
+          <Flex justify="center" py="md">
+            <Loader size="sm" />
+          </Flex>
+        ) : itemOrders.length === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">
+            Tiada pesanan ditemui untuk item ini.
+          </Text>
+        ) : (
+          <Table.ScrollContainer minWidth={300}>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>No. Inden</Table.Th>
+                  <Table.Th>Tarikh</Table.Th>
+                  <Table.Th>Wad</Table.Th>
+                  <Table.Th ta="right">Kuantiti</Table.Th>
+                  <Table.Th>MP</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {itemOrders.map((o) => (
+                  <Table.Tr key={o.order_id}>
+                    <Table.Td fw={500}>{o.order_number}</Table.Td>
+                    <Table.Td>{o.order_date}</Table.Td>
+                    <Table.Td>{o.ward_name}</Table.Td>
+                    <Table.Td ta="right" fw={600}>{o.quantity}</Table.Td>
+                    <Table.Td>
+                      <Badge color={o.masa_pejabat ? "cyan" : "red"} variant="light" size="sm">
+                        {o.masa_pejabat ? "Ya" : "Tidak"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={o.sudah_disedia ? "green" : "yellow"} variant="light" size="sm">
+                        {o.sudah_disedia ? "Selesai" : "Menunggu"}
+                      </Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </Modal>
     </AppShell>
   );
 }
