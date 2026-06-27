@@ -5,14 +5,14 @@ import { Notifications } from "@mantine/notifications";
 import { NavigationProgress } from "@mantine/nprogress";
 
 const theme = createTheme({
-  primaryColor: "blue",
+  primaryColor: "cyan",
   primaryShade: 6,
   defaultRadius: "md",
   fontFamily: "'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
   colors: {
-    blue: [
-      "#e6f0ff", "#b3d1ff", "#80b3ff", "#4d94ff", "#1a75ff",
-      "#4f87ff", "#3d6fcc", "#2b5799", "#1a3f66", "#082833",
+    cyan: [
+      "#e3fafc", "#c5f6fa", "#99e9f2", "#66d9e8", "#3bc9db",
+      "#22b8cf", "#15aabf", "#1098ad", "#0c8599", "#0b7285",
     ],
     dark: [
       "#C1C2C5", "#A6A7AB", "#909296", "#5C5F66", "#373A40",

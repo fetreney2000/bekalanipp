@@ -178,7 +178,7 @@ export default function AdminPage() {
       <AppShell>
         <Stack gap="lg" maw={480} mx="auto">
           <Group gap="sm" justify="center">
-            <IconShield size={24} color="#4f87ff" />
+            <IconShield size={24} color="cyan.6" />
             <Title order={2}>Pentadbiran</Title>
           </Group>
 
@@ -266,7 +266,7 @@ export default function AdminPage() {
 
         <Paper shadow="sm" p="md" radius="md">
           <Group gap="sm" mb="md">
-            <IconDatabase size={18} color="#4f87ff" />
+            <IconDatabase size={18} color="cyan.6" />
             <Title order={4}>Status Pangkalan Data</Title>
           </Group>
           {loading && !data ? (
@@ -292,7 +292,7 @@ export default function AdminPage() {
 
         <Paper shadow="sm" p="md" radius="md">
           <Group gap="sm" mb="md">
-            <IconSettings size={18} color="#4f87ff" />
+            <IconSettings size={18} color="cyan.6" />
             <Title order={4}>Tetapan Penyelenggaraan</Title>
           </Group>
 
@@ -362,7 +362,7 @@ export default function AdminPage() {
 
         <Paper shadow="sm" p="md" radius="md">
           <Group gap="sm" mb="md">
-            <IconDeviceFloppy size={18} color="#4f87ff" />
+            <IconDeviceFloppy size={18} color="cyan.6" />
             <Title order={4}>Pengurusan Sandaran</Title>
           </Group>
           <Paper p="md" radius="md" withBorder>

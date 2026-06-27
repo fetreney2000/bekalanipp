@@ -261,7 +261,7 @@ export default function RecordsPage() {
       <Stack gap="md">
         <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
           <Group gap="sm">
-            <IconClock size={22} color="#4f87ff" />
+            <IconClock size={22} color="cyan.6" />
             <Title order={2}>Senarai Inden</Title>
           </Group>
         </Flex>

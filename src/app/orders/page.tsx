@@ -353,7 +353,7 @@ export default function OrdersPage() {
       <Stack gap="md">
         <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
           <Group gap="sm">
-            <IconShoppingCart size={22} color="#4f87ff" />
+            <IconShoppingCart size={22} color="cyan.6" />
             <Title order={2}>Butiran Inden</Title>
           </Group>
         </Flex>

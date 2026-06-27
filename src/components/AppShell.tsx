@@ -60,7 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               size="sm"
             />
             <Group gap="xs">
-              <IconPill size={22} color="#4f87ff" />
+              <IconPill size={22} color="cyan.6" />
               <Text fw={700} size="sm">Rekod FS, EMT, AOH - Hospital Keningau</Text>
             </Group>
           </Group>
