@@ -16,6 +16,7 @@ import {
   Alert,
   Loader,
   Switch,
+  Select,
 } from "@mantine/core";
 import {
   IconRefresh,
@@ -98,24 +99,6 @@ function formatElapsed(mins: number): string {
   return `${mins} min`;
 }
 
-function monthLabel(year: number, month: number): string {
-  const names = [
-    "Januari",
-    "Februari",
-    "Mac",
-    "April",
-    "Mei",
-    "Jun",
-    "Julai",
-    "Ogos",
-    "September",
-    "Oktober",
-    "November",
-    "Disember",
-  ];
-  return `${names[month]} ${year}`;
-}
-
 export default function RecordsPage() {
   const router = useRouter();
   const now = new Date();
@@ -177,24 +160,6 @@ export default function RecordsPage() {
     } else {
       setSortKey(key);
       setSortAsc(true);
-    }
-  };
-
-  const prevMonth = () => {
-    if (month === 0) {
-      setMonth(11);
-      setYear(year - 1);
-    } else {
-      setMonth(month - 1);
-    }
-  };
-
-  const nextMonth = () => {
-    if (month === 11) {
-      setMonth(0);
-      setYear(year + 1);
-    } else {
-      setMonth(month + 1);
     }
   };
 
@@ -301,18 +266,36 @@ export default function RecordsPage() {
           </Group>
         </Flex>
 
-        <Flex gap="sm" wrap="wrap" align="center">
-          <Group gap="sm">
-            <Button size="compact-sm" onClick={prevMonth} variant="subtle">
-              ←
-            </Button>
-            <Text fw={600} style={{ whiteSpace: "nowrap" }} size="sm">
-              {monthLabel(year, month)}
-            </Text>
-            <Button size="compact-sm" onClick={nextMonth} variant="subtle">
-              →
-            </Button>
-          </Group>
+        <Flex gap="sm" wrap="wrap" align="flex-end">
+          <Select
+            data={[
+              { value: "0", label: "Januari" },
+              { value: "1", label: "Februari" },
+              { value: "2", label: "Mac" },
+              { value: "3", label: "April" },
+              { value: "4", label: "Mei" },
+              { value: "5", label: "Jun" },
+              { value: "6", label: "Julai" },
+              { value: "7", label: "Ogos" },
+              { value: "8", label: "September" },
+              { value: "9", label: "Oktober" },
+              { value: "10", label: "November" },
+              { value: "11", label: "Disember" },
+            ]}
+            value={String(month)}
+            onChange={(val) => {
+              if (val !== null) setMonth(Number(val));
+            }}
+            size="sm"
+            w={160}
+          />
+          <TextInput
+            type="number"
+            value={String(year)}
+            onChange={(e) => setYear(Number(e.currentTarget.value))}
+            size="sm"
+            w={90}
+          />
           <Button
             size="compact-sm"
             onClick={fetchOrders}

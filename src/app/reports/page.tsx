@@ -71,9 +71,9 @@ interface UsageReport {
   end: string;
   summary: SummaryItem[];
   totals_by_ward: WardSummary[];
-  totals: { orders: number; quantity: number };
-  totals_by_masa: MasaSummary[];
-  totals_by_masa_by_cat: MasaCatSummary[];
+  totals: { order_count: number; bil_item: number; jumlah_item: number };
+  totals_by_masa: Record<string, { order_count: number; bil_item: number; jumlah_item: number }>;
+  totals_by_masa_by_cat: Record<string, Record<string, { order_count: number; bil_item: number; jumlah_item: number }>>;
   recommendations: Recommendation[];
 }
 
@@ -180,38 +180,30 @@ export default function ReportsPage() {
   }, [reportType, date, week, month, year]);
 
   const masaPejabatQty =
-    report?.totals_by_masa.find((m) => m.masa_pejabat)?.quantity || 0;
+    report?.totals_by_masa.masa_pejabat?.jumlah_item || 0;
   const selepasMasaPejabatQty =
-    report?.totals_by_masa.find((m) => !m.masa_pejabat)?.quantity || 0;
-  const totalQty = report?.totals.quantity || 0;
+    report?.totals_by_masa.selepas_masa_pejabat?.jumlah_item || 0;
+  const totalQty = report?.totals.jumlah_item || 0;
 
   const wardMpQty =
-    report?.totals_by_masa_by_cat
-      .filter((c) => c.ward_category === "Wad" && c.masa_pejabat)
-      .reduce((s, c) => s + c.quantity, 0) || 0;
+    report?.totals_by_masa_by_cat.ward?.masa_pejabat?.jumlah_item || 0;
   const wardSmpQty =
-    report?.totals_by_masa_by_cat
-      .filter((c) => c.ward_category === "Wad" && !c.masa_pejabat)
-      .reduce((s, c) => s + c.quantity, 0) || 0;
+    report?.totals_by_masa_by_cat.ward?.selepas_masa_pejabat?.jumlah_item || 0;
   const bukanWardMpQty =
-    report?.totals_by_masa_by_cat
-      .filter((c) => c.ward_category !== "Wad" && c.masa_pejabat)
-      .reduce((s, c) => s + c.quantity, 0) || 0;
+    report?.totals_by_masa_by_cat.not_ward?.masa_pejabat?.jumlah_item || 0;
   const bukanWardSmpQty =
-    report?.totals_by_masa_by_cat
-      .filter((c) => c.ward_category !== "Wad" && !c.masa_pejabat)
-      .reduce((s, c) => s + c.quantity, 0) || 0;
+    report?.totals_by_masa_by_cat.not_ward?.selepas_masa_pejabat?.jumlah_item || 0;
 
   const statCards = [
     {
       label: "Jumlah Pesanan",
-      value: formatNumber(report?.totals.orders || 0),
+      value: formatNumber(report?.totals.order_count || 0),
       icon: IconFileText,
       color: "#4f87ff",
     },
     {
       label: "Jumlah Item",
-      value: formatNumber(report?.totals.quantity || 0),
+      value: formatNumber(report?.totals.jumlah_item || 0),
       icon: IconChartBar,
       color: "#4caf50",
     },
@@ -411,7 +403,7 @@ export default function ReportsPage() {
                     <Table.Tr style={{ fontWeight: 700 }}>
                       <Table.Td>JUMLAH</Table.Td>
                       <Table.Td style={{ textAlign: "right" }}>
-                        {formatNumber(report.totals.quantity)}
+                        {formatNumber(report.totals.jumlah_item)}
                       </Table.Td>
                     </Table.Tr>
                   </Table.Tbody>
