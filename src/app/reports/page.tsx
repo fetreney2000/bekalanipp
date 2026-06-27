@@ -35,6 +35,7 @@ import {
   IconClockCheck,
   IconTrendingUp,
   IconTrendingDown,
+  IconList,
 } from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
@@ -263,6 +264,30 @@ export default function ReportsPage() {
     { label: "Bukan Wad + Selepas MP", value: nwSmp.jumlah_item, icon: IconBuildingSkyscraper, color: "pink" },
   ];
 
+  const bilItemCards = [
+    { label: "Jumlah Bilangan Item", value: report?.totals.bil_item || 0, icon: IconPackage, color: "green" },
+    { label: "Masa Pejabat", value: mp.bil_item, icon: IconClock, color: "teal" },
+    { label: "Selepas Masa Pejabat", value: smp.bil_item, icon: IconClockOff, color: "red" },
+    { label: "Wad", value: wMp.bil_item + wSmp.bil_item, icon: IconBuildingHospital, color: "blue" },
+    { label: "Bukan Wad", value: nwMp.bil_item + nwSmp.bil_item, icon: IconBuildingSkyscraper, color: "gray" },
+    { label: "Wad + Masa Pejabat", value: wMp.bil_item, icon: IconBuildingHospital, color: "teal" },
+    { label: "Wad + Selepas MP", value: wSmp.bil_item, icon: IconBuildingHospital, color: "yellow" },
+    { label: "Bukan Wad + MP", value: nwMp.bil_item, icon: IconBuildingSkyscraper, color: "orange" },
+    { label: "Bukan Wad + Selepas MP", value: nwSmp.bil_item, icon: IconBuildingSkyscraper, color: "pink" },
+  ];
+
+  const kategoriInden = (report?.summary || []).reduce((acc, s) => {
+    const existing = acc.find((a) => a.order_type === s.order_type);
+    if (existing) {
+      existing.order_count += s.order_count;
+      existing.bil_item += s.bil_item;
+      existing.jumlah_item += s.jumlah_item;
+    } else {
+      acc.push({ order_type: s.order_type, order_count: s.order_count, bil_item: s.bil_item, jumlah_item: s.jumlah_item });
+    }
+    return acc;
+  }, [] as { order_type: string; order_count: number; bil_item: number; jumlah_item: number }[]);
+
   return (
     <AppShell>
       <Stack gap="lg">
@@ -451,6 +476,33 @@ export default function ReportsPage() {
 
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                <IconList size={18} color="blue.6" />
+                <Title order={4} fw={700}>
+                  Bilangan Item
+                </Title>
+              </Group>
+              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
+                {bilItemCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
+                      <Group gap="sm" align="center">
+                        <ThemeIcon size="lg" radius="md" variant="light" color={card.color}>
+                          <Icon size={22} />
+                        </ThemeIcon>
+                        <Stack gap={0}>
+                          <Text size="xs" c="dimmed">{card.label}</Text>
+                          <Text size="xl" fw={700}>{formatNumber(card.value)}</Text>
+                        </Stack>
+                      </Group>
+                    </Paper>
+                  );
+                })}
+              </SimpleGrid>
+            </Paper>
+
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconPackage size={18} color="green.6" />
                 <Title order={4} fw={700}>
                   Jumlah Item
@@ -474,6 +526,43 @@ export default function ReportsPage() {
                   );
                 })}
               </SimpleGrid>
+            </Paper>
+
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                <IconFileText size={18} color="cyan.6" />
+                <Title order={4} fw={700}>
+                  Mengikut Kategori Inden
+                </Title>
+              </Group>
+              <Table.ScrollContainer minWidth={400}>
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Jenis Inden</Table.Th>
+                      <Table.Th ta="right">Bilangan Inden</Table.Th>
+                      <Table.Th ta="right">Bilangan Item</Table.Th>
+                      <Table.Th ta="right">Jumlah Item</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {kategoriInden.map((row) => (
+                      <Table.Tr key={row.order_type}>
+                        <Table.Td fw={500}>{row.order_type}</Table.Td>
+                        <Table.Td ta="right">{formatNumber(row.order_count)}</Table.Td>
+                        <Table.Td ta="right">{formatNumber(row.bil_item)}</Table.Td>
+                        <Table.Td ta="right" fw={600}>{formatNumber(row.jumlah_item)}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                    <Table.Tr fw={700}>
+                      <Table.Td>JUMLAH</Table.Td>
+                      <Table.Td ta="right">{formatNumber(report.totals.order_count)}</Table.Td>
+                      <Table.Td ta="right">{formatNumber(report.totals.bil_item)}</Table.Td>
+                      <Table.Td ta="right">{formatNumber(report.totals.jumlah_item)}</Table.Td>
+                    </Table.Tr>
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
             </Paper>
 
             <Paper shadow="sm" p="md" radius="md">
