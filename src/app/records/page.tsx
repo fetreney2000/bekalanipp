@@ -364,6 +364,7 @@ export default function RecordsPage() {
                       <IconArrowsSort size={14} style={{ opacity: sortKey === "order_date" ? 1 : 0.4, transform: sortKey === "order_date" && !sortAsc ? "scaleY(-1)" : undefined }} />
                     </Group>
                   </Table.Th>
+                  <Table.Th style={{ textAlign: "center" }}>Masa Diterima</Table.Th>
                   <Table.Th
                     onClick={() => toggleSort("order_number")}
                     style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
@@ -400,7 +401,7 @@ export default function RecordsPage() {
               <Table.Tbody>
                 {filtered.length === 0 && (
                   <Table.Tr>
-                    <Table.Td colSpan={9} style={{ textAlign: "center" }}>
+                    <Table.Td colSpan={10} style={{ textAlign: "center" }}>
                       <Text c="dimmed" py="md">Tiada data ditemui</Text>
                     </Table.Td>
                   </Table.Tr>
@@ -413,6 +414,15 @@ export default function RecordsPage() {
                       <Table.Td>{idx + 1}</Table.Td>
                       <Table.Td style={{ whiteSpace: "nowrap" }}>
                         {order.order_date}
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "center" }}>
+                        {order.masa_diterima ? (
+                          <Badge color="blue" variant="filled" size="sm">
+                            Ya
+                          </Badge>
+                        ) : (
+                          <Text c="dimmed" size="sm">-</Text>
+                        )}
                       </Table.Td>
                       <Table.Td style={{ fontWeight: 600 }}>
                         {order.order_number}

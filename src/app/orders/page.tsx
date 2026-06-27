@@ -20,7 +20,6 @@ import {
   NumberInput,
 } from "@mantine/core";
 import {
-  IconEdit,
   IconTrash,
   IconShoppingCart,
   IconFilter,
@@ -420,13 +419,12 @@ export default function OrdersPage() {
                   {[
                     { key: null, label: "No" },
                     { key: "order_date" as SortKey, label: "Tarikh" },
+                    { key: null, label: "Masa Diterima" },
                     { key: "order_number" as SortKey, label: "No. Inden" },
                     { key: "order_type" as SortKey, label: "Jenis" },
                     { key: "ward_name" as SortKey, label: "Wad" },
                     { key: "masa_pejabat" as SortKey, label: "Masa Pejabat" },
-                    { key: "sudah_disedia" as SortKey, label: "Diterima" },
                     { key: null, label: "Masa" },
-                    { key: null, label: "Aksi" },
                   ].map((col, i) => (
                     <Table.Th
                       key={i}
@@ -452,7 +450,7 @@ export default function OrdersPage() {
               <Table.Tbody>
                 {filtered.length === 0 && (
                   <Table.Tr>
-                    <Table.Td colSpan={9} style={{ textAlign: "center" }}>
+                    <Table.Td colSpan={8} style={{ textAlign: "center" }}>
                       <Text c="dimmed" py="md">Tiada data ditemui</Text>
                     </Table.Td>
                   </Table.Tr>
@@ -466,6 +464,15 @@ export default function OrdersPage() {
                     <Table.Td>{idx + 1}</Table.Td>
                     <Table.Td style={{ whiteSpace: "nowrap" }}>
                       {order.order_date}
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: "center" }}>
+                      {order.masa_diterima ? (
+                        <Badge color="blue" variant="filled" size="sm">
+                          Ya
+                        </Badge>
+                      ) : (
+                        <Text c="dimmed" size="sm">-</Text>
+                      )}
                     </Table.Td>
                     <Table.Td style={{ fontWeight: 600 }}>
                       {order.order_number}
@@ -490,17 +497,6 @@ export default function OrdersPage() {
                         <Text c="dimmed" size="sm">-</Text>
                       )}
                     </Table.Td>
-                    <Table.Td style={{ textAlign: "center" }}>
-                      {order.sudah_disedia ? (
-                        <Badge color="green" variant="filled" size="sm">
-                          Diterima
-                        </Badge>
-                      ) : (
-                        <Badge color="yellow" variant="filled" size="sm">
-                          Menunggu
-                        </Badge>
-                      )}
-                    </Table.Td>
                     <Table.Td style={{ whiteSpace: "nowrap" }}>
                       <Badge
                         color={elapsedColor(order)}
@@ -510,19 +506,6 @@ export default function OrdersPage() {
                       >
                         {elapsedMinutes(order)}
                       </Badge>
-                    </Table.Td>
-                    <Table.Td
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Group gap="xs">
-                        <ActionIcon
-                          variant="subtle"
-                          size="sm"
-                          onClick={() => openModal(order)}
-                        >
-                          <IconEdit size={14} />
-                        </ActionIcon>
-                      </Group>
                     </Table.Td>
                   </Table.Tr>
                 ))}
