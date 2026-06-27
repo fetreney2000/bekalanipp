@@ -92,7 +92,7 @@ export const shadcnTheme: MantineThemeOverride = createTheme({
     fuchsia: fuchsiaColors,
     pink: pinkColors,
 
-    primary: stoneColors,
+    primary: violetColors,
     secondary: stoneColors,
     dark: stoneColors,
 

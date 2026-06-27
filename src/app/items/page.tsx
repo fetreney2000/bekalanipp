@@ -174,7 +174,7 @@ export default function ItemsPage() {
         <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
           <Group gap="sm">
             <IconPill size={22} color="var(--mantine-color-blue-6)" />
-            <Title order={3}>Urus Item/Ubat</Title>
+            <Title order={2}>Urus Item/Ubat</Title>
           </Group>
           <Button
             leftSection={<IconPlus size={16} />}

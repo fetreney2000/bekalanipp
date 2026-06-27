@@ -62,6 +62,8 @@ export default function DashboardPage() {
       .then((json) => setData(json))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    fetch("/api/admin/indexes", { method: "POST" }).catch(() => {});
   }, []);
 
   return (
