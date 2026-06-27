@@ -150,12 +150,14 @@ export async function GET(request: NextRequest) {
       if (!masaMap.has(masaKey)) {
         masaMap.set(masaKey, { order_count: 0, bil_item: 0, jumlah_item: 0 });
       }
+      masaMap.get(masaKey)!.order_count += 1;
 
       const cat = wardInfo?.category || "unknown";
       const masaCatKey = `${cat}_${masaKey}`;
       if (!masaCatMap.has(masaCatKey)) {
         masaCatMap.set(masaCatKey, { order_count: 0, bil_item: 0, jumlah_item: 0 });
       }
+      masaCatMap.get(masaCatKey)!.order_count += 1;
 
       for (const oi of orderItems) {
         const qty = oi.quantity;
