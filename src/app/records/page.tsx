@@ -41,7 +41,7 @@ type Order = {
   order_number: string;
   order_type: string;
   masa_pejabat: boolean;
-  masa_diterima: boolean;
+  masa_diterima: string | null;
   sudah_disedia: boolean;
   completion_minutes: number | null;
   masa_selesai: string | null;
@@ -415,14 +415,8 @@ export default function RecordsPage() {
                       <Table.Td style={{ whiteSpace: "nowrap" }}>
                         {order.order_date}
                       </Table.Td>
-                      <Table.Td style={{ textAlign: "center" }}>
-                        {order.masa_diterima ? (
-                          <Badge color="blue" variant="filled" size="sm">
-                            Ya
-                          </Badge>
-                        ) : (
-                          <Text c="dimmed" size="sm">-</Text>
-                        )}
+                      <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                        {order.masa_diterima || <Text c="dimmed" size="sm">-</Text>}
                       </Table.Td>
                       <Table.Td style={{ fontWeight: 600 }}>
                         {order.order_number}
