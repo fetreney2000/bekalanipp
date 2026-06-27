@@ -26,8 +26,13 @@ import {
   IconFilter,
   IconFileText,
   IconPill,
+  IconClock,
+  IconClockOff,
+  IconBuildingHospital,
+  IconBuildingSkyscraper,
+  IconShoppingBag,
+  IconPackage,
 } from "@tabler/icons-react";
-import { BarChart, PieChart } from "@mantine/charts";
 import AppShell from "@/components/AppShell";
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly";
@@ -198,41 +203,31 @@ export default function ReportsPage() {
   const nwMp = report?.totals_by_masa_by_cat.not_ward?.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
   const nwSmp = report?.totals_by_masa_by_cat.not_ward?.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
 
-  const wadTotal = wMp.order_count + wSmp.order_count;
-  const bukanWadTotal = nwMp.order_count + nwSmp.order_count;
-  const wadItemTotal = wMp.jumlah_item + wSmp.jumlah_item;
-  const bukanWadItemTotal = nwMp.jumlah_item + nwSmp.jumlah_item;
+  const wadTotalOrders = wMp.order_count + wSmp.order_count;
+  const bukanWadTotalOrders = nwMp.order_count + nwSmp.order_count;
+  const wadTotalItems = wMp.jumlah_item + wSmp.jumlah_item;
+  const bukanWadTotalItems = nwMp.jumlah_item + nwSmp.jumlah_item;
 
-  const pesananChartData = [
-    { name: "Masa Pejabat", value: mp.order_count, color: "cyan.6" },
-    { name: "Selepas MP", value: smp.order_count, color: "red.6" },
-    { name: "Wad", value: wadTotal, color: "blue.6" },
-    { name: "Bukan Wad", value: bukanWadTotal, color: "gray.6" },
-    { name: "Wad + MP", value: wMp.order_count, color: "teal.6" },
-    { name: "Wad + SMP", value: wSmp.order_count, color: "yellow.6" },
-    { name: "Bukan Wad + MP", value: nwMp.order_count, color: "orange.6" },
-    { name: "Bukan Wad + SMP", value: nwSmp.order_count, color: "pink.6" },
+  const pesananCards = [
+    { label: "Masa Pejabat", value: mp.order_count, icon: IconClock, color: "cyan" },
+    { label: "Selepas Masa Pejabat", value: smp.order_count, icon: IconClockOff, color: "red" },
+    { label: "Wad", value: wadTotalOrders, icon: IconBuildingHospital, color: "blue" },
+    { label: "Bukan Wad", value: bukanWadTotalOrders, icon: IconBuildingSkyscraper, color: "gray" },
+    { label: "Wad + Masa Pejabat", value: wMp.order_count, icon: IconBuildingHospital, color: "teal" },
+    { label: "Wad + Selepas MP", value: wSmp.order_count, icon: IconBuildingHospital, color: "yellow" },
+    { label: "Bukan Wad + MP", value: nwMp.order_count, icon: IconBuildingSkyscraper, color: "orange" },
+    { label: "Bukan Wad + Selepas MP", value: nwSmp.order_count, icon: IconBuildingSkyscraper, color: "pink" },
   ];
 
-  const itemChartData = [
-    { name: "Masa Pejabat", value: mp.jumlah_item, color: "cyan.6" },
-    { name: "Selepas MP", value: smp.jumlah_item, color: "red.6" },
-    { name: "Wad", value: wadItemTotal, color: "blue.6" },
-    { name: "Bukan Wad", value: bukanWadItemTotal, color: "gray.6" },
-    { name: "Wad + MP", value: wMp.jumlah_item, color: "teal.6" },
-    { name: "Wad + SMP", value: wSmp.jumlah_item, color: "yellow.6" },
-    { name: "Bukan Wad + MP", value: nwMp.jumlah_item, color: "orange.6" },
-    { name: "Bukan Wad + SMP", value: nwSmp.jumlah_item, color: "pink.6" },
-  ];
-
-  const mpPieData = [
-    { name: "Masa Pejabat", value: mp.jumlah_item, color: "cyan.6" },
-    { name: "Selepas MP", value: smp.jumlah_item, color: "red.6" },
-  ];
-
-  const catPieData = [
-    { name: "Wad", value: wadItemTotal, color: "blue.6" },
-    { name: "Bukan Wad", value: bukanWadItemTotal, color: "gray.6" },
+  const itemCards = [
+    { label: "Masa Pejabat", value: mp.jumlah_item, icon: IconClock, color: "cyan" },
+    { label: "Selepas Masa Pejabat", value: smp.jumlah_item, icon: IconClockOff, color: "red" },
+    { label: "Wad", value: wadTotalItems, icon: IconBuildingHospital, color: "blue" },
+    { label: "Bukan Wad", value: bukanWadTotalItems, icon: IconBuildingSkyscraper, color: "gray" },
+    { label: "Wad + Masa Pejabat", value: wMp.jumlah_item, icon: IconBuildingHospital, color: "teal" },
+    { label: "Wad + Selepas MP", value: wSmp.jumlah_item, icon: IconBuildingHospital, color: "yellow" },
+    { label: "Bukan Wad + MP", value: nwMp.jumlah_item, icon: IconBuildingSkyscraper, color: "orange" },
+    { label: "Bukan Wad + Selepas MP", value: nwSmp.jumlah_item, icon: IconBuildingSkyscraper, color: "pink" },
   ];
 
   return (
@@ -351,85 +346,61 @@ export default function ReportsPage() {
         {report && !loading && (
           <>
             <Paper shadow="sm" p="md" radius="md">
-              <Group gap="sm" mb="md">
-                <IconFileText size={18} color="cyan.6" />
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                <IconShoppingBag size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
-                  Ringkasan Jumlah
+                  Jumlah Pesanan
                 </Title>
               </Group>
-
-              <Title order={5} fw={600} style={{ marginBottom: "var(--mantine-spacing-sm)" }}>
-                Jumlah Pesanan
-              </Title>
-              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
-                {pesananChartData.map((item) => (
-                  <Paper key={item.name} p="sm" radius="sm" withBorder>
-                    <Text size="xs" c="dimmed">{item.name}</Text>
-                    <Text size="lg" fw={700}>{formatNumber(item.value)}</Text>
-                  </Paper>
-                ))}
-              </SimpleGrid>
-
-              <Title order={5} fw={600} style={{ marginBottom: "var(--mantine-spacing-sm)" }}>
-                Jumlah Item
-              </Title>
-              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
-                {itemChartData.map((item) => (
-                  <Paper key={item.name} p="sm" radius="sm" withBorder>
-                    <Text size="xs" c="dimmed">{item.name}</Text>
-                    <Text size="lg" fw={700}>{formatNumber(item.value)}</Text>
-                  </Paper>
-                ))}
-              </SimpleGrid>
-
-              <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" style={{ marginTop: "var(--mantine-spacing-md)" }}>
-                <Box>
-                  <Text size="sm" fw={600} mb="xs">Jumlah Pesanan</Text>
-                  <BarChart
-                    h={220}
-                    data={pesananChartData}
-                    dataKey="name"
-                    series={[{ name: "value", color: "cyan.6" }]}
-                    tickLine="none"
-                    gridAxis="x"
-                    withTooltip
-                  />
-                </Box>
-                <Box>
-                  <Text size="sm" fw={600} mb="xs">Jumlah Item</Text>
-                  <BarChart
-                    h={220}
-                    data={itemChartData}
-                    dataKey="name"
-                    series={[{ name: "value", color: "green.6" }]}
-                    tickLine="none"
-                    gridAxis="x"
-                    withTooltip
-                  />
-                </Box>
-                <Box>
-                  <Text size="sm" fw={600} mb="xs">Masa Pejabat vs Selepas MP</Text>
-                  <PieChart
-                    h={220}
-                    data={mpPieData}
-                    withTooltip
-                    labelsType="percent"
-                  />
-                </Box>
-                <Box>
-                  <Text size="sm" fw={600} mb="xs">Wad vs Bukan Wad</Text>
-                  <PieChart
-                    h={220}
-                    data={catPieData}
-                    withTooltip
-                    labelsType="percent"
-                  />
-                </Box>
+              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
+                {pesananCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
+                      <Group gap="sm" align="center">
+                        <ThemeIcon size="lg" radius="md" variant="light" color={card.color}>
+                          <Icon size={22} />
+                        </ThemeIcon>
+                        <Stack gap={0}>
+                          <Text size="xs" c="dimmed">{card.label}</Text>
+                          <Text size="xl" fw={700}>{formatNumber(card.value)}</Text>
+                        </Stack>
+                      </Group>
+                    </Paper>
+                  );
+                })}
               </SimpleGrid>
             </Paper>
 
             <Paper shadow="sm" p="md" radius="md">
-              <Group gap="sm" mb="md">
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
+                <IconPackage size={18} color="green.6" />
+                <Title order={4} fw={700}>
+                  Jumlah Item
+                </Title>
+              </Group>
+              <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
+                {itemCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
+                      <Group gap="sm" align="center">
+                        <ThemeIcon size="lg" radius="md" variant="light" color={card.color}>
+                          <Icon size={22} />
+                        </ThemeIcon>
+                        <Stack gap={0}>
+                          <Text size="xs" c="dimmed">{card.label}</Text>
+                          <Text size="xl" fw={700}>{formatNumber(card.value)}</Text>
+                        </Stack>
+                      </Group>
+                    </Paper>
+                  );
+                })}
+              </SimpleGrid>
+            </Paper>
+
+            <Paper shadow="sm" p="md" radius="md">
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconFileText size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
                   Ringkasan Mengikut Wad
@@ -463,7 +434,7 @@ export default function ReportsPage() {
             </Paper>
 
             <Paper shadow="sm" p="md" radius="md">
-              <Group gap="sm" mb="md">
+              <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconPill size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
                   Butiran Item

@@ -21,6 +21,7 @@ import {
   Flex,
   Box,
   rem,
+  Loader,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import Holidays from "date-holidays";
@@ -103,6 +104,7 @@ export default function SupplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/wards")
@@ -112,10 +114,12 @@ export default function SupplyPage() {
   }, []);
 
   const fetchCatalog = useCallback((wardId: number) => {
+    setCatalogLoading(true);
     fetch(`/api/catalog/${wardId}?month=${currentMonth()}`)
       .then((res) => res.json())
       .then((data) => setCatalogItems(data.items || []))
-      .catch(() => setCatalogItems([]));
+      .catch(() => setCatalogItems([]))
+      .finally(() => setCatalogLoading(false));
   }, []);
 
   const wardData = useMemo(
@@ -381,6 +385,14 @@ export default function SupplyPage() {
             </Alert>
           )}
 
+          {catalogLoading ? (
+            <Flex justify="center" py="xl">
+              <Stack align="center" gap="xs">
+                <Loader size="sm" color="cyan" />
+                <Text size="sm" c="dimmed">Memuatkan senarai item...</Text>
+              </Stack>
+            </Flex>
+          ) : (
           <TableScrollContainer minWidth={600}>
             <Table striped highlightOnHover withTableBorder>
               <Table.Thead>
@@ -454,6 +466,7 @@ export default function SupplyPage() {
               </Table.Tbody>
             </Table>
           </TableScrollContainer>
+          )}
         </Paper>
 
         <Flex justify="flex-end">
