@@ -36,15 +36,20 @@ import AppShell from "@/components/AppShell";
 type ReportType = "daily" | "weekly" | "monthly" | "yearly";
 
 interface SummaryItem {
-  item_id: string;
-  item_name: string;
-  quantity: number;
+  ward_id: number;
+  ward_name: string;
+  order_type: string;
+  order_count: number;
+  bil_item: number;
+  jumlah_item: number;
 }
 
 interface WardSummary {
-  ward_id: string;
+  ward_id: number;
   ward_name: string;
-  quantity: number;
+  order_count: number;
+  bil_item: number;
+  jumlah_item: number;
 }
 
 interface MasaSummary {
@@ -91,8 +96,8 @@ const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   yearly: "Tahunan",
 };
 
-function formatNumber(n: number): string {
-  return n.toLocaleString("ms-MY");
+function formatNumber(n: number | undefined | null): string {
+  return (n || 0).toLocaleString("ms-MY");
 }
 
 function getCurrentYear(): number {
@@ -199,37 +204,37 @@ export default function ReportsPage() {
       label: "Jumlah Pesanan",
       value: formatNumber(report?.totals.order_count || 0),
       icon: IconFileText,
-      color: "#4f87ff",
+      color: "cyan",
     },
     {
       label: "Jumlah Item",
       value: formatNumber(report?.totals.jumlah_item || 0),
       icon: IconChartBar,
-      color: "#4caf50",
+      color: "green",
     },
     {
       label: "Masa Pejabat",
       value: formatNumber(masaPejabatQty),
       icon: IconTrendingUp,
-      color: "#f0ad4e",
+      color: "yellow",
     },
     {
       label: "Selepas Masa Pejabat",
       value: formatNumber(selepasMasaPejabatQty),
       icon: IconTrendingDown,
-      color: "#ef5350",
+      color: "red",
     },
     {
       label: "Wad + MP",
       value: formatNumber(wardMpQty),
       icon: IconMinus,
-      color: "#4f87ff",
+      color: "cyan",
     },
     {
       label: "Bukan Wad + SMP",
       value: formatNumber(bukanWardSmpQty),
       icon: IconMinus,
-      color: "#a3aab3",
+      color: "gray",
     },
   ];
 
@@ -365,8 +370,7 @@ export default function ReportsPage() {
                       <ThemeIcon
                         size="lg"
                         variant="light"
-                        color="gray"
-                        style={{ backgroundColor: `${card.color}22`, color: card.color }}
+                        color={card.color}
                       >
                         <Icon size={20} />
                       </ThemeIcon>
@@ -378,7 +382,7 @@ export default function ReportsPage() {
 
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" mb="md">
-                <IconFileText size={18} color="#4f87ff" />
+                <IconFileText size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
                   Ringkasan Mengikut Wad
                 </Title>
@@ -396,7 +400,7 @@ export default function ReportsPage() {
                       <Table.Tr key={ws.ward_id}>
                         <Table.Td>{ws.ward_name}</Table.Td>
                         <Table.Td style={{ textAlign: "right", fontWeight: 600 }}>
-                          {formatNumber(ws.quantity)}
+                          {formatNumber(ws.jumlah_item)}
                         </Table.Td>
                       </Table.Tr>
                     ))}
@@ -413,14 +417,14 @@ export default function ReportsPage() {
 
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" mb="md">
-                <IconCalendar size={18} color="#f0ad4e" />
+                <IconCalendar size={18} color="yellow.6" />
                 <Title order={4} fw={700}>
                   Masa Pejabat
                 </Title>
               </Group>
               <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(79,135,255,0.06)", border: "1px solid rgba(79,135,255,0.15)" }}>
-                  <Text size="sm" fw={600} mb="sm" c="blue">
+                <Paper p="md" radius="md" variant="light" color="cyan">
+                  <Text size="sm" fw={600} mb="sm" c="cyan">
                     Masa Pejabat
                   </Text>
                   <Stack gap="xs">
@@ -439,7 +443,7 @@ export default function ReportsPage() {
                     </Group>
                   </Stack>
                 </Paper>
-                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(239,83,80,0.06)", border: "1px solid rgba(239,83,80,0.15)" }}>
+                <Paper p="md" radius="md" variant="light" color="red">
                   <Text size="sm" fw={600} mb="sm" c="red">
                     Selepas Masa Pejabat
                   </Text>
@@ -464,14 +468,14 @@ export default function ReportsPage() {
 
             <Paper shadow="sm" p="md" radius="md">
               <Group gap="sm" mb="md">
-                <IconChartBar size={18} color="#4caf50" />
+                <IconChartBar size={18} color="green.6" />
                 <Title order={4} fw={700}>
                   Pecahan Mengikut Kategori
                 </Title>
               </Group>
               <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(79,135,255,0.06)", border: "1px solid rgba(79,135,255,0.15)" }}>
-                  <Text size="sm" fw={600} mb="sm" c="blue">
+                <Paper p="md" radius="md" variant="light" color="cyan">
+                  <Text size="sm" fw={600} mb="sm" c="cyan">
                     Wad + Masa Pejabat
                   </Text>
                   <Text size="xl" fw={700}>{formatNumber(wardMpQty)}</Text>
@@ -479,7 +483,7 @@ export default function ReportsPage() {
                     {totalQty > 0 ? ((wardMpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
                 </Paper>
-                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(240,173,78,0.06)", border: "1px solid rgba(240,173,78,0.15)" }}>
+                <Paper p="md" radius="md" variant="light" color="yellow">
                   <Text size="sm" fw={600} mb="sm" c="yellow">
                     Wad + Selepas Masa Pejabat
                   </Text>
@@ -488,7 +492,7 @@ export default function ReportsPage() {
                     {totalQty > 0 ? ((wardSmpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
                 </Paper>
-                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(76,175,80,0.06)", border: "1px solid rgba(76,175,80,0.15)" }}>
+                <Paper p="md" radius="md" variant="light" color="green">
                   <Text size="sm" fw={600} mb="sm" c="green">
                     Bukan Wad + Masa Pejabat
                   </Text>
@@ -497,7 +501,7 @@ export default function ReportsPage() {
                     {totalQty > 0 ? ((bukanWardMpQty / totalQty) * 100).toFixed(1) : "0.0"} % daripada jumlah
                   </Text>
                 </Paper>
-                <Paper p="md" radius="md" style={{ backgroundColor: "rgba(163,170,179,0.06)", border: "1px solid rgba(163,170,179,0.15)" }}>
+                <Paper p="md" radius="md" variant="light" color="gray">
                   <Text size="sm" fw={600} mb="sm" c="dimmed">
                     Bukan Wad + Selepas Masa Pejabat
                   </Text>
@@ -512,7 +516,7 @@ export default function ReportsPage() {
             {report.recommendations.length > 0 && (
               <Paper shadow="sm" p="md" radius="md">
                 <Group gap="sm" mb="md">
-                  <IconTrendingUp size={18} color="#4caf50" />
+                  <IconTrendingUp size={18} color="green.6" />
                   <Title order={4} fw={700}>
                     Cadangan Kuota
                   </Title>
@@ -539,9 +543,9 @@ export default function ReportsPage() {
                             : "0.0";
                         const deltaColor =
                           delta > 0
-                            ? "#4caf50"
+                            ? "green"
                             : delta < 0
-                              ? "#ef5350"
+                              ? "red"
                               : "dimmed";
                         const DeltaIcon =
                           delta > 0
@@ -608,7 +612,7 @@ export default function ReportsPage() {
               <Paper shadow="sm" p="md" radius="md">
                 <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
                   <Group gap="sm">
-                    <IconDownload size={18} color="#4f87ff" />
+                    <IconDownload size={18} color="cyan.6" />
                     <Title order={4} fw={700}>
                       Butiran Item
                     </Title>

@@ -2,25 +2,6 @@
 @import "@mantine/notifications/styles.css";
 @import "@mantine/nprogress/styles.css";
 
-:root {
-  --mantine-color-blue-0: #e6f0ff;
-  --mantine-color-blue-6: #4f87ff;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;

@@ -96,7 +96,7 @@ export default function DashboardPage() {
           <SimpleGrid cols={3}>
             <Paper shadow="sm" p="md" radius="md" withBorder>
               <Group gap="sm" align="center">
-                <ThemeIcon size="lg" radius="md" variant="light" color="#4f87ff" style={{ backgroundColor: `#4f87ff22`, color: "#4f87ff" }}>
+                <ThemeIcon size="lg" radius="md" variant="light" color="cyan">
                   <IconShoppingBag size={22} />
                 </ThemeIcon>
                 <Stack gap={0}>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
             </Paper>
             <Paper shadow="sm" p="md" radius="md" withBorder>
               <Group gap="sm" align="center">
-                <ThemeIcon size="lg" radius="md" variant="light" color="#4caf50" style={{ backgroundColor: `#4caf5022`, color: "#4caf50" }}>
+                <ThemeIcon size="lg" radius="md" variant="light" color="green">
                   <IconPackage size={22} />
                 </ThemeIcon>
                 <Stack gap={0}>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
             </Paper>
             <Paper shadow="sm" p="md" radius="md" withBorder>
               <Group gap="sm" align="center">
-                <ThemeIcon size="lg" radius="md" variant="light" color="#f0ad4e" style={{ backgroundColor: `#f0ad4e22`, color: "#f0ad4e" }}>
+                <ThemeIcon size="lg" radius="md" variant="light" color="yellow">
                   <IconBuildingHospital size={22} />
                 </ThemeIcon>
                 <Stack gap={0}>
