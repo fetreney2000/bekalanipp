@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Stack,
   Group,
@@ -22,7 +22,6 @@ import {
 import {
   IconEdit,
   IconTrash,
-  IconX,
   IconShoppingCart,
   IconFilter,
   IconArrowsSort,
@@ -140,6 +139,32 @@ export default function OrdersPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState<string | null>(null);
+  const autoOpenRef = useRef(true);
+
+  const openModal = useCallback(async (order: Order) => {
+    setSelectedOrder(order);
+    setModalLoading(true);
+    setModalError(null);
+    setModalSuccess(null);
+    setConfirmDelete(false);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`);
+      if (!res.ok) throw new Error("Gagal memuatkan butiran");
+      const data = await res.json();
+      setEditForm({
+        order_date: data.order_date,
+        order_number: data.order_number,
+        order_type: data.order_type,
+        masa_pejabat: data.masa_pejabat,
+        masa_diterima: data.masa_diterima,
+      });
+      setEditItems(data.items || []);
+    } catch (e: unknown) {
+      setModalError(e instanceof Error ? e.message : "Ralat");
+    } finally {
+      setModalLoading(false);
+    }
+  }, []);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -161,6 +186,41 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    if (!autoOpenRef.current) return;
+    autoOpenRef.current = false;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    if (id) {
+      setSelectedOrder({ id } as Order);
+      setModalLoading(true);
+      setConfirmDelete(false);
+      fetch(`/api/orders/${id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Gagal memuatkan butiran");
+          return res.json();
+        })
+        .then((data) => {
+          setSelectedOrder(data);
+          setEditForm({
+            order_date: data.order_date,
+            order_number: data.order_number,
+            order_type: data.order_type,
+            masa_pejabat: data.masa_pejabat,
+            masa_diterima: data.masa_diterima,
+          });
+          setEditItems(data.items || []);
+        })
+        .catch((e: unknown) => {
+          setModalError(e instanceof Error ? e.message : "Ralat");
+          setSelectedOrder(null);
+        })
+        .finally(() => {
+          setModalLoading(false);
+        });
+    }
+  }, []);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -201,40 +261,6 @@ export default function OrdersPage() {
     });
     return list.slice(0, 500);
   }, [orders, searchText, sortKey, sortAsc]);
-
-  const openModal = useCallback(async (order: Order) => {
-    setSelectedOrder(order);
-    setModalLoading(true);
-    setModalError(null);
-    setModalSuccess(null);
-    setConfirmDelete(false);
-    try {
-      const res = await fetch(`/api/orders/${order.id}`);
-      if (!res.ok) throw new Error("Gagal memuatkan butiran");
-      const data = await res.json();
-      setEditForm({
-        order_date: data.order_date,
-        order_number: data.order_number,
-        order_type: data.order_type,
-        masa_pejabat: data.masa_pejabat,
-        masa_diterima: data.masa_diterima,
-      });
-      setEditItems(data.items || []);
-    } catch (e: unknown) {
-      setModalError(e instanceof Error ? e.message : "Ralat");
-    } finally {
-      setModalLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
-    if (id && orders.length > 0 && !selectedOrder) {
-      const order = orders.find((o) => o.id === id);
-      if (order) openModal(order);
-    }
-  }, [orders, selectedOrder, openModal]);
 
   const closeModal = () => {
     setSelectedOrder(null);
