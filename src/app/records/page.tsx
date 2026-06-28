@@ -172,10 +172,10 @@ export default function RecordsPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setTick((t) => t + 1);
-      fetchOrders();
-    }, 30000);
+      if (!selectedOrder) fetchOrders();
+    }, 60000);
     return () => clearInterval(interval);
-  }, [fetchOrders]);
+  }, [fetchOrders, selectedOrder]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
