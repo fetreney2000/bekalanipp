@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Stack,
   Group,
@@ -106,6 +106,27 @@ function formatElapsed(mins: number): string {
   return `${mins} min`;
 }
 
+function playWarningBeep() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {
+    /* audio not available */
+  }
+}
+
+const WARN_105 = 105;
+const WARN_115 = 115;
+
 export default function RecordsPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -123,6 +144,7 @@ export default function RecordsPage() {
     value: boolean;
   } | null>(null);
   const [, setTick] = useState(0);
+  const playedAlerts = useRef<Set<string>>(new Set());
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -173,9 +195,22 @@ export default function RecordsPage() {
     const interval = setInterval(() => {
       setTick((t) => t + 1);
       if (!selectedOrder) fetchOrders();
+      for (const order of orders) {
+        if (order.sudah_disedia) continue;
+        const elapsed = getElapsedMinutes(order);
+        if (elapsed < WARN_105) continue;
+        if (elapsed >= WARN_105 && !playedAlerts.current.has(`${order.id}_105`)) {
+          playedAlerts.current.add(`${order.id}_105`);
+          playWarningBeep();
+        }
+        if (elapsed >= WARN_115 && !playedAlerts.current.has(`${order.id}_115`)) {
+          playedAlerts.current.add(`${order.id}_115`);
+          playWarningBeep();
+        }
+      }
     }, 60000);
     return () => clearInterval(interval);
-  }, [fetchOrders, selectedOrder]);
+  }, [fetchOrders, selectedOrder, orders]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -363,6 +398,13 @@ export default function RecordsPage() {
 
   return (
     <AppShell>
+      <style>{`
+        @keyframes inden-warn-pulse {
+          0%, 100% { background-color: transparent; }
+          50% { background-color: rgba(255, 0, 0, 0.08); }
+        }
+        .inden-warn { animation: inden-warn-pulse 1.5s ease-in-out infinite; }
+      `}</style>
       <Stack gap="md">
         <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
           <Group gap="sm">
@@ -497,8 +539,17 @@ export default function RecordsPage() {
                 {filtered.map((order, idx) => {
                   const elapsed = getElapsedMinutes(order);
                   const elapsedGrad = getElapsedGradient(elapsed);
+                  const isWarning = !order.sudah_disedia && elapsed >= WARN_105;
                   return (
-                    <Table.Tr key={order.id} style={{ cursor: "pointer" }} onClick={() => openDetailModal(order)}>
+                    <Table.Tr
+                      key={order.id}
+                      onClick={() => openDetailModal(order)}
+                      className={isWarning ? "inden-warn" : undefined}
+                      style={{
+                        cursor: "pointer",
+                        ...(isWarning ? { fontWeight: 600 } : {}),
+                      }}
+                    >
                       <Table.Td>{idx + 1}</Table.Td>
                       <Table.Td style={{ whiteSpace: "nowrap" }}>
                         {order.order_date}
@@ -547,8 +598,8 @@ export default function RecordsPage() {
                       </Table.Td>
                       <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                         <Badge
-                          color={elapsedGrad}
-                          variant="light"
+                          color={isWarning ? "red" : elapsedGrad}
+                          variant={isWarning ? "filled" : "light"}
                           radius="xl"
                           size="sm"
                           tt="none"
@@ -556,6 +607,8 @@ export default function RecordsPage() {
                           <Group gap={4} style={{ flexWrap: "nowrap" }}>
                             {order.sudah_disedia && order.completion_minutes != null ? (
                               <IconCircleCheck size={12} />
+                            ) : isWarning ? (
+                              <IconAlertTriangle size={12} />
                             ) : (
                               <IconClock size={12} />
                             )}
