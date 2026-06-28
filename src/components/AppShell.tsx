@@ -21,7 +21,10 @@ import {
   IconBook2,
   IconCopyright,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+
+const INACTIVITY_TIMEOUT = 3 * 60 * 1000;
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: IconDashboard },
@@ -36,7 +39,45 @@ const navItems = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [opened, setOpened] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevPathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    const isSupplyPage = pathname === "/supply";
+
+    if (isSupplyPage) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    const resetTimer = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        router.push("/records");
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ["mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [pathname, router]);
+
+  useEffect(() => {
+    if (prevPathnameRef.current !== "/records" && pathname === "/records") {
+      window.dispatchEvent(new Event("idle:refresh-records"));
+    }
+    prevPathnameRef.current = pathname;
+  }, [pathname]);
 
   return (
     <MantineAppShell
