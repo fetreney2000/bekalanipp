@@ -260,6 +260,7 @@ export default function SupplyPage() {
         color: "green",
       });
 
+      setSelectedWardId(null);
       setOrderNumber("");
       setOrderDate(todayStr());
       setOrderType("FS");
@@ -268,7 +269,7 @@ export default function SupplyPage() {
       setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
       setNextRowId(2);
       setErrors({});
-      if (selectedWardId) fetchCatalog(Number(selectedWardId));
+      setCatalogItems([]);
     } catch {
       notifications.show({
         title: "Ralat",
@@ -320,6 +321,7 @@ export default function SupplyPage() {
                   type="date"
                   value={orderDate}
                   onChange={(e) => setOrderDate(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   error={errors.date}
                 />
               </Box>
@@ -330,6 +332,7 @@ export default function SupplyPage() {
                   placeholder="Contoh: IND-2026-001"
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   error={errors.number}
                 />
               </Box>
@@ -350,6 +353,7 @@ export default function SupplyPage() {
                   type="time"
                   value={masaDiterima}
                   onChange={(e) => setMasaDiterima(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                 />
               </Box>
 
@@ -443,6 +447,7 @@ export default function SupplyPage() {
                           style={{ width: 70 }}
                           hideControls
                           error={errors[`qty_${row.id}`]}
+                          onFocus={(e) => e.target.select()}
                         />
                       </Table.Td>
                       <Table.Td style={{ fontSize: 13 }}>{cat ? cat.max_per_order : "—"}</Table.Td>
