@@ -164,6 +164,12 @@ export default function RecordsPage() {
   }, [fetchOrders]);
 
   useEffect(() => {
+    const handler = () => fetchOrders();
+    window.addEventListener("idle:refresh-records", handler);
+    return () => window.removeEventListener("idle:refresh-records", handler);
+  }, [fetchOrders]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setTick((t) => t + 1);
     }, 60000);
