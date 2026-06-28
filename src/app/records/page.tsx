@@ -124,10 +124,17 @@ function playWarningBeep() {
   }
 }
 
-const WARN_105 = 105;
-const WARN_115 = 115;
+function getWarnThresholds() {
+  if (typeof window === "undefined") return { w105: 105, w115: 115 };
+  const p = new URLSearchParams(window.location.search);
+  return {
+    w105: p.has("warn105") ? Number(p.get("warn105")) : 105,
+    w115: p.has("warn115") ? Number(p.get("warn115")) : 115,
+  };
+}
 
 export default function RecordsPage() {
+  const { w105, w115 } = useMemo(() => getWarnThresholds(), []);
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -198,19 +205,19 @@ export default function RecordsPage() {
       for (const order of orders) {
         if (order.sudah_disedia) continue;
         const elapsed = getElapsedMinutes(order);
-        if (elapsed < WARN_105) continue;
-        if (elapsed >= WARN_105 && !playedAlerts.current.has(`${order.id}_105`)) {
-          playedAlerts.current.add(`${order.id}_105`);
+        if (elapsed < w105) continue;
+        if (elapsed >= w105 && !playedAlerts.current.has(`${order.id}_${w105}`)) {
+          playedAlerts.current.add(`${order.id}_${w105}`);
           playWarningBeep();
         }
-        if (elapsed >= WARN_115 && !playedAlerts.current.has(`${order.id}_115`)) {
-          playedAlerts.current.add(`${order.id}_115`);
+        if (elapsed >= w115 && !playedAlerts.current.has(`${order.id}_${w115}`)) {
+          playedAlerts.current.add(`${order.id}_${w115}`);
           playWarningBeep();
         }
       }
     }, 60000);
     return () => clearInterval(interval);
-  }, [fetchOrders, selectedOrder, orders]);
+  }, [fetchOrders, selectedOrder, orders, w105, w115]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -539,7 +546,7 @@ export default function RecordsPage() {
                 {filtered.map((order, idx) => {
                   const elapsed = getElapsedMinutes(order);
                   const elapsedGrad = getElapsedGradient(elapsed);
-                  const isWarning = !order.sudah_disedia && elapsed >= WARN_105;
+                  const isWarning = !order.sudah_disedia && elapsed >= w105;
                   return (
                     <Table.Tr
                       key={order.id}
