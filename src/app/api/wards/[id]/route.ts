@@ -16,7 +16,7 @@ export async function PUT(
     const numberId = Number(id);
 
     if (isNaN(numberId)) {
-      return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
     const body = await request.json();
@@ -24,7 +24,7 @@ export async function PUT(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
@@ -51,7 +51,7 @@ export async function PUT(
 
     if (!result) {
       return NextResponse.json(
-        { error: "Wad/jabatan tidak ditemui" },
+        { error: "Wad/jabatan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -64,7 +64,7 @@ export async function PUT(
   } catch (error) {
     console.error("PUT /api/wards/[id] error:", error);
     return NextResponse.json(
-      { error: "Ralat mengemaskini wad/jabatan" },
+      { error: "Ralat mengemaskini wad/jabatan." },
       { status: 500 }
     );
   }
@@ -79,7 +79,7 @@ export async function DELETE(
     const numberId = Number(id);
 
     if (isNaN(numberId)) {
-      return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
@@ -87,7 +87,7 @@ export async function DELETE(
     const ward = await db.collection("wards").findOne({ id: numberId });
     if (!ward) {
       return NextResponse.json(
-        { error: "Wad/jabatan tidak ditemui" },
+        { error: "Wad/jabatan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -112,7 +112,7 @@ export async function DELETE(
   } catch (error) {
     console.error("DELETE /api/wards/[id] error:", error);
     return NextResponse.json(
-      { error: "Ralat memadam wad/jabatan" },
+      { error: "Ralat memadam wad/jabatan." },
       { status: 500 }
     );
   }

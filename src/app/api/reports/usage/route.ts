@@ -325,7 +325,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("GET /api/reports/usage error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan laporan penggunaan" },
+      { error: "Ralat mendapatkan laporan penggunaan." },
       { status: 500 }
     );
   }

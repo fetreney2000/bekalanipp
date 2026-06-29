@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     const itemId = searchParams.get("item_id");
 
     if (!itemId) {
-      return NextResponse.json({ error: "item_id diperlukan" }, { status: 400 });
+      return NextResponse.json({ error: "item_id diperlukan." }, { status: 400 });
     }
 
     const { start, end } = getDateRange(type, date, week, month, year);
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("GET /api/reports/item-orders error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan pesanan item" },
+      { error: "Ralat mendapatkan pesanan item." },
       { status: 500 }
     );
   }

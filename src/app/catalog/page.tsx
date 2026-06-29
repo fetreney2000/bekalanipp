@@ -92,7 +92,7 @@ export default function CatalogPage() {
       const res = await fetch(`/api/catalog/${selectedWard}?month=${currentMonth}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Ralat memuat katalog");
+        setError(data.error || "Ralat memuatkan katalog");
         return;
       }
       setWardName(data.ward || "");
@@ -332,12 +332,12 @@ export default function CatalogPage() {
         {selectedWard && (
           <TableScrollContainer minWidth={600}>
             {loading ? (
-              <Text c="dimmed" ta="center" py="md">Memuat data...</Text>
+              <Text c="dimmed" ta="center" py="md">Memuatkan data...</Text>
             ) : catalogItems.length === 0 ? (
               <Stack align="center" gap="xs" py="md" c="dimmed">
                 <IconAlertTriangle size={20} />
                 <Text size="sm" ta="center">
-                  Tiada item dalam katalog wad/jabatan ini. Klik &quot;Tambah Item&quot; untuk menambah.
+                  Tiada item dalam katalog wad/jabatan ini. Klik &quot;Tambah Item&quot; untuk menambah item.
                 </Text>
               </Stack>
             ) : (

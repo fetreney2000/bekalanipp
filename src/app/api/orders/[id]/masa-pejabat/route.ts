@@ -15,7 +15,7 @@ export async function PATCH(
     const numberId = Number(id);
 
     if (isNaN(numberId)) {
-      return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
     const body = await request.json();
@@ -23,7 +23,7 @@ export async function PATCH(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
@@ -45,7 +45,7 @@ export async function PATCH(
 
     if (!result) {
       return NextResponse.json(
-        { error: "Pesanan tidak ditemui" },
+        { error: "Pesanan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -58,7 +58,7 @@ export async function PATCH(
   } catch (error) {
     console.error("PATCH /api/orders/[id]/masa-pejabat error:", error);
     return NextResponse.json(
-      { error: "Ralat mengemaskini status masa pejabat" },
+      { error: "Ralat mengemaskini status masa pejabat." },
       { status: 500 }
     );
   }

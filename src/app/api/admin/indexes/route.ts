@@ -24,7 +24,7 @@ export async function POST() {
   } catch (error) {
     console.error("POST /api/admin/indexes error:", error);
     return NextResponse.json(
-      { error: "Ralat mencipta indeks" },
+      { error: "Ralat mencipta indeks." },
       { status: 500 }
     );
   }

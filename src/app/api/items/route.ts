@@ -24,7 +24,7 @@ export async function GET(_request: NextRequest) {
   } catch (error) {
     console.error("GET /api/items error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan senarai item" },
+      { error: "Ralat mendapatkan senarai item." },
       { status: 500 }
     );
   }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
@@ -72,6 +72,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("POST /api/items error:", error);
-    return NextResponse.json({ error: "Ralat mencipta item" }, { status: 500 });
+    return NextResponse.json({ error: "Ralat mencipta item." }, { status: 500 });
   }
 }

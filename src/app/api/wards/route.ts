@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest) {
   } catch (error) {
     console.error("GET /api/wards error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan senarai wad/jabatan" },
+      { error: "Ralat mendapatkan senarai wad/jabatan." },
       { status: 500 }
     );
   }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("POST /api/wards error:", error);
     return NextResponse.json(
-      { error: "Ralat mencipta wad/jabatan" },
+      { error: "Ralat mencipta wad/jabatan." },
       { status: 500 }
     );
   }

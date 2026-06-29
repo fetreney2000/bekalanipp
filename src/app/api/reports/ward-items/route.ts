@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("GET /api/reports/ward-items error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan laporan item wad" },
+      { error: "Ralat mendapatkan laporan item wad." },
       { status: 500 }
     );
   }
