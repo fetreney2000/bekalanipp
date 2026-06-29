@@ -15,15 +15,12 @@ import {
   Title,
   Table,
   TableScrollContainer,
-  Box,
-  Divider,
 } from "@mantine/core";
 import {
   IconShoppingBag,
   IconPackage,
   IconBuildingHospital,
   IconCalendar,
-  IconLayoutDashboard,
 } from "@tabler/icons-react";
 
 interface ItemStatus {
@@ -93,38 +90,16 @@ export default function DashboardPage() {
 
       {data && (
         <Stack gap="lg">
-          <Box
-            style={{
-              background: "linear-gradient(135deg, var(--mantine-color-gray-0) 0%, var(--mantine-color-white) 100%)",
-              borderRadius: "var(--mantine-radius-md)",
-              border: "1px solid var(--mantine-color-gray-2)",
-              padding: "var(--mantine-spacing-lg) var(--mantine-spacing-xl)",
-            }}
-          >
+          <Paper shadow="sm" p="md" radius="md" withBorder>
             <Group justify="space-between" align="center">
-              <Group gap="md">
-                <ThemeIcon
-                  size="lg"
-                  variant="light"
-                  color="primary"
-                  radius="md"
-                >
-                  <IconLayoutDashboard size={22} />
-                </ThemeIcon>
-                <Stack gap={2}>
-                  <Title order={3} fw={700} c="gray.8">
-                    Dashboard
-                  </Title>
-                  <Group gap="xs">
-                    <IconCalendar size={14} color="var(--mantine-color-gray-5)" />
-                    <Text size="sm" c="dimmed">
-                      {data.month}
-                    </Text>
-                  </Group>
-                </Stack>
+              <Group gap="xs">
+                <IconCalendar size={18} color="var(--mantine-color-gray-5)" />
+                <Title order={3} fw={700}>
+                  Dashboard — {data.month}
+                </Title>
               </Group>
             </Group>
-          </Box>
+          </Paper>
 
           <SimpleGrid cols={3}>
             <Paper shadow="sm" p="md" radius="md" withBorder>
