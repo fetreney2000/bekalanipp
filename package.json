@@ -9,12 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@mantine/charts": "^9.4.0",
-    "@mantine/core": "^9.4.0",
+    "@mantine/charts": "^9.4.1",
+    "@mantine/core": "^9.4.1",
     "@mantine/dates": "^9.4.1",
-    "@mantine/hooks": "^9.4.0",
-    "@mantine/notifications": "^9.4.0",
-    "@mantine/nprogress": "^9.4.0",
+    "@mantine/hooks": "^9.4.1",
+    "@mantine/notifications": "^9.4.1",
+    "@mantine/nprogress": "^9.4.1",
     "@tabler/icons-react": "^3.44.0",
     "date-holidays": "^3.30.2",
     "dayjs": "^1.11.21",
