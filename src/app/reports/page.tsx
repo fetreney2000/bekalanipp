@@ -346,8 +346,8 @@ export default function ReportsPage() {
                   onChange={(val) => {
                     if (val) setMonthDate(typeof val === "object" ? val : new Date(val));
                   }}
-                  miw={160}
-                  flex={1}
+                  size="sm"
+                  style={{ minWidth: 160, flex: 1 }}
                   valueFormat="MMMM YYYY"
                 />
               )}
