@@ -24,6 +24,9 @@ import {
   IconHospital,
   IconDeviceFloppy,
   IconX,
+  IconArrowsSort,
+  IconAlertCircle,
+  IconBuildingSkyscraper,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
@@ -217,7 +220,7 @@ export default function WardsPage() {
         </Flex>
 
         {error && (
-          <Alert color="red" variant="light" title="Ralat">
+          <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" title="Ralat">
             {error}
           </Alert>
         )}
@@ -275,13 +278,19 @@ export default function WardsPage() {
                   style={{ cursor: "pointer", userSelect: "none" }}
                   onClick={() => handleSort("name")}
                 >
-                  Nama {sortKey === "name" && (sortDir === "asc" ? "▲" : "▼")}
+                  <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                    Nama
+                    <IconArrowsSort size={14} style={{ opacity: sortKey === "name" ? 1 : 0.4, transform: sortKey === "name" && sortDir === "desc" ? "scaleY(-1)" : undefined }} />
+                  </Group>
                 </Table.Th>
                 <Table.Th
                   style={{ cursor: "pointer", userSelect: "none" }}
                   onClick={() => handleSort("category")}
                 >
-                  Kategori {sortKey === "category" && (sortDir === "asc" ? "▲" : "▼")}
+                  <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                    Kategori
+                    <IconArrowsSort size={14} style={{ opacity: sortKey === "category" ? 1 : 0.4, transform: sortKey === "category" && sortDir === "desc" ? "scaleY(-1)" : undefined }} />
+                  </Group>
                 </Table.Th>
                 <Table.Th style={{ textAlign: "right" }}>
                   Aksi
@@ -328,6 +337,7 @@ export default function WardsPage() {
                         <Badge
                           color={w.category === "ward" ? "green" : "gray"}
                           variant="light"
+                          leftSection={w.category === "ward" ? <IconHospital size={12} /> : <IconBuildingSkyscraper size={12} />}
                         >
                           {w.category === "ward" ? "Wad" : "Bukan Wad"}
                         </Badge>

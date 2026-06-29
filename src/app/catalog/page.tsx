@@ -25,6 +25,7 @@ import {
   IconDeviceFloppy,
   IconX,
   IconAlertTriangle,
+  IconBuildingHospital,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
@@ -242,6 +243,7 @@ export default function CatalogPage() {
           <Select
             label="Pilih Wad/Jabatan"
             placeholder="-- Pilih Wad/Jabatan --"
+            leftSection={<IconBuildingHospital size={16} />}
             data={wardSelectData}
             value={selectedWard}
             onChange={(val) => {
