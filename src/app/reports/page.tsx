@@ -292,7 +292,7 @@ export default function ReportsPage() {
   return (
     <AppShell>
       <Stack gap="lg">
-        <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Paper shadow="sm" p="sm" radius="md" withBorder>
           <Group gap="xs">
             <IconChartBar size={18} color="var(--mantine-color-gray-5)" />
             <Title order={2} fw={700}>Laporan</Title>

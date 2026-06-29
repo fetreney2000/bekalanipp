@@ -292,7 +292,7 @@ export default function SupplyPage() {
   return (
     <AppShell>
       <Stack gap="lg" pb="xl">
-        <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Paper shadow="sm" p="sm" radius="md" withBorder>
           <Group gap="xs">
             <IconPackage size={18} color="var(--mantine-color-gray-5)" />
             <Title order={3} fw={700}>Rekod Inden Baharu</Title>
