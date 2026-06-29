@@ -14,6 +14,7 @@ import {
   Table,
   TableScrollContainer,
   Loader,
+  Paper,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -174,21 +175,23 @@ export default function ItemsPage() {
   return (
     <AppShell>
       <Stack gap="md">
-        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="sm">
-            <IconPill size={22} color="var(--mantine-color-blue-6)" />
-            <Title order={2}>Urus Item/Ubat</Title>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group justify="space-between" align="center">
+            <Group gap="xs">
+              <IconPill size={18} color="var(--mantine-color-gray-5)" />
+              <Title order={2} fw={700}>Urus Item/Ubat</Title>
+            </Group>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => {
+                setShowAdd(!showAdd);
+                setError("");
+              }}
+            >
+              Tambah Item
+            </Button>
           </Group>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => {
-              setShowAdd(!showAdd);
-              setError("");
-            }}
-          >
-            Tambah Item
-          </Button>
-        </Flex>
+        </Paper>
 
         {error && (
           <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" title="Ralat">

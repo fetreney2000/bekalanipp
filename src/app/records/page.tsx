@@ -420,12 +420,14 @@ export default function RecordsPage() {
         }
       `}</style>
       <Stack gap="md">
-        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="sm">
-            <IconClock size={22} />
-            <Title order={2}>Senarai Inden</Title>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group justify="space-between" align="center">
+            <Group gap="xs">
+              <IconClock size={18} color="var(--mantine-color-gray-5)" />
+              <Title order={2} fw={700}>Senarai Inden</Title>
+            </Group>
           </Group>
-        </Flex>
+        </Paper>
 
         <Flex gap="sm" wrap="wrap" align="flex-end">
           <MonthPickerInput

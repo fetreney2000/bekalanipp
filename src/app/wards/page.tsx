@@ -16,6 +16,7 @@ import {
   TableScrollContainer,
   Select,
   Loader,
+  Paper,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -204,21 +205,23 @@ export default function WardsPage() {
   return (
     <AppShell>
       <Stack gap="md">
-        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="sm">
-            <IconHospital size={22} color="var(--mantine-color-blue-6)" />
-            <Title order={2}>Urus Wad/Jabatan</Title>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group justify="space-between" align="center">
+            <Group gap="xs">
+              <IconHospital size={18} color="var(--mantine-color-gray-5)" />
+              <Title order={2} fw={700}>Urus Wad/Jabatan</Title>
+            </Group>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => {
+                setShowAdd(!showAdd);
+                setError("");
+              }}
+            >
+              Tambah Wad/Jabatan
+            </Button>
           </Group>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => {
-              setShowAdd(!showAdd);
-              setError("");
-            }}
-          >
-            Tambah Wad/Jabatan
-          </Button>
-        </Flex>
+        </Paper>
 
         {error && (
           <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" title="Ralat">
