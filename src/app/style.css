@@ -713,6 +713,33 @@
   margin-bottom: var(--mantine-spacing-xs);
 }
 
+/* TimePicker - Input fields (hours, minutes) */
+.m_6b43ba88 {
+  &:focus {
+    background-color: var(--mantine-primary-color-filled);
+    color: var(--mantine-primary-color-contrast);
+  }
+
+  &:focus::placeholder {
+    color: var(--mantine-primary-color-contrast);
+  }
+}
+
+/* TimePicker - Dropdown controls and preset controls */
+[data-mantine-color-scheme="light"] .m_154c536b:hover:where(:not([data-active])),
+[data-mantine-color-scheme="dark"] .m_154c536b:hover:where(:not([data-active])),
+[data-mantine-color-scheme="light"] .m_7be09d0c:hover:where(:not([data-active])),
+[data-mantine-color-scheme="dark"] .m_7be09d0c:hover:where(:not([data-active])) {
+  background-color: var(--mantine-color-default-hover) !important;
+}
+
+[data-mantine-color-scheme="light"] .m_154c536b:active:where(:not([data-active])),
+[data-mantine-color-scheme="dark"] .m_154c536b:active:where(:not([data-active])),
+[data-mantine-color-scheme="light"] .m_7be09d0c:active:where(:not([data-active])),
+[data-mantine-color-scheme="dark"] .m_7be09d0c:active:where(:not([data-active])) {
+  background-color: var(--mantine-color-default-hover) !important;
+}
+
 /* Spotlight */
 .mantine-Spotlight-root {
   .mantine-Spotlight-content {
