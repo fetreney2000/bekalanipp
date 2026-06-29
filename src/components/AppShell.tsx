@@ -158,7 +158,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </MantineAppShell.Main>
 
       <MantineAppShell.Footer p="xs" h="auto">
-        <Group gap={4}>
+        <Group justify="flex-end" gap={4}>
           <Text size="xs" c="dimmed">Inden Belum Disediakan:</Text>
           <Text size="xs" c={pendingCount !== null && pendingCount > 0 ? "orange.7" : "dimmed"} fw={600}>
             {pendingCount !== null ? pendingCount : "..."}
