@@ -15,15 +15,11 @@ import {
   Title,
   Table,
   TableScrollContainer,
-  Box,
-  Divider,
 } from "@mantine/core";
 import {
   IconShoppingBag,
   IconPackage,
   IconBuildingHospital,
-  IconCalendar,
-  IconTrendingUp,
 } from "@tabler/icons-react";
 
 interface ItemStatus {
@@ -93,279 +89,102 @@ export default function DashboardPage() {
 
       {data && (
         <Stack gap="lg">
-          <Box
-            style={{
-              background: "linear-gradient(135deg, var(--mantine-color-gray-0) 0%, var(--mantine-color-white) 100%)",
-              borderRadius: "var(--mantine-radius-md)",
-              padding: "var(--mantine-spacing-xl)",
-              border: "1px solid var(--mantine-color-gray-2)",
-            }}
-          >
-            <Group justify="space-between" align="flex-start">
-              <Stack gap="xs">
-                <Title order={3} fw={700} c="gray.8">
-                  Dashboard
-                </Title>
-                <Group gap="xs">
-                  <IconCalendar size={16} color="var(--mantine-color-gray-5)" />
-                  <Text size="sm" c="dimmed">
-                    {data.month}
-                  </Text>
-                </Group>
-              </Stack>
-              <Group gap="xs">
-                <ThemeIcon size="lg" variant="light" color="teal" radius="md">
-                  <IconTrendingUp size={20} />
-                </ThemeIcon>
-              </Group>
-            </Group>
-          </Box>
+          <Title order={3} fw={700}>
+            Dashboard — {data.month}
+          </Title>
 
-          <SimpleGrid cols={{ base: 1, md: 3 }}>
-            <Paper
-              p="lg"
-              radius="md"
-              withBorder
-              style={{
-                borderLeft: "3px solid var(--mantine-color-cyan-6)",
-                transition: "box-shadow 150ms ease",
-              }}
-            >
-              <Group gap="md" align="center">
-                <ThemeIcon size="xl" radius="md" variant="light" color="cyan">
-                  <IconShoppingBag size={24} />
+          <SimpleGrid cols={3}>
+            <Paper shadow="sm" p="md" radius="md" withBorder>
+              <Group gap="sm" align="center">
+                <ThemeIcon size="lg" radius="md" variant="light" color="cyan">
+                  <IconShoppingBag size={22} />
                 </ThemeIcon>
-                <Stack gap={2}>
-                  <Text size="xs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: "0.05em" }}>
-                    Jumlah Pesanan
-                  </Text>
-                  <Text size="2xl" fw={700} c="gray.8">
-                    {data.orders_count}
-                  </Text>
+                <Stack gap={0}>
+                  <Text size="xs" c="dimmed">Jumlah Pesanan</Text>
+                  <Text size="xl" fw={700}>{data.orders_count}</Text>
                 </Stack>
               </Group>
             </Paper>
-            <Paper
-              p="lg"
-              radius="md"
-              withBorder
-              style={{
-                borderLeft: "3px solid var(--mantine-color-green-6)",
-                transition: "box-shadow 150ms ease",
-              }}
-            >
-              <Group gap="md" align="center">
-                <ThemeIcon size="xl" radius="md" variant="light" color="green">
-                  <IconPackage size={24} />
+            <Paper shadow="sm" p="md" radius="md" withBorder>
+              <Group gap="sm" align="center">
+                <ThemeIcon size="lg" radius="md" variant="light" color="green">
+                  <IconPackage size={22} />
                 </ThemeIcon>
-                <Stack gap={2}>
-                  <Text size="xs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: "0.05em" }}>
-                    Jumlah Item
-                  </Text>
-                  <Text size="2xl" fw={700} c="gray.8">
-                    {data.items_count}
-                  </Text>
+                <Stack gap={0}>
+                  <Text size="xs" c="dimmed">Jumlah Item</Text>
+                  <Text size="xl" fw={700}>{data.items_count}</Text>
                 </Stack>
               </Group>
             </Paper>
-            <Paper
-              p="lg"
-              radius="md"
-              withBorder
-              style={{
-                borderLeft: "3px solid var(--mantine-color-amber-6)",
-                transition: "box-shadow 150ms ease",
-              }}
-            >
-              <Group gap="md" align="center">
-                <ThemeIcon size="xl" radius="md" variant="light" color="yellow">
-                  <IconBuildingHospital size={24} />
+            <Paper shadow="sm" p="md" radius="md" withBorder>
+              <Group gap="sm" align="center">
+                <ThemeIcon size="lg" radius="md" variant="light" color="yellow">
+                  <IconBuildingHospital size={22} />
                 </ThemeIcon>
-                <Stack gap={2}>
-                  <Text size="xs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: "0.05em" }}>
-                    Pesanan Terbanyak
-                  </Text>
-                  <Text size="lg" fw={700} c="gray.8">
+                <Stack gap={0}>
+                  <Text size="xs" c="dimmed">Pesanan Terbanyak</Text>
+                  <Text size="xl" fw={700}>
                     {data.top_ward
-                      ? `${data.top_ward.ward_name}`
+                      ? `${data.top_ward.ward_name} (${data.top_ward.order_count})`
                       : "Tiada data"}
                   </Text>
-                  {data.top_ward && (
-                    <Text size="xs" c="dimmed">
-                      {data.top_ward.order_count} pesanan
-                    </Text>
-                  )}
                 </Stack>
               </Group>
             </Paper>
           </SimpleGrid>
 
-          <SimpleGrid cols={{ base: 1, md: 3 }}>
-            <Paper
-              p="lg"
-              radius="md"
-              withBorder
-              style={{
-                background: "linear-gradient(135deg, var(--mantine-color-gray-0) 0%, var(--mantine-color-white) 100%)",
-              }}
-            >
-              <Group gap="sm" mb="md">
-                <ThemeIcon size="md" variant="light" color="orange" radius="sm">
-                  <IconTrendingUp size={18} />
-                </ThemeIcon>
-                <Title order={5} fw={600} c="gray.8">
-                  Ringkasan Amaran
-                </Title>
-              </Group>
-              <Divider mb="md" />
-              <Stack gap="sm">
-                <Group justify="space-between">
-                  <Text size="sm" c="dimmed">Amaran (80%+)</Text>
-                  <Badge color="yellow" variant="light" size="lg">
-                    {data.warnings.length}
-                  </Badge>
-                </Group>
-                <Group justify="space-between">
-                  <Text size="sm" c="dimmed">Kritikal (100%+)</Text>
-                  <Badge color="red" variant="light" size="lg">
-                    {data.exceeded.length}
-                  </Badge>
-                </Group>
-              </Stack>
+          <SimpleGrid cols={3}>
+            <Paper p="md" radius="md" withBorder>
+              <Title order={5} fw={600} mb="md">Amaran Kuota (Bulan Ini)</Title>
+              <Text size="sm">
+                Jumlah amaran: {data.warnings.length} (80%+) | Jumlah kritikal: {data.exceeded.length} (100%+)
+              </Text>
             </Paper>
 
-            <Paper
-              p="lg"
-              radius="md"
-              withBorder
-              style={{
-                borderTop: "3px solid var(--mantine-color-yellow-6)",
-              }}
-            >
-              <Group gap="sm" mb="md">
-                <Badge color="yellow" variant="filled" size="lg" radius="sm">
-                  80%+
-                </Badge>
-                <Title order={5} fw={600} c="gray.8">
-                  Melebihi 80%
-                </Title>
-              </Group>
-              <Divider mb="md" />
+            <Paper p="md" radius="md" withBorder>
+              <Title order={5} fw={600} mb="md">Wad/Jabatan Melebihi 80%</Title>
               {data.warnings.length === 0 ? (
-                <Text c="dimmed" size="sm" ta="center" py="md">
-                  Tiada amaran pada masa ini
-                </Text>
+                <Text c="dimmed">Tiada</Text>
               ) : (
-                <Stack gap="sm">
-                  {data.warnings.slice(0, 5).map((item, idx) => (
-                    <Box
-                      key={idx}
-                      p="xs"
-                      style={{
-                        borderRadius: "var(--mantine-radius-sm)",
-                        backgroundColor: "var(--mantine-color-yellow-0)",
-                        border: "1px solid var(--mantine-color-yellow-2)",
-                      }}
-                    >
-                      <Text size="sm" fw={600} c="gray.8">
-                        {item.ward_name}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {item.item_name} ({item.used}/{item.quota})
-                      </Text>
-                    </Box>
+                <Stack gap="xs">
+                  {data.warnings.map((item, idx) => (
+                    <Group key={idx} gap="xs">
+                      <Badge color="yellow" variant="light" size="sm">80%+</Badge>
+                      <Text size="sm"><strong>{item.ward_name}</strong> - {item.item_name} ({item.used}/{item.quota})</Text>
+                    </Group>
                   ))}
-                  {data.warnings.length > 5 && (
-                    <Text size="xs" c="dimmed" ta="center">
-                      +{data.warnings.length - 5} lagi...
-                    </Text>
-                  )}
                 </Stack>
               )}
             </Paper>
 
-            <Paper
-              p="lg"
-              radius="md"
-              withBorder
-              style={{
-                borderTop: "3px solid var(--mantine-color-red-6)",
-              }}
-            >
-              <Group gap="sm" mb="md">
-                <Badge color="red" variant="filled" size="lg" radius="sm">
-                  100%+
-                </Badge>
-                <Title order={5} fw={600} c="gray.8">
-                  Habis Kuota
-                </Title>
-              </Group>
-              <Divider mb="md" />
+            <Paper p="md" radius="md" withBorder>
+              <Title order={5} fw={600} mb="md">Wad/Jabatan Habis Kuota</Title>
               {data.exceeded.length === 0 ? (
-                <Text c="dimmed" size="sm" ta="center" py="md">
-                  Tiada item melebihi kuota
-                </Text>
+                <Text c="dimmed">Tiada</Text>
               ) : (
-                <Stack gap="sm">
-                  {data.exceeded.slice(0, 5).map((item, idx) => (
-                    <Box
-                      key={idx}
-                      p="xs"
-                      style={{
-                        borderRadius: "var(--mantine-radius-sm)",
-                        backgroundColor: "var(--mantine-color-red-0)",
-                        border: "1px solid var(--mantine-color-red-2)",
-                      }}
-                    >
-                      <Text size="sm" fw={600} c="gray.8">
-                        {item.ward_name}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {item.item_name} ({item.used}/{item.quota})
-                      </Text>
-                    </Box>
+                <Stack gap="xs">
+                  {data.exceeded.map((item, idx) => (
+                    <Group key={idx} gap="xs">
+                      <Badge color="red" variant="light" size="sm">100%+</Badge>
+                      <Text size="sm"><strong>{item.ward_name}</strong> - {item.item_name} ({item.used}/{item.quota})</Text>
+                    </Group>
                   ))}
-                  {data.exceeded.length > 5 && (
-                    <Text size="xs" c="dimmed" ta="center">
-                      +{data.exceeded.length - 5} lagi...
-                    </Text>
-                  )}
                 </Stack>
               )}
             </Paper>
           </SimpleGrid>
 
-          <Paper
-            p="lg"
-            radius="md"
-            withBorder
-            style={{
-              borderTop: "3px solid var(--mantine-color-slate-6)",
-            }}
-          >
-            <Group justify="space-between" mb="md">
-              <Group gap="sm">
-                <ThemeIcon size="md" variant="light" color="slate" radius="sm">
-                  <IconPackage size={18} />
-                </ThemeIcon>
-                <Title order={5} fw={600} c="gray.8">
-                  Butiran Item Kuota Kritikal
-                </Title>
-              </Group>
-              <Badge color="gray" variant="light" size="sm">
-                {data.itemStatus.filter((item) => item.quota > 0).length} item
-              </Badge>
-            </Group>
-            <Divider mb="md" />
+          <Paper shadow="sm" p="md" radius="md" withBorder>
+            <Title order={5} fw={600} mb="md">Butiran Item Kuota Kritikal</Title>
             <TableScrollContainer minWidth={500}>
               <Table striped highlightOnHover withTableBorder>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th fw={600} c="gray.7">Wad/Jabatan</Table.Th>
-                    <Table.Th fw={600} c="gray.7">Item</Table.Th>
-                    <Table.Th ta="right" fw={600} c="gray.7">Digunakan</Table.Th>
-                    <Table.Th ta="right" fw={600} c="gray.7">Kuota</Table.Th>
-                    <Table.Th ta="center" fw={600} c="gray.7">Status</Table.Th>
+                    <Table.Th>Wad/Jabatan</Table.Th>
+                    <Table.Th>Item</Table.Th>
+                    <Table.Th ta="right">Digunakan</Table.Th>
+                    <Table.Th ta="right">Kuota</Table.Th>
+                    <Table.Th ta="center">Status</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -375,24 +194,12 @@ export default function DashboardPage() {
                       const pct = Math.round((item.used / item.quota) * 100);
                       return (
                         <Table.Tr key={idx}>
-                          <Table.Td fw={500}>{item.ward_name}</Table.Td>
+                          <Table.Td>{item.ward_name}</Table.Td>
                           <Table.Td>{item.item_name}</Table.Td>
-                          <Table.Td ta="right" fw={600}>{item.used}</Table.Td>
-                          <Table.Td ta="right" fw={600}>{item.quota}</Table.Td>
+                          <Table.Td ta="right">{item.used}</Table.Td>
+                          <Table.Td ta="right">{item.quota}</Table.Td>
                           <Table.Td ta="center">
-                            {pct >= 100 ? (
-                              <Badge color="red" variant="filled" size="sm" radius="sm">
-                                100%+
-                              </Badge>
-                            ) : pct >= 80 ? (
-                              <Badge color="yellow" variant="filled" size="sm" radius="sm">
-                                80%+
-                              </Badge>
-                            ) : (
-                              <Badge color="green" variant="light" size="sm" radius="sm">
-                                &lt;80%
-                              </Badge>
-                            )}
+                            {pct >= 100 ? <Badge color="red" variant="light" size="sm">100%+</Badge> : pct >= 80 ? <Badge color="yellow" variant="light" size="sm">80%+</Badge> : <Badge color="green" variant="light" size="sm">&lt;80%</Badge>}
                           </Table.Td>
                         </Table.Tr>
                       );

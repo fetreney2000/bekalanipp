@@ -10,9 +10,6 @@ import {
   Stack,
   Box,
   Burger,
-  Badge,
-  Divider,
-  UnstyledButton,
 } from "@mantine/core";
 import {
   IconDashboard,
@@ -23,7 +20,6 @@ import {
   IconPill,
   IconBook2,
   IconCopyright,
-  IconBell,
 } from "@tabler/icons-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -107,7 +103,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <MantineAppShell
-      header={{ height: 64 }}
+      header={{ height: 60 }}
       navbar={{
         width: 260,
         breakpoint: "md",
@@ -115,89 +111,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }}
       padding="md"
     >
-      <MantineAppShell.Header
-        style={{
-          borderBottom: "1px solid var(--mantine-color-gray-2)",
-          backgroundColor: "var(--mantine-color-white)",
-        }}
-      >
-        <Group h="100%" px="lg" justify="space-between">
-          <Group gap="md">
+      <MantineAppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group gap="sm">
             <Burger
               opened={opened}
               onClick={() => setOpened((o) => !o)}
               hiddenFrom="md"
               size="sm"
             />
-            <Group gap="sm">
-              <Box
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "var(--mantine-radius-sm)",
-                  background: "linear-gradient(135deg, var(--mantine-color-cyan-6) 0%, var(--mantine-color-teal-6) 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <IconPill size={20} color="white" />
-              </Box>
-              <Stack gap={0}>
-                <Text fw={700} size="sm" c="gray.8" style={{ lineHeight: 1.2 }}>
-                  Sistem Rekod Inden
-                </Text>
-                <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
-                  Jabatan Farmasi Hospital Keningau
-                </Text>
-              </Stack>
+            <Group gap="xs">
+              <IconPill size={22} color="cyan.6" />
+              <Text fw={700} size="sm">Sistem Rekod FS, EMT, AOH - Jabatan Farmasi Hospital Keningau</Text>
             </Group>
-          </Group>
-
-          <Group gap="md">
-            <UnstyledButton
-              style={{
-                position: "relative",
-                padding: "var(--mantine-spacing-xs)",
-                borderRadius: "var(--mantine-radius-sm)",
-              }}
-            >
-              <IconBell size={20} color="var(--mantine-color-gray-6)" />
-              {pendingCount !== null && pendingCount > 0 && (
-                <Badge
-                  color="red"
-                  variant="filled"
-                  size="xs"
-                  circle
-                  style={{
-                    position: "absolute",
-                    top: 2,
-                    right: 2,
-                    minWidth: 18,
-                    height: 18,
-                    fontSize: 10,
-                    padding: "0 5px",
-                  }}
-                >
-                  {pendingCount}
-                </Badge>
-              )}
-            </UnstyledButton>
-            <Divider orientation="vertical" size="xs" />
-            <Text size="xs" c="dimmed">
-              Hospital Keningau
-            </Text>
           </Group>
         </Group>
       </MantineAppShell.Header>
 
-      <MantineAppShell.Navbar
-        p="md"
-        style={{
-          borderRight: "1px solid var(--mantine-color-gray-2)",
-          backgroundColor: "var(--mantine-color-gray-0)",
-        }}
-      >
+      <MantineAppShell.Navbar p="md">
         <Stack gap={2}>
           {navItems.map((item) => {
             const isActive =
@@ -216,9 +147,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setOpened(false)}
                 variant="filled"
                 autoContrast
-                style={{
-                  borderRadius: "var(--mantine-radius-sm)",
-                }}
               />
             );
           })}
@@ -231,14 +159,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </Box>
       </MantineAppShell.Main>
 
-      <MantineAppShell.Footer
-        p="xs"
-        h="auto"
-        style={{
-          borderTop: "1px solid var(--mantine-color-gray-2)",
-          backgroundColor: "var(--mantine-color-gray-0)",
-        }}
-      >
+      <MantineAppShell.Footer p="xs" h="auto">
         <Group justify="flex-end" gap={4}>
           <Text size="xs" c="dimmed">Inden Belum Disediakan:</Text>
           <Text size="xs" c={pendingCount !== null && pendingCount > 0 ? "orange.7" : "dimmed"} fw={600}>
