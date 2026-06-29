@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { orders: enrichedOrders, total, page, pageSize },
-      { headers: { "Cache-Control": "s-maxage=15, stale-while-revalidate=60" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/orders error:", error);
