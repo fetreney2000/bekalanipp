@@ -21,7 +21,6 @@ import {
   ActionIcon,
   Paper,
   Divider,
-  Pagination,
 } from "@mantine/core";
 import {
   IconRefresh,
@@ -33,8 +32,6 @@ import {
   IconSearch,
   IconDeviceFloppy,
   IconX,
-  IconChevronLeft,
-  IconChevronRight,
 } from "@tabler/icons-react";
 import { DatePickerInput, MonthPickerInput, TimePicker } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
@@ -136,7 +133,6 @@ function playWarningBeep() {
 export default function RecordsPage() {
   const WARN_105 = 105;
   const WARN_115 = 115;
-  const PAGE_SIZE = 50;
   const now = new Date();
   const [dateValue, setDateValue] = useState<Date>(now);
   const month = dateValue.getMonth();
@@ -155,8 +151,6 @@ export default function RecordsPage() {
   } | null>(null);
   const [, setTick] = useState(0);
   const playedAlerts = useRef<Set<string>>(new Set());
-  const [page, setPage] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -176,17 +170,16 @@ export default function RecordsPage() {
 
   const range = useMemo(() => getMonthRange(year, month), [year, month]);
 
-  const fetchOrders = useCallback(async (pageNum: number = 1, pageSize: number = PAGE_SIZE) => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(
-        `/api/orders?from=${range.from}&to=${range.to}&page=${pageNum}&pageSize=${pageSize}`
+        `/api/orders?from=${range.from}&to=${range.to}&page=1&pageSize=500`
       );
       if (!res.ok) throw new Error("Gagal memuatkan data");
       const data = await res.json();
       setOrders(data.orders);
-      setTotalOrders(data.total);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Ralat tidak diketahui");
     } finally {
@@ -195,27 +188,14 @@ export default function RecordsPage() {
   }, [range.from, range.to]);
 
   useEffect(() => {
-    setPage(1);
-    const size = searchText.trim() ? 500 : PAGE_SIZE;
-    fetchOrders(1, size);
+    fetchOrders();
   }, [fetchOrders]);
 
   useEffect(() => {
-    const handler = () => {
-      const size = searchText.trim() ? 500 : PAGE_SIZE;
-      fetchOrders(1, size);
-    };
+    const handler = () => fetchOrders();
     window.addEventListener("idle:refresh-records", handler);
     return () => window.removeEventListener("idle:refresh-records", handler);
-  }, [fetchOrders, searchText]);
-
-  useEffect(() => {
-    if (!searchText.trim()) return;
-    const timer = setTimeout(() => {
-      fetchOrders(1, 500);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchText, fetchOrders]);
+  }, [fetchOrders]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -241,12 +221,11 @@ export default function RecordsPage() {
     if (typeof document === "undefined") return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && !selectedOrder) {
-        const size = searchText.trim() ? 500 : PAGE_SIZE;
-        fetchOrders(page, size);
+        fetchOrders();
       }
     }, 300000);
     return () => clearInterval(interval);
-  }, [fetchOrders, selectedOrder, page, searchText]);
+  }, [fetchOrders, selectedOrder]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -403,7 +382,7 @@ export default function RecordsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
       setModalSuccess("Berjaya disimpan");
-      fetchOrders(page, PAGE_SIZE);
+      fetchOrders();
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -424,7 +403,7 @@ export default function RecordsPage() {
         throw new Error(data.error || "Gagal memadam");
       }
       closeModal();
-      fetchOrders(page, PAGE_SIZE);
+      fetchOrders();
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -463,10 +442,7 @@ export default function RecordsPage() {
           />
           <Button
             size="compact-sm"
-            onClick={() => {
-              const size = searchText.trim() ? 500 : PAGE_SIZE;
-              fetchOrders(page, size);
-            }}
+            onClick={() => fetchOrders()}
             variant="subtle"
             leftSection={<IconRefresh size={14} />}
           >
@@ -503,42 +479,6 @@ export default function RecordsPage() {
 
         {!loading && !error && (
           <>
-            <Flex justify="space-between" align="center" wrap="wrap" gap="sm" pb="xs">
-              <Text size="xs" c="dimmed">
-                {filtered.length} inden dipaparkan (jumlah: {totalOrders})
-              </Text>
-              {!searchText.trim() && (
-              <Group gap="xs">
-                <Button
-                  size="compact-xs"
-                  variant="default"
-                  disabled={page <= 1}
-                  onClick={() => {
-                    const p = page - 1;
-                    setPage(p);
-                    fetchOrders(p, PAGE_SIZE);
-                  }}
-                >
-                  <IconChevronLeft size={14} />
-                </Button>
-                <Text size="sm" fw={500} style={{ minWidth: 60, textAlign: "center" }}>
-                  {page} / {Math.max(1, Math.ceil(totalOrders / PAGE_SIZE))}
-                </Text>
-                <Button
-                  size="compact-xs"
-                  variant="default"
-                  disabled={page >= Math.ceil(totalOrders / PAGE_SIZE)}
-                  onClick={() => {
-                    const p = page + 1;
-                    setPage(p);
-                    fetchOrders(p, PAGE_SIZE);
-                  }}
-                >
-                  <IconChevronRight size={14} />
-                </Button>
-              </Group>
-              )}
-            </Flex>
             <Table.ScrollContainer minWidth={800}>
               <Table>
                 <Table.Thead>
@@ -610,7 +550,7 @@ export default function RecordsPage() {
                             : {}),
                         }}
                       >
-                        <Table.Td>{(page - 1) * PAGE_SIZE + idx + 1}</Table.Td>
+                        <Table.Td>{idx + 1}</Table.Td>
                         <Table.Td style={{ whiteSpace: "nowrap" }}>
                           {order.order_date}
                         </Table.Td>
