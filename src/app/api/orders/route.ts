@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
-    const pageSize = Math.min(500, Math.max(1, Number(searchParams.get("pageSize")) || 50));
+    const pageSize = Math.min(600, Math.max(1, Number(searchParams.get("pageSize")) || 50));
 
     const { db } = await connectToDatabase();
 

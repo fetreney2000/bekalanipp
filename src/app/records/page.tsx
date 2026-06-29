@@ -82,9 +82,11 @@ const ORDER_TYPE_COLOR: Record<string, string> = {
 function getMonthRange(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   return {
-    from: firstDay.toISOString().slice(0, 10),
-    to: lastDay.toISOString().slice(0, 10),
+    from: fmt(firstDay),
+    to: fmt(lastDay),
   };
 }
 
@@ -175,7 +177,7 @@ export default function RecordsPage() {
     setError(null);
     try {
       const res = await fetch(
-        `/api/orders?from=${range.from}&to=${range.to}&page=1&pageSize=500`
+        `/api/orders?from=${range.from}&to=${range.to}&page=1&pageSize=600`
       );
       if (!res.ok) throw new Error("Gagal memuatkan data");
       const data = await res.json();
