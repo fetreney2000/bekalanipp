@@ -32,6 +32,10 @@ import {
   IconSend,
   IconCheck,
   IconAlertTriangle,
+  IconBuildingHospital,
+  IconHash,
+  IconList,
+  IconClock,
 } from "@tabler/icons-react";
 
 interface Ward {
@@ -284,7 +288,10 @@ export default function SupplyPage() {
   return (
     <AppShell>
       <Stack gap="lg" pb="xl">
-        <Title order={3} fw={700}>Rekod Inden Baharu</Title>
+        <Group gap="sm">
+          <IconPackage size={22} color="var(--mantine-color-blue-6)" />
+          <Title order={3} fw={700}>Rekod Inden Baharu</Title>
+        </Group>
 
         {successId && (
           <Alert
@@ -307,6 +314,7 @@ export default function SupplyPage() {
                 <Select
                   label="Wad/Jabatan *"
                   placeholder="Cari wad/jabatan..."
+                  leftSection={<IconBuildingHospital size={16} />}
                   data={wardData}
                   searchable
                   value={selectedWardId}
@@ -330,6 +338,7 @@ export default function SupplyPage() {
                 <TextInput
                   label="No. Inden *"
                   placeholder="Contoh: IND-2026-001"
+                  leftSection={<IconHash size={16} />}
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
                   onFocus={(e) => e.target.select()}
@@ -341,6 +350,7 @@ export default function SupplyPage() {
                 <Select
                   label="Jenis *"
                   placeholder="Pilih jenis..."
+                  leftSection={<IconList size={16} />}
                   data={orderTypeData}
                   value={orderType}
                   onChange={setOrderType}
@@ -351,6 +361,7 @@ export default function SupplyPage() {
                 <TextInput
                   label="Masa Diterima"
                   type="time"
+                  leftSection={<IconClock size={16} />}
                   value={masaDiterima}
                   onChange={(e) => setMasaDiterima(e.target.value)}
                   onFocus={(e) => e.target.select()}

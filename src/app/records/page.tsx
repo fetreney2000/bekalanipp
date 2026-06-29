@@ -27,6 +27,9 @@ import {
   IconCircleCheck,
   IconAlertTriangle,
   IconTrash,
+  IconSearch,
+  IconDeviceFloppy,
+  IconX,
 } from "@tabler/icons-react";
 import AppShell from "@/components/AppShell";
 
@@ -453,6 +456,7 @@ export default function RecordsPage() {
           <Box style={{ flex: 1, minWidth: 200, maxWidth: 320 }}>
             <TextInput
               placeholder="Cari No. Inden, Wad, atau Item..."
+              leftSection={<IconSearch size={14} />}
               value={searchText}
               onChange={(e) => setSearchText(e.currentTarget.value)}
               size="sm"
@@ -648,6 +652,7 @@ export default function RecordsPage() {
             <Button
               size="compact-sm"
               variant="subtle"
+              leftSection={<IconX size={14} />}
               onClick={() => setConfirmDialog(null)}
             >
               Batal
@@ -655,6 +660,7 @@ export default function RecordsPage() {
             <Button
               size="compact-sm"
               color="red"
+              leftSection={<IconX size={14} />}
               onClick={handleConfirmReady}
             >
               Ya, Batalkan
@@ -796,10 +802,10 @@ export default function RecordsPage() {
                 {confirmDelete ? (
                   <Group gap="sm">
                     <Text size="sm" c="red">Pasti padam?</Text>
-                    <Button size="compact-sm" color="red" onClick={handleDelete} loading={deleting}>
+                    <Button size="compact-sm" color="red" leftSection={<IconTrash size={14} />} onClick={handleDelete} loading={deleting}>
                       Ya, Padam
                     </Button>
-                    <Button size="compact-sm" variant="subtle" onClick={() => setConfirmDelete(false)}>
+                    <Button size="compact-sm" variant="subtle" leftSection={<IconX size={14} />} onClick={() => setConfirmDelete(false)}>
                       Batal
                     </Button>
                   </Group>
@@ -810,10 +816,10 @@ export default function RecordsPage() {
                 )}
               </Group>
               <Group gap="sm">
-                <Button size="compact-sm" variant="subtle" onClick={closeModal}>
+                <Button size="compact-sm" variant="subtle" leftSection={<IconX size={14} />} onClick={closeModal}>
                   Tutup
                 </Button>
-                <Button size="compact-sm" onClick={handleSave} loading={saving}>
+                <Button size="compact-sm" leftSection={<IconDeviceFloppy size={14} />} onClick={handleSave} loading={saving}>
                   Simpan
                 </Button>
               </Group>

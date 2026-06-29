@@ -22,6 +22,8 @@ import {
   IconPill,
   IconDeviceFloppy,
   IconX,
+  IconArrowsSort,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
@@ -188,7 +190,7 @@ export default function ItemsPage() {
         </Flex>
 
         {error && (
-          <Alert color="red" variant="light" title="Ralat">
+          <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" title="Ralat">
             {error}
           </Alert>
         )}
@@ -240,7 +242,10 @@ export default function ItemsPage() {
                   style={{ cursor: "pointer", userSelect: "none" }}
                   onClick={handleSort}
                 >
-                  Nama {sortDir === "asc" ? "▲" : "▼"}
+                  <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                    Nama
+                    <IconArrowsSort size={14} style={{ transform: sortDir === "desc" ? "scaleY(-1)" : undefined }} />
+                  </Group>
                 </Table.Th>
                 <Table.Th style={{ textAlign: "right" }}>
                   Aksi
