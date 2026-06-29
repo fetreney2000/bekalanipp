@@ -31,17 +31,18 @@ export async function GET(request: NextRequest) {
     }
 
     const [wards, catalogEntries, ordersThisMonth] = await Promise.all([
-      db.collection("wards").find({}).sort({ name: 1 }).toArray(),
-      db.collection("ward_catalog").find({}).toArray(),
+      db.collection("wards").find({}).project({ _id: 0, id: 1, name: 1 }).sort({ name: 1 }).toArray(),
+      db.collection("ward_catalog").find({}).project({ _id: 0, ward_id: 1, item_id: 1, monthly_quota: 1, max_per_order: 1 }).toArray(),
       db.collection("orders")
         .find({ order_date: { $gte: startOfMonth, $lte: endOfMonth } })
+        .project({ _id: 0, id: 1, ward_id: 1, order_date: 1, order_type: 1 })
         .toArray(),
     ]);
 
     const ordersCount = ordersThisMonth.length;
     const itemIdsWithQuota = [...new Set(catalogEntries.filter((c: any) => c.monthly_quota > 0).map((c: any) => c.item_id))];
     const allItems = itemIdsWithQuota.length > 0
-      ? await db.collection("items").find({ id: { $in: itemIdsWithQuota } }).sort({ name: 1 }).toArray()
+      ? await db.collection("items").find({ id: { $in: itemIdsWithQuota } }).project({ _id: 0, id: 1, name: 1 }).sort({ name: 1 }).toArray()
       : [];
     const itemsCount = await db.collection("items").countDocuments();
 
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
       const allOrderItems = await db
         .collection("order_items")
         .find({ order_id: { $in: orderIds } })
+        .project({ _id: 0, order_id: 1, item_id: 1, quantity: 1 })
         .toArray();
 
       const orderMap = new Map<number, any>();
@@ -110,15 +112,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      month: monthStr,
-      itemStatus,
-      warnings,
-      exceeded,
-      orders_count: ordersCount,
-      items_count: itemsCount,
-      top_ward: topWard,
-    });
+    return NextResponse.json(
+      {
+        month: monthStr,
+        itemStatus,
+        warnings,
+        exceeded,
+        orders_count: ordersCount,
+        items_count: itemsCount,
+        top_ward: topWard,
+      },
+      { headers: { "Cache-Control": "s-maxage=30, stale-while-revalidate=150" } }
+    );
   } catch (error) {
     console.error("GET /api/dashboard error:", error);
     return NextResponse.json(

@@ -13,6 +13,7 @@ export async function GET(_request: NextRequest) {
     const wards = await db
       .collection("wards")
       .find({})
+      .project({ _id: 0, id: 1, name: 1, category: 1 })
       .sort({ name: 1 })
       .toArray();
 

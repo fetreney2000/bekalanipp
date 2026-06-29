@@ -181,37 +181,28 @@ export default function ReportsPage() {
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
+    setWardItemsLoading(true);
     setError(null);
     setWardItems([]);
     try {
-      const res = await fetch(`/api/reports/usage?${qs}`);
-      if (!res.ok) throw new Error("Gagal memuatkan laporan");
-      const data = await res.json();
-      setReport(data);
+      const [reportRes, wardItemsRes] = await Promise.all([
+        fetch(`/api/reports/usage?${qs}`),
+        fetch(`/api/reports/ward-items?${qs}`),
+      ]);
+      if (!reportRes.ok) throw new Error("Gagal memuatkan laporan");
+      const reportData = await reportRes.json();
+      setReport(reportData);
+      if (wardItemsRes.ok) {
+        const wardData = await wardItemsRes.json();
+        setWardItems(wardData.items || []);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ralat tidak diketahui");
     } finally {
       setLoading(false);
-    }
-  }, [qs]);
-
-  const fetchWardItems = useCallback(async () => {
-    setWardItemsLoading(true);
-    try {
-      const res = await fetch(`/api/reports/ward-items?${qs}`);
-      if (!res.ok) throw new Error("Gagal memuatkan item wad");
-      const data = await res.json();
-      setWardItems(data.items || []);
-    } catch {
-      setWardItems([]);
-    } finally {
       setWardItemsLoading(false);
     }
   }, [qs]);
-
-  useEffect(() => {
-    if (report) fetchWardItems();
-  }, [report, fetchWardItems]);
 
   const fetchItemOrders = useCallback(async (item: WardItemResult) => {
     setSelectedItem(item);

@@ -32,11 +32,12 @@ export async function GET(
     const catalogEntries = await db
       .collection("ward_catalog")
       .find({ ward_id: numberWardId })
+      .project({ _id: 0, ward_id: 1, item_id: 1, max_per_order: 1, monthly_quota: 1 })
       .toArray();
 
     const itemIds = catalogEntries.map((e: any) => e.item_id);
     const itemDocs = itemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: itemIds } }).toArray()
+      ? await db.collection("items").find({ id: { $in: itemIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
       : [];
     const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
 
@@ -85,7 +86,10 @@ export async function GET(
       ...(month && { month_used: usageMap.get(entry.item_id) || 0 }),
     }));
 
-    return NextResponse.json({ ward: ward.name, items });
+    return NextResponse.json(
+      { ward: ward.name, items },
+      { headers: { "Cache-Control": "s-maxage=120, stale-while-revalidate=600" } }
+    );
   } catch (error) {
     console.error("GET /api/catalog/[wardId] error:", error);
     return NextResponse.json(

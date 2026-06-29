@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
       filter.ward_id = Number(wardId);
     }
 
-    const orders = await db.collection("orders").find(filter).toArray();
+    const orders = await db.collection("orders").find(filter).project({ _id: 0, id: 1 }).toArray();
     const orderIds = orders.map((o: any) => o.id);
 
     const allOrderItems = orderIds.length > 0
-      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
+      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).project({ _id: 0, item_id: 1, order_id: 1, quantity: 1 }).toArray()
       : [];
 
     const itemStats = new Map<
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     const neededItemIds = [...itemStats.keys()];
     const items = neededItemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: neededItemIds } }).toArray()
+      ? await db.collection("items").find({ id: { $in: neededItemIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
       : [];
     const itemMap = new Map(items.map((i) => [i.id, i.name]));
 
@@ -140,7 +140,10 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.quantity_sum - a.quantity_sum);
 
-    return NextResponse.json({ items: result });
+    return NextResponse.json(
+      { items: result },
+      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+    );
   } catch (error) {
     console.error("GET /api/reports/ward-items error:", error);
     return NextResponse.json(

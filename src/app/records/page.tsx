@@ -21,6 +21,7 @@ import {
   ActionIcon,
   Paper,
   Divider,
+  Pagination,
 } from "@mantine/core";
 import {
   IconRefresh,
@@ -32,6 +33,8 @@ import {
   IconSearch,
   IconDeviceFloppy,
   IconX,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import { DatePickerInput, MonthPickerInput, TimePicker } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
@@ -133,6 +136,7 @@ function playWarningBeep() {
 export default function RecordsPage() {
   const WARN_105 = 105;
   const WARN_115 = 115;
+  const PAGE_SIZE = 50;
   const now = new Date();
   const [dateValue, setDateValue] = useState<Date>(now);
   const month = dateValue.getMonth();
@@ -151,6 +155,8 @@ export default function RecordsPage() {
   } | null>(null);
   const [, setTick] = useState(0);
   const playedAlerts = useRef<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -170,16 +176,18 @@ export default function RecordsPage() {
 
   const range = useMemo(() => getMonthRange(year, month), [year, month]);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (pageNum?: number) => {
     setLoading(true);
     setError(null);
     try {
+      const p = pageNum ?? 1;
       const res = await fetch(
-        `/api/orders?from=${range.from}&to=${range.to}`
+        `/api/orders?from=${range.from}&to=${range.to}&page=${p}&pageSize=${PAGE_SIZE}`
       );
       if (!res.ok) throw new Error("Gagal memuatkan data");
       const data = await res.json();
-      setOrders(data);
+      setOrders(data.orders);
+      setTotalOrders(data.total);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Ralat tidak diketahui");
     } finally {
@@ -188,11 +196,12 @@ export default function RecordsPage() {
   }, [range.from, range.to]);
 
   useEffect(() => {
-    fetchOrders();
+    setPage(1);
+    fetchOrders(1);
   }, [fetchOrders]);
 
   useEffect(() => {
-    const handler = () => fetchOrders();
+    const handler = () => fetchOrders(1);
     window.addEventListener("idle:refresh-records", handler);
     return () => window.removeEventListener("idle:refresh-records", handler);
   }, [fetchOrders]);
@@ -221,11 +230,11 @@ export default function RecordsPage() {
     if (typeof document === "undefined") return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && !selectedOrder) {
-        fetchOrders();
+        fetchOrders(page);
       }
     }, 300000);
     return () => clearInterval(interval);
-  }, [fetchOrders, selectedOrder]);
+  }, [fetchOrders, selectedOrder, page]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -382,7 +391,7 @@ export default function RecordsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
       setModalSuccess("Berjaya disimpan");
-      fetchOrders();
+      fetchOrders(page);
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -403,7 +412,7 @@ export default function RecordsPage() {
         throw new Error(data.error || "Gagal memadam");
       }
       closeModal();
-      fetchOrders();
+      fetchOrders(page);
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -442,7 +451,7 @@ export default function RecordsPage() {
           />
           <Button
             size="compact-sm"
-            onClick={fetchOrders}
+            onClick={() => fetchOrders(page)}
             variant="subtle"
             leftSection={<IconRefresh size={14} />}
           >
@@ -623,9 +632,40 @@ export default function RecordsPage() {
           </Table.ScrollContainer>
         )}
 
-        <Text size="xs" c="dimmed">
-          {filtered.length} inden dipaparkan
-        </Text>
+        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
+          <Text size="xs" c="dimmed">
+            {filtered.length} inden dipaparkan (jumlah: {totalOrders})
+          </Text>
+          <Group gap="xs">
+            <Button
+              size="compact-xs"
+              variant="default"
+              disabled={page <= 1}
+              onClick={() => {
+                const p = page - 1;
+                setPage(p);
+                fetchOrders(p);
+              }}
+            >
+              <IconChevronLeft size={14} />
+            </Button>
+            <Text size="sm" fw={500} style={{ minWidth: 60, textAlign: "center" }}>
+              {page} / {Math.max(1, Math.ceil(totalOrders / PAGE_SIZE))}
+            </Text>
+            <Button
+              size="compact-xs"
+              variant="default"
+              disabled={page >= Math.ceil(totalOrders / PAGE_SIZE)}
+              onClick={() => {
+                const p = page + 1;
+                setPage(p);
+                fetchOrders(p);
+              }}
+            >
+              <IconChevronRight size={14} />
+            </Button>
+          </Group>
+        </Flex>
       </Stack>
 
       <Modal

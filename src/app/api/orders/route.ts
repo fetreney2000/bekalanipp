@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(500, Math.max(1, Number(searchParams.get("pageSize")) || 50));
 
     const { db } = await connectToDatabase();
 
@@ -34,22 +36,31 @@ export async function GET(request: NextRequest) {
       filter.order_date = dateFilter;
     }
 
-    const orders = await db
-      .collection("orders")
-      .find(filter)
-      .sort({ order_date: -1, created_at: -1 })
-      .limit(500)
-      .toArray();
+    const skip = (page - 1) * pageSize;
+
+    const [orders, total] = await Promise.all([
+      db
+        .collection("orders")
+        .find(filter)
+        .project({ _id: 0, id: 1, ward_id: 1, order_date: 1, order_number: 1, order_type: 1, masa_pejabat: 1, masa_diterima: 1, sudah_disedia: 1, completion_minutes: 1, masa_selesai: 1, created_at: 1 })
+        .sort({ order_date: -1, created_at: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .toArray(),
+      db.collection("orders").countDocuments(
+        Object.keys(filter).length ? filter : {}
+      ),
+    ]);
 
     const orderIds = orders.map((o: any) => o.id);
     const wardIds = [...new Set(orders.map((o: any) => Number(o.ward_id)).filter(Boolean))];
 
     const [allOrderItems, allWards] = await Promise.all([
       orderIds.length > 0
-        ? db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
+        ? db.collection("order_items").find({ order_id: { $in: orderIds } }).project({ _id: 0, order_id: 1, item_id: 1, quantity: 1 }).toArray()
         : Promise.resolve([]),
       wardIds.length > 0
-        ? db.collection("wards").find({ id: { $in: wardIds } }).toArray()
+        ? db.collection("wards").find({ id: { $in: wardIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
         : Promise.resolve([]),
     ]);
 
@@ -57,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     const uniqueItemIds = [...new Set(allOrderItems.map((oi: any) => oi.item_id).filter(Boolean))];
     const allItems = uniqueItemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: uniqueItemIds } }).toArray()
+      ? await db.collection("items").find({ id: { $in: uniqueItemIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
       : [];
     const itemMap = new Map(allItems.map((i: any) => [i.id, i.name]));
 
@@ -94,7 +105,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(enrichedOrders);
+    return NextResponse.json(
+      { orders: enrichedOrders, total, page, pageSize },
+      { headers: { "Cache-Control": "s-maxage=15, stale-while-revalidate=60" } }
+    );
   } catch (error) {
     console.error("GET /api/orders error:", error);
     return NextResponse.json(

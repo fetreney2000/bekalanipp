@@ -64,22 +64,25 @@ export async function GET(
 
     const enrichedItems = await getOrderItems(db, numberId);
 
-    return NextResponse.json({
-      id: order.id,
-      ward_id: order.ward_id,
-      ward_name: wardName,
-      order_date: order.order_date,
-      order_number: order.order_number,
-      order_type: order.order_type,
-      masa_pejabat: order.masa_pejabat || false,
-      masa_diterima: order.masa_diterima || null,
-      sudah_disedia: order.sudah_disedia || false,
-      completion_minutes: order.completion_minutes || null,
-      masa_selesai: order.masa_selesai || null,
-      items: enrichedItems,
-      created_at: order.created_at,
-      updated_at: order.updated_at,
-    });
+    return NextResponse.json(
+      {
+        id: order.id,
+        ward_id: order.ward_id,
+        ward_name: wardName,
+        order_date: order.order_date,
+        order_number: order.order_number,
+        order_type: order.order_type,
+        masa_pejabat: order.masa_pejabat || false,
+        masa_diterima: order.masa_diterima || null,
+        sudah_disedia: order.sudah_disedia || false,
+        completion_minutes: order.completion_minutes || null,
+        masa_selesai: order.masa_selesai || null,
+        items: enrichedItems,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+      },
+      { headers: { "Cache-Control": "s-maxage=30, stale-while-revalidate=150" } }
+    );
   } catch (error) {
     console.error("GET /api/orders/[id] error:", error);
     return NextResponse.json(

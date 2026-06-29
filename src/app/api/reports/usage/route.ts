@@ -81,11 +81,12 @@ export async function GET(request: NextRequest) {
     const orders = await db
       .collection("orders")
       .find({ order_date: { $gte: start, $lte: end } })
+      .project({ _id: 0, id: 1, ward_id: 1, order_date: 1, order_number: 1, order_type: 1, masa_pejabat: 1, sudah_disedia: 1, created_at: 1, masa_selesai: 1 })
       .toArray();
 
     const orderIds = orders.map((o: any) => o.id);
     const allOrderItems = orderIds.length > 0
-      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
+      ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).project({ _id: 0, order_id: 1, item_id: 1, quantity: 1 }).toArray()
       : [];
 
     const orderItemsByOrder = new Map<number, any[]>();
@@ -95,8 +96,8 @@ export async function GET(request: NextRequest) {
       orderItemsByOrder.get(oid)!.push(oi);
     }
 
-    const items = await db.collection("items").find({}).toArray();
-    const wards = await db.collection("wards").find({}).toArray();
+    const items = await db.collection("items").find({}).project({ _id: 0, id: 1, name: 1 }).toArray();
+    const wards = await db.collection("wards").find({}).project({ _id: 0, id: 1, name: 1, category: 1 }).toArray();
 
     const itemMap = new Map(items.map((i: any) => [i.id, i.name]));
     const wardMap = new Map(
@@ -219,22 +220,25 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    return NextResponse.json({
-      type,
-      start,
-      end,
-      summary,
-      totals_by_ward,
-      totals: { order_count: totalOrderCount, bil_item: totalBilItem, jumlah_item: totalQuantity },
-      totals_by_masa,
-      totals_by_masa_by_cat,
-      timing: {
-        completed_within_120: completedWithin120,
-        completed_over_120: completedOver120,
-        total_completed: totalCompleted,
-        percentage_within_120: totalCompleted > 0 ? Math.round((completedWithin120 / totalCompleted) * 100) : 0,
+    return NextResponse.json(
+      {
+        type,
+        start,
+        end,
+        summary,
+        totals_by_ward,
+        totals: { order_count: totalOrderCount, bil_item: totalBilItem, jumlah_item: totalQuantity },
+        totals_by_masa,
+        totals_by_masa_by_cat,
+        timing: {
+          completed_within_120: completedWithin120,
+          completed_over_120: completedOver120,
+          total_completed: totalCompleted,
+          percentage_within_120: totalCompleted > 0 ? Math.round((completedWithin120 / totalCompleted) * 100) : 0,
+        },
       },
-    });
+      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+    );
   } catch (error) {
     console.error("GET /api/reports/usage error:", error);
     return NextResponse.json(
