@@ -237,7 +237,7 @@ export async function GET(request: NextRequest) {
           percentage_within_120: totalCompleted > 0 ? Math.round((completedWithin120 / totalCompleted) * 100) : 0,
         },
       },
-      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/reports/usage error:", error);

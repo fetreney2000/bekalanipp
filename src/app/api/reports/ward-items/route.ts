@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { items: result },
-      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/reports/ward-items error:", error);

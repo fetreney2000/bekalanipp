@@ -81,7 +81,7 @@ export async function GET(
         created_at: order.created_at,
         updated_at: order.updated_at,
       },
-      { headers: { "Cache-Control": "s-maxage=30, stale-while-revalidate=150" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/orders/[id] error:", error);
