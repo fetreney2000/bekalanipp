@@ -179,7 +179,7 @@ export default function ItemsPage() {
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconPill size={18} color="var(--mantine-color-gray-5)" />
-              <Title order={2} fw={700}>Urus Item/Ubat</Title>
+              <Title order={3} fw={700}>Urus Item/Ubat</Title>
             </Group>
             <Button
               leftSection={<IconPlus size={16} />}
