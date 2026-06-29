@@ -24,6 +24,7 @@ import {
   Loader,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { DatePickerInput, TimePicker } from "@mantine/dates";
 import Holidays from "date-holidays";
 import {
   IconPackage,
@@ -327,12 +328,11 @@ export default function SupplyPage() {
               </Box>
 
               <Box flex="1 1 160px">
-                <TextInput
+                <DatePickerInput
                   label="Tarikh *"
-                  type="date"
                   value={orderDate}
-                  onChange={(e) => setOrderDate(e.target.value)}
-                  onFocus={(e) => e.target.select()}
+                  onChange={(val) => setOrderDate(val || "")}
+                  valueFormat="DD/MM/YYYY"
                   error={errors.date}
                 />
               </Box>
@@ -361,13 +361,12 @@ export default function SupplyPage() {
               </Box>
 
               <Box flex="1 1 140px">
-                <TextInput
+                <TimePicker
                   label="Masa Diterima"
-                  type="time"
                   leftSection={<IconClock size={16} />}
                   value={masaDiterima}
-                  onChange={(e) => setMasaDiterima(e.target.value)}
-                  onFocus={(e) => e.target.select()}
+                  onChange={(val) => setMasaDiterima(val)}
+                  withDropdown
                 />
               </Box>
 
