@@ -292,16 +292,12 @@ export default function ReportsPage() {
   return (
     <AppShell>
       <Stack gap="lg">
-        <Group justify="space-between" wrap="wrap" gap="md">
-          <Group gap="sm">
-            <ThemeIcon size="lg" variant="light" color="cyan">
-              <IconChartBar size={24} />
-            </ThemeIcon>
-            <Title order={2} fw={700}>
-              Laporan
-            </Title>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group gap="xs">
+            <IconChartBar size={18} color="var(--mantine-color-gray-5)" />
+            <Title order={2} fw={700}>Laporan</Title>
           </Group>
-        </Group>
+        </Paper>
 
         <Paper shadow="sm" p="md" radius="md">
           <Stack gap="md">

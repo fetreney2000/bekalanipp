@@ -25,14 +25,12 @@ export default function HakciptaPage() {
   return (
     <AppShell>
       <Stack gap="lg" maw={800} mx="auto">
-        <Group gap="sm">
-          <ThemeIcon size="lg" variant="light" color="cyan">
-            <IconCopyright size={24} />
-          </ThemeIcon>
-          <Title order={2} fw={700}>
-            Hakcipta
-          </Title>
-        </Group>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group gap="xs">
+            <IconCopyright size={18} color="var(--mantine-color-gray-5)" />
+            <Title order={2} fw={700}>Hakcipta</Title>
+          </Group>
+        </Paper>
 
         <Paper shadow="sm" p="xl" radius="md" withBorder>
           <Stack gap="xl">

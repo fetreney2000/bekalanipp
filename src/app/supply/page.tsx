@@ -292,10 +292,12 @@ export default function SupplyPage() {
   return (
     <AppShell>
       <Stack gap="lg" pb="xl">
-        <Group gap="sm">
-          <IconPackage size={22} color="var(--mantine-color-blue-6)" />
-          <Title order={3} fw={700}>Rekod Inden Baharu</Title>
-        </Group>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group gap="xs">
+            <IconPackage size={18} color="var(--mantine-color-gray-5)" />
+            <Title order={3} fw={700}>Rekod Inden Baharu</Title>
+          </Group>
+        </Paper>
 
         {successId && (
           <Alert

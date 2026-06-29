@@ -95,7 +95,7 @@ export default function DashboardPage() {
               <Group gap="xs">
                 <IconCalendar size={18} color="var(--mantine-color-gray-5)" />
                 <Title order={3} fw={700}>
-                  Dashboard — {data.month}
+                  Dashboard - {data.month}
                 </Title>
               </Group>
             </Group>

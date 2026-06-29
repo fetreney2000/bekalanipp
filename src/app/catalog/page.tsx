@@ -17,6 +17,7 @@ import {
   TableScrollContainer,
   Select,
   Loader,
+  Paper,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -227,12 +228,14 @@ export default function CatalogPage() {
   return (
     <AppShell>
       <Stack gap="md">
-        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Group gap="sm">
-            <IconBook2 size={22} color="var(--mantine-color-blue-6)" />
-            <Title order={3}>Katalog Wad/Jabatan</Title>
+        <Paper shadow="sm" p="md" radius="md" withBorder>
+          <Group justify="space-between" align="center">
+            <Group gap="xs">
+              <IconBook2 size={18} color="var(--mantine-color-gray-5)" />
+              <Title order={3} fw={700}>Katalog Wad/Jabatan</Title>
+            </Group>
           </Group>
-        </Flex>
+        </Paper>
 
         {error && (
           <Alert color="red" variant="light" title="Ralat">
