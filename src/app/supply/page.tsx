@@ -138,7 +138,10 @@ export default function SupplyPage() {
   ];
 
   const catalogData = useMemo(
-    () => catalogItems.map((c) => ({ value: String(c.item_id), label: c.item_name })),
+    () =>
+      catalogItems
+        .map((c) => ({ value: String(c.item_id), label: c.item_name }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ms")),
     [catalogItems]
   );
 
