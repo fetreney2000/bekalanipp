@@ -76,7 +76,7 @@ export default function DashboardPage() {
         <Paper
           p="md"
           radius="md"
-          style={{ backgroundColor: "rgba(239,83,80,0.08)", border: "1px solid var(--mantine-color-red-4)" }}
+          style={{ backgroundColor: "var(--mantine-color-red-light)", border: "1px solid var(--mantine-color-red-4)" }}
         >
           <Group gap="xs">
             <ThemeIcon size="sm" variant="light" color="red">
