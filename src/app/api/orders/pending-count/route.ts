@@ -7,7 +7,7 @@ export async function GET() {
     const count = await db.collection("orders").countDocuments({ sudah_disedia: false });
     return NextResponse.json(
       { count },
-      { headers: { "Cache-Control": "s-maxage=10" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/orders/pending-count error:", error);

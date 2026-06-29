@@ -88,7 +88,7 @@ export async function GET(
 
     return NextResponse.json(
       { ward: ward.name, items },
-      { headers: { "Cache-Control": "s-maxage=120, stale-while-revalidate=600" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/catalog/[wardId] error:", error);

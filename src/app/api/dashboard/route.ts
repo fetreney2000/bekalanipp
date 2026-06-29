@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
         items_count: itemsCount,
         top_ward: topWard,
       },
-      { headers: { "Cache-Control": "s-maxage=30, stale-while-revalidate=150" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("GET /api/dashboard error:", error);
