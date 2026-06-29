@@ -67,7 +67,7 @@ type SortKey =
 const ORDER_TYPE_DATA = [
   { value: "FS", label: "Floor Stock" },
   { value: "EMT", label: "Emergency Trolley" },
-  { value: "AOH", label: "Selepas Waktu Pejabat" },
+  { value: "AOH", label: "AOH - After Office Hours" },
 ];
 
 const ORDER_TYPE_COLOR: Record<string, string> = {

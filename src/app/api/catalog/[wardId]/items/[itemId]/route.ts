@@ -24,7 +24,7 @@ export async function PUT(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
@@ -43,7 +43,7 @@ export async function PUT(
 
     if (!result) {
       return NextResponse.json(
-        { error: "Entri katalog tidak ditemui" },
+        { error: "Entri katalog tidak ditemui." },
         { status: 404 }
       );
     }
@@ -52,7 +52,7 @@ export async function PUT(
   } catch (error) {
     console.error("PUT /api/catalog/[wardId]/items/[itemId] error:", error);
     return NextResponse.json(
-      { error: "Ralat mengemaskini katalog" },
+      { error: "Ralat mengemaskini katalog." },
       { status: 500 }
     );
   }
@@ -78,7 +78,7 @@ export async function DELETE(
 
     if (result.deletedCount === 0) {
       return NextResponse.json(
-        { error: "Entri katalog tidak ditemui" },
+        { error: "Entri katalog tidak ditemui." },
         { status: 404 }
       );
     }
@@ -90,7 +90,7 @@ export async function DELETE(
       error
     );
     return NextResponse.json(
-      { error: "Ralat memadam katalog" },
+      { error: "Ralat memadam katalog." },
       { status: 500 }
     );
   }

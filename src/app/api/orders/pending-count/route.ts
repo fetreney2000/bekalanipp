@@ -9,7 +9,7 @@ export async function GET() {
   } catch (error) {
     console.error("GET /api/orders/pending-count error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan kiraan inden belum disediakan" },
+      { error: "Ralat mendapatkan kiraan inden belum disediakan." },
       { status: 500 }
     );
   }

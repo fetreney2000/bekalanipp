@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     const wardId = searchParams.get("ward_id");
 
     if (!wardId) {
-      return NextResponse.json({ error: "ward_id diperlukan" }, { status: 400 });
+      return NextResponse.json({ error: "ward_id diperlukan." }, { status: 400 });
     }
 
     const { start, end } = getDateRange(type, date, week, month, year);
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("GET /api/reports/ward-orders error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan pesanan wad" },
+      { error: "Ralat mendapatkan pesanan wad." },
       { status: 500 }
     );
   }

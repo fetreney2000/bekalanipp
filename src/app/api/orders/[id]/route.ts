@@ -49,7 +49,7 @@ export async function GET(
     const numberId = Number(id);
 
     if (isNaN(numberId)) {
-      return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
@@ -57,7 +57,7 @@ export async function GET(
 
     if (!order) {
       return NextResponse.json(
-        { error: "Pesanan tidak ditemui" },
+        { error: "Pesanan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -89,7 +89,7 @@ export async function GET(
   } catch (error) {
     console.error("GET /api/orders/[id] error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan pesanan" },
+      { error: "Ralat mendapatkan pesanan." },
       { status: 500 }
     );
   }
@@ -104,7 +104,7 @@ export async function PUT(
     const numberId = Number(id);
 
     if (isNaN(numberId)) {
-      return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
     const body = await request.json();
@@ -112,7 +112,7 @@ export async function PUT(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
@@ -125,7 +125,7 @@ export async function PUT(
       .findOne({ id: numberId });
     if (!existingOrder) {
       return NextResponse.json(
-        { error: "Pesanan tidak ditemui" },
+        { error: "Pesanan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -252,7 +252,7 @@ export async function PUT(
   } catch (error) {
     console.error("PUT /api/orders/[id] error:", error);
     return NextResponse.json(
-      { error: "Ralat mengemaskini pesanan" },
+      { error: "Ralat mengemaskini pesanan." },
       { status: 500 }
     );
   }
@@ -267,7 +267,7 @@ export async function DELETE(
     const numberId = Number(id);
 
     if (isNaN(numberId)) {
-      return NextResponse.json({ error: "ID tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
@@ -280,7 +280,7 @@ export async function DELETE(
 
     if (result.deletedCount === 0) {
       return NextResponse.json(
-        { error: "Pesanan tidak ditemui" },
+        { error: "Pesanan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -289,7 +289,7 @@ export async function DELETE(
   } catch (error) {
     console.error("DELETE /api/orders/[id] error:", error);
     return NextResponse.json(
-      { error: "Ralat memadam pesanan" },
+      { error: "Ralat memadam pesanan." },
       { status: 500 }
     );
   }

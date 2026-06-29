@@ -19,14 +19,14 @@ export async function GET(
     const month = searchParams.get("month");
 
     if (isNaN(numberWardId)) {
-      return NextResponse.json({ error: "ID wad tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID wad tidak sah." }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
 
     const ward = await db.collection("wards").findOne({ id: numberWardId });
     if (!ward) {
-      return NextResponse.json({ error: "Wad/jabatan tidak ditemui" }, { status: 404 });
+      return NextResponse.json({ error: "Wad/jabatan tidak ditemui." }, { status: 404 });
     }
 
     const catalogEntries = await db
@@ -80,7 +80,7 @@ export async function GET(
   } catch (error) {
     console.error("GET /api/catalog/[wardId] error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan katalog wad" },
+      { error: "Ralat mendapatkan katalog wad." },
       { status: 500 }
     );
   }
@@ -98,13 +98,13 @@ export async function POST(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Data tidak sah" },
+        { error: parsed.error.issues[0]?.message || "Data tidak sah." },
         { status: 400 }
       );
     }
 
     if (isNaN(numberWardId)) {
-      return NextResponse.json({ error: "ID wad tidak sah" }, { status: 400 });
+      return NextResponse.json({ error: "ID wad tidak sah." }, { status: 400 });
     }
 
     const { db } = await connectToDatabase();
@@ -112,7 +112,7 @@ export async function POST(
     const ward = await db.collection("wards").findOne({ id: numberWardId });
     if (!ward) {
       return NextResponse.json(
-        { error: "Wad/jabatan tidak ditemui" },
+        { error: "Wad/jabatan tidak ditemui." },
         { status: 404 }
       );
     }
@@ -120,7 +120,7 @@ export async function POST(
     const item = await db.collection("items").findOne({ id: parsed.data.item_id });
     if (!item) {
       return NextResponse.json(
-        { error: "Item tidak ditemui" },
+        { error: "Item tidak ditemui." },
         { status: 404 }
       );
     }
@@ -142,7 +142,7 @@ export async function POST(
   } catch (error) {
     console.error("POST /api/catalog/[wardId] error:", error);
     return NextResponse.json(
-      { error: "Ralat menyimpan katalog" },
+      { error: "Ralat menyimpan katalog." },
       { status: 500 }
     );
   }

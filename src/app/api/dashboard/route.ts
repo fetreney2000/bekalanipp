@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("GET /api/dashboard error:", error);
     return NextResponse.json(
-      { error: "Ralat mendapatkan data papan pemuka" },
+      { error: "Ralat mendapatkan data papan pemuka." },
       { status: 500 }
     );
   }

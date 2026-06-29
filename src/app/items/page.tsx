@@ -52,10 +52,10 @@ export default function ItemsPage() {
     try {
       setLoading(true);
       const res = await fetch("/api/items");
-      if (!res.ok) throw new Error("Gagal memuat data");
+      if (!res.ok) throw new Error("Gagal memuatkan data");
       setItems(await res.json());
     } catch {
-      setError("Ralat memuat senarai item");
+      setError("Ralat memuatkan senarai item");
     } finally {
       setLoading(false);
     }

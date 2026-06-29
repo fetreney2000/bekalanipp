@@ -59,10 +59,10 @@ export default function WardsPage() {
     try {
       setLoading(true);
       const res = await fetch("/api/wards");
-      if (!res.ok) throw new Error("Gagal memuat data");
+      if (!res.ok) throw new Error("Gagal memuatkan data");
       setWards(await res.json());
     } catch {
-      setError("Ralat memuat senarai wad/jabatan");
+      setError("Ralat memuatkan senarai wad/jabatan");
     } finally {
       setLoading(false);
     }
