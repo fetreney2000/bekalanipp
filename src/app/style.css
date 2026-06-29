@@ -713,6 +713,14 @@
   margin-bottom: var(--mantine-spacing-xs);
 }
 
+/* Today highlight border */
+[data-mantine-color-scheme="light"] .m_396ce5cb:where([data-today][data-highlight-today]:not([data-selected], [data-in-range])) {
+  border-color: var(--mantine-color-default-border);
+}
+[data-mantine-color-scheme="dark"] .m_396ce5cb:where([data-today][data-highlight-today]:not([data-selected], [data-in-range])) {
+  border-color: var(--mantine-color-default-border);
+}
+
 /* TimePicker - Input fields (hours, minutes) */
 .m_6b43ba88 {
   &:focus {
