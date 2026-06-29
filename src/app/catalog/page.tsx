@@ -16,6 +16,7 @@ import {
   Table,
   TableScrollContainer,
   Select,
+  Loader,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -332,7 +333,9 @@ export default function CatalogPage() {
         {selectedWard && (
           <TableScrollContainer minWidth={600}>
             {loading ? (
-              <Text c="dimmed" ta="center" py="md">Memuatkan data...</Text>
+              <Flex justify="center" py="md">
+                <Loader size="sm" />
+              </Flex>
             ) : catalogItems.length === 0 ? (
               <Stack align="center" gap="xs" py="md" c="dimmed">
                 <IconAlertTriangle size={20} />

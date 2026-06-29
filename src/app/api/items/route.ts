@@ -19,7 +19,8 @@ export async function GET(_request: NextRequest) {
       items.map((item) => ({
         id: item.id,
         name: item.name,
-      }))
+      })),
+      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
     );
   } catch (error) {
     console.error("GET /api/items error:", error);

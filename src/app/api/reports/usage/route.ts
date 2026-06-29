@@ -219,92 +219,6 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // Recommendations based on monthly usage
-    const catalogEntries = await db.collection("ward_catalog").find({ monthly_quota: { $ne: null } }).toArray();
-    const monthlyUsage: Record<string, { ward_name: string; item_name: string; current_quota: number; values: number[] }> = {};
-
-    for (const catEntry of catalogEntries) {
-      const wardId = catEntry.ward_id;
-      const itemId = catEntry.item_id;
-      const quota = catEntry.monthly_quota;
-
-      const wardDoc = wards.find((w: any) => w.id === wardId);
-      const itemDoc = items.find((i: any) => i.id === itemId);
-
-      const key = `${wardId}:${itemId}`;
-      monthlyUsage[key] = {
-        ward_name: wardDoc?.name || "Unknown",
-        item_name: itemDoc?.name || "Unknown",
-        current_quota: quota,
-        values: [],
-      };
-    }
-
-    const monthlyOrderItems = await db
-      .collection("order_items")
-      .aggregate([
-        {
-          $lookup: {
-            from: "orders",
-            localField: "order_id",
-            foreignField: "id",
-            as: "order",
-          },
-        },
-        { $unwind: "$order" },
-        {
-          $lookup: {
-            from: "wards",
-            localField: "order.ward_id",
-            foreignField: "id",
-            as: "ward",
-          },
-        },
-        { $unwind: { path: "$ward", preserveNullAndEmptyArrays: true } },
-        { $group: { _id: { ward_id: "$order.ward_id", item_id: "$item_id", ym: { $substr: ["$order.order_date", 0, 7] } }, qty: { $sum: "$quantity" } } },
-      ])
-      .toArray();
-
-    for (const moi of monthlyOrderItems) {
-      const key = `${moi._id.ward_id}:${moi._id.item_id}`;
-      if (!monthlyUsage[key]) {
-        const wardDoc = wards.find((w: any) => w.id === moi._id.ward_id);
-        const itemDoc = items.find((i: any) => i.id === moi._id.item_id);
-        const catEntry = catalogEntries.find((c: any) => c.ward_id === moi._id.ward_id && c.item_id === moi._id.item_id);
-        monthlyUsage[key] = {
-          ward_name: wardDoc?.name || "Unknown",
-          item_name: itemDoc?.name || "Unknown",
-          current_quota: catEntry?.monthly_quota || 0,
-          values: [],
-        };
-      }
-      monthlyUsage[key].values.push(moi.qty);
-    }
-
-    const recommendations = [];
-    for (const x of Object.values(monthlyUsage)) {
-      if (x.values.length < 1 || x.current_quota <= 0) continue;
-      const mean = x.values.reduce((a, b) => a + b, 0) / x.values.length;
-      const target = Math.max(1, Math.ceil(mean * 1.25));
-      const delta = target - x.current_quota;
-
-      let recommendation = "Kekalkan kuota.";
-      if (delta > 0) recommendation = `Naikkan kuota +${delta} (cadangan: ${target}).`;
-      if (delta < 0) recommendation = `Turunkan kuota ${delta} (cadangan: ${target}).`;
-
-      recommendations.push({
-        ward_name: x.ward_name,
-        item_name: x.item_name,
-        current_quota: x.current_quota,
-        mean_monthly: mean,
-        recommendation,
-        recommended_quota: target,
-        delta,
-      });
-    }
-
-    recommendations.sort((a, b) => (a.ward_name + a.item_name).localeCompare(b.ward_name + b.item_name));
-
     return NextResponse.json({
       type,
       start,
@@ -320,7 +234,6 @@ export async function GET(request: NextRequest) {
         total_completed: totalCompleted,
         percentage_within_120: totalCompleted > 0 ? Math.round((completedWithin120 / totalCompleted) * 100) : 0,
       },
-      recommendations,
     });
   } catch (error) {
     console.error("GET /api/reports/usage error:", error);

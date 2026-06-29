@@ -21,7 +21,8 @@ export async function GET(_request: NextRequest) {
         id: w.id,
         name: w.name,
         category: w.category,
-      }))
+      })),
+      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
     );
   } catch (error) {
     console.error("GET /api/wards error:", error);

@@ -22,22 +22,16 @@ async function getOrderItems(db: Awaited<ReturnType<typeof connectToDatabase>>["
     .collection("order_items")
     .find({ order_id: orderId })
     .toArray();
-  return Promise.all(
-    orderItemsDocs.map(async (item: any) => {
-      let itemName = "Unknown";
-      if (item.item_id != null) {
-        const itemDoc = await db
-          .collection("items")
-          .findOne({ id: Number(item.item_id) });
-        itemName = itemDoc?.name || "Unknown";
-      }
-      return {
-        item_id: item.item_id,
-        item_name: itemName,
-        quantity: item.quantity,
-      };
-    })
-  );
+  const itemIds = [...new Set(orderItemsDocs.map((i: any) => i.item_id).filter(Boolean))];
+  const itemDocs = itemIds.length > 0
+    ? await db.collection("items").find({ id: { $in: itemIds } }).toArray()
+    : [];
+  const itemMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+  return orderItemsDocs.map((item: any) => ({
+    item_id: item.item_id,
+    item_name: item.item_id != null ? itemMap.get(item.item_id) || "Unknown" : "Unknown",
+    quantity: item.quantity,
+  }));
 }
 
 export async function GET(
@@ -141,17 +135,59 @@ export async function PUT(
       );
     }
 
+    const itemIds = data.items.map((i) => i.item_id);
+
+    const [catalogEntries, itemDocs] = await Promise.all([
+      db.collection("ward_catalog").find({ ward_id: existingOrder.ward_id, item_id: { $in: itemIds } }).toArray(),
+      db.collection("items").find({ id: { $in: itemIds } }).toArray(),
+    ]);
+    const catalogMap = new Map(catalogEntries.map((c: any) => [c.item_id, c]));
+    const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+
+    const quotaItemIds = catalogEntries.filter((c: any) => c.monthly_quota != null).map((c: any) => c.item_id);
+
+    const [yearStr, monthStr] = data.order_date.split("-");
+    const year = parseInt(yearStr);
+    const m = parseInt(monthStr);
+    const startOfMonth = `${yearStr}-${monthStr}-01`;
+    const lastDay = new Date(year, m, 0).getDate();
+    const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
+
+    const monthlyUsageMap = new Map<number, number>();
+    if (quotaItemIds.length > 0) {
+      const monthlyOrderItems = await db
+        .collection("order_items")
+        .aggregate([
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              foreignField: "id",
+              as: "order",
+            },
+          },
+          { $unwind: "$order" },
+          {
+            $match: {
+              "order.ward_id": existingOrder.ward_id,
+              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+              "order.id": { $ne: numberId },
+              item_id: { $in: quotaItemIds },
+            },
+          },
+          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
+        ])
+        .toArray();
+      for (const row of monthlyOrderItems) {
+        monthlyUsageMap.set(row._id, row.total);
+      }
+    }
+
     for (const orderItem of data.items) {
-      const catalogEntry = await db.collection("ward_catalog").findOne({
-        ward_id: existingOrder.ward_id,
-        item_id: orderItem.item_id,
-      });
+      const catalogEntry = catalogMap.get(orderItem.item_id);
+      const itemName = itemNameMap.get(orderItem.item_id) || String(orderItem.item_id);
 
       if (!catalogEntry) {
-        const itemDoc = await db
-          .collection("items")
-          .findOne({ id: Number(orderItem.item_id) });
-        const itemName = itemDoc?.name || String(orderItem.item_id);
         return NextResponse.json(
           { error: `Item "${itemName}" tidak tersedia dalam katalog wad ini.` },
           { status: 400 }
@@ -159,62 +195,19 @@ export async function PUT(
       }
 
       if (catalogEntry.max_per_order > 0 && orderItem.quantity > catalogEntry.max_per_order) {
-        const itemDoc = await db
-          .collection("items")
-          .findOne({ id: Number(orderItem.item_id) });
-        const itemName = itemDoc?.name || String(orderItem.item_id);
         return NextResponse.json(
-          {
-            error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).`,
-          },
+          { error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).` },
           { status: 400 }
         );
       }
 
       if (catalogEntry.monthly_quota != null) {
-        const [yearStr, monthStr] = data.order_date.split("-");
-        const year = parseInt(yearStr);
-        const m = parseInt(monthStr);
-        const startOfMonth = `${yearStr}-${monthStr}-01`;
-        const lastDay = new Date(year, m, 0).getDate();
-        const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
-
-        const monthOrderItems = await db
-          .collection("order_items")
-          .aggregate([
-            {
-              $lookup: {
-                from: "orders",
-                localField: "order_id",
-                foreignField: "id",
-                as: "order",
-              },
-            },
-            { $unwind: "$order" },
-            {
-              $match: {
-                "order.ward_id": existingOrder.ward_id,
-                "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
-                "order.id": { $ne: numberId },
-                item_id: orderItem.item_id,
-              },
-            },
-            { $group: { _id: null, total: { $sum: "$quantity" } } },
-          ])
-          .toArray();
-
-        const monthUsed = monthOrderItems[0]?.total || 0;
+        const monthUsed = monthlyUsageMap.get(orderItem.item_id) || 0;
         const newTotal = monthUsed + orderItem.quantity;
 
         if (newTotal > catalogEntry.monthly_quota) {
-          const itemDoc = await db
-            .collection("items")
-            .findOne({ id: Number(orderItem.item_id) });
-          const itemName = itemDoc?.name || String(orderItem.item_id);
           return NextResponse.json(
-            {
-              error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.`,
-            },
+            { error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.` },
             { status: 400 }
           );
         }

@@ -313,7 +313,7 @@ export default function SupplyPage() {
             <Title order={5} fw={600}>Maklumat Inden</Title>
 
             <Group gap="md" align="flex-start" wrap="wrap">
-              <Box style={{ flex: "1 1 220px" }}>
+              <Box flex="1 1 220px">
                 <Select
                   label="Wad/Jabatan *"
                   placeholder="Cari wad/jabatan..."
@@ -326,7 +326,7 @@ export default function SupplyPage() {
                 />
               </Box>
 
-              <Box style={{ flex: "1 1 160px" }}>
+              <Box flex="1 1 160px">
                 <TextInput
                   label="Tarikh *"
                   type="date"
@@ -337,7 +337,7 @@ export default function SupplyPage() {
                 />
               </Box>
 
-              <Box style={{ flex: "1 1 180px" }}>
+              <Box flex="1 1 180px">
                 <TextInput
                   label="No. Inden *"
                   placeholder="Contoh: 131990 / CKK A No: 057374/19"
@@ -349,7 +349,7 @@ export default function SupplyPage() {
                 />
               </Box>
 
-              <Box style={{ flex: "1 1 180px" }}>
+              <Box flex="1 1 180px">
                 <Select
                   label="Jenis *"
                   placeholder="Pilih jenis..."
@@ -360,7 +360,7 @@ export default function SupplyPage() {
                 />
               </Box>
 
-              <Box style={{ flex: "1 1 140px" }}>
+              <Box flex="1 1 140px">
                 <TextInput
                   label="Masa Diterima"
                   type="time"
@@ -371,7 +371,7 @@ export default function SupplyPage() {
                 />
               </Box>
 
-              <Box style={{ paddingTop: rem(20) }}>
+              <Box pt={rem(20)}>
                 <Switch
                   label="Masa Pejabat"
                   checked={masaPejabat}
@@ -422,7 +422,7 @@ export default function SupplyPage() {
             <Table striped highlightOnHover withTableBorder>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th style={{ textAlign: "center" }}>#</Table.Th>
+                  <Table.Th ta="center">#</Table.Th>
                   <Table.Th>Item</Table.Th>
                   <Table.Th>Kuantiti</Table.Th>
                   <Table.Th>Had/Pesanan</Table.Th>
@@ -438,8 +438,8 @@ export default function SupplyPage() {
                   const pct = getUsagePct(row.item_id);
                   return (
                     <Table.Tr key={row.id}>
-                      <Table.Td style={{ textAlign: "center" }}>{idx + 1}</Table.Td>
-                      <Table.Td style={{ minWidth: 200 }}>
+                      <Table.Td ta="center">{idx + 1}</Table.Td>
+                      <Table.Td miw={200}>
                         <Select
                           placeholder="Cari item..."
                           data={getAvailableItems(row.id)}
@@ -458,7 +458,7 @@ export default function SupplyPage() {
                           value={row.quantity}
                           onChange={(value) => updateRow(row.id, "quantity", typeof value === "number" ? value : 0)}
                           size="xs"
-                          style={{ width: 70 }}
+                          w={70}
                           hideControls
                           error={errors[`qty_${row.id}`]}
                           onFocus={(e) => e.target.select()}
@@ -467,14 +467,14 @@ export default function SupplyPage() {
                       <Table.Td style={{ fontSize: 13 }}>{cat ? cat.max_per_order : "—"}</Table.Td>
                       <Table.Td style={{ fontSize: 13 }}>{cat && cat.monthly_quota > 0 ? cat.monthly_quota : "—"}</Table.Td>
                       <Table.Td style={{ fontSize: 13 }}>{cat && cat.monthly_quota > 0 ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Table.Td>
-                      <Table.Td style={{ textAlign: "center" }}>
+                      <Table.Td ta="center">
                         {pct !== null ? (
                           <Badge color={getUsageBadgeColor(pct)} variant="light" size="sm">
                             {pct}%
                           </Badge>
                         ) : "—"}
                       </Table.Td>
-                      <Table.Td style={{ textAlign: "center" }}>
+                      <Table.Td ta="center">
                         {orderRows.length > 1 && (
                           <ActionIcon
                             variant="subtle"

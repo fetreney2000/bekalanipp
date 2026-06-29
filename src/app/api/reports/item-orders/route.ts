@@ -99,7 +99,10 @@ export async function GET(request: NextRequest) {
 
     const orderMap = new Map(orders.map((o: any) => [o.id, o]));
 
-    const wards = await db.collection("wards").find({}).toArray();
+    const referencedWardIds = [...new Set(orders.map((o: any) => Number(o.ward_id)).filter(Boolean))];
+    const wards = referencedWardIds.length > 0
+      ? await db.collection("wards").find({ id: { $in: referencedWardIds } }).toArray()
+      : [];
     const wardMap = new Map(wards.map((w: any) => [w.id, w.name]));
 
     const result = orderItems

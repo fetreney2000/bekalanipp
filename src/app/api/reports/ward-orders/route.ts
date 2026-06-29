@@ -94,9 +94,11 @@ export async function GET(request: NextRequest) {
       ? await db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
       : [];
 
-    const itemMap = new Map(
-      (await db.collection("items").find({}).toArray()).map((i: any) => [i.id, i.name])
-    );
+    const referencedItemIds = [...new Set(allOrderItems.map((oi: any) => oi.item_id).filter(Boolean))];
+    const items = referencedItemIds.length > 0
+      ? await db.collection("items").find({ id: { $in: referencedItemIds } }).toArray()
+      : [];
+    const itemMap = new Map(items.map((i: any) => [i.id, i.name]));
 
     const result = orders
       .map((order: any) => {

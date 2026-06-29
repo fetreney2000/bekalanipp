@@ -19,6 +19,8 @@ import {
   Select,
   NumberInput,
   ActionIcon,
+  Paper,
+  Divider,
 } from "@mantine/core";
 import {
   IconRefresh,
@@ -31,6 +33,7 @@ import {
   IconDeviceFloppy,
   IconX,
 } from "@tabler/icons-react";
+import { MonthPickerInput } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
 
 type OrderItem = {
@@ -131,8 +134,9 @@ export default function RecordsPage() {
   const WARN_105 = 105;
   const WARN_115 = 115;
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
+  const [dateValue, setDateValue] = useState<Date>(now);
+  const month = dateValue.getMonth();
+  const year = dateValue.getFullYear();
   const [searchText, setSearchText] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +200,6 @@ export default function RecordsPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setTick((t) => t + 1);
-      if (!selectedOrder) fetchOrders();
       for (const order of orders) {
         if (order.sudah_disedia) continue;
         const elapsed = getElapsedMinutes(order);
@@ -212,7 +215,17 @@ export default function RecordsPage() {
       }
     }, 60000);
     return () => clearInterval(interval);
-  }, [fetchOrders, selectedOrder, orders]);
+  }, [orders]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && !selectedOrder) {
+        fetchOrders();
+      }
+    }, 300000);
+    return () => clearInterval(interval);
+  }, [fetchOrders, selectedOrder]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -405,7 +418,6 @@ export default function RecordsPage() {
           0%, 100% { background-color: transparent; }
           50% { background-color: rgba(255, 0, 0, 0.08); }
         }
-        .inden-warn { animation: inden-warn-pulse 1.5s ease-in-out infinite; }
       `}</style>
       <Stack gap="md">
         <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
@@ -416,34 +428,15 @@ export default function RecordsPage() {
         </Flex>
 
         <Flex gap="sm" wrap="wrap" align="flex-end">
-          <Select
-            data={[
-              { value: "0", label: "Januari" },
-              { value: "1", label: "Februari" },
-              { value: "2", label: "Mac" },
-              { value: "3", label: "April" },
-              { value: "4", label: "Mei" },
-              { value: "5", label: "Jun" },
-              { value: "6", label: "Julai" },
-              { value: "7", label: "Ogos" },
-              { value: "8", label: "September" },
-              { value: "9", label: "Oktober" },
-              { value: "10", label: "November" },
-              { value: "11", label: "Disember" },
-            ]}
-            value={String(month)}
+          <MonthPickerInput
+            label="Bulan"
+            value={dateValue}
             onChange={(val) => {
-              if (val !== null) setMonth(Number(val));
+              if (val) setDateValue(typeof val === "object" ? val : new Date(val));
             }}
             size="sm"
-            w={160}
-          />
-          <TextInput
-            type="number"
-            value={String(year)}
-            onChange={(e) => setYear(Number(e.currentTarget.value))}
-            size="sm"
-            w={90}
+            w={170}
+            valueFormat="MMMM YYYY"
           />
           <Button
             size="compact-sm"
@@ -453,7 +446,7 @@ export default function RecordsPage() {
           >
             Muat Semula
           </Button>
-          <Box style={{ flex: 1, minWidth: 200, maxWidth: 320 }}>
+          <Box flex={1} miw={200} maw={320}>
             <TextInput
               placeholder="Cari No. Inden, Wad, atau Item..."
               leftSection={<IconSearch size={14} />}
@@ -465,7 +458,7 @@ export default function RecordsPage() {
         </Flex>
 
         {loading && (
-          <Box py={40} style={{ textAlign: "center" }}>
+          <Box py={40} ta="center">
             <Loader size="sm" />
             <Text size="sm" mt="xs" c="dimmed">Memuatkan data...</Text>
           </Box>
@@ -483,7 +476,7 @@ export default function RecordsPage() {
         )}
 
         {!loading && !error && (
-          <Box style={{ overflowX: "auto" }}>
+          <Table.ScrollContainer minWidth={800}>
             <Table>
               <Table.Thead>
                 <Table.Tr>
@@ -534,7 +527,7 @@ export default function RecordsPage() {
               <Table.Tbody>
                 {filtered.length === 0 && (
                   <Table.Tr>
-                    <Table.Td colSpan={10} style={{ textAlign: "center" }}>
+                    <Table.Td colSpan={10} ta="center">
                       <Text c="dimmed" py="md">Tiada data ditemui</Text>
                     </Table.Td>
                   </Table.Tr>
@@ -547,10 +540,11 @@ export default function RecordsPage() {
                     <Table.Tr
                       key={order.id}
                       onClick={() => openDetailModal(order)}
-                      className={isWarning ? "inden-warn" : undefined}
                       style={{
                         cursor: "pointer",
-                        ...(isWarning ? { fontWeight: 600 } : {}),
+                        ...(isWarning
+                          ? { fontWeight: 600, animation: "inden-warn-pulse 1.5s ease-in-out infinite" }
+                          : {}),
                       }}
                     >
                       <Table.Td>{idx + 1}</Table.Td>
@@ -624,7 +618,7 @@ export default function RecordsPage() {
                 })}
               </Table.Tbody>
             </Table>
-          </Box>
+          </Table.ScrollContainer>
         )}
 
         <Text size="xs" c="dimmed">
@@ -677,7 +671,7 @@ export default function RecordsPage() {
         centered
       >
         {modalLoading ? (
-          <Box py={40} style={{ textAlign: "center" }}>
+          <Box py={40} ta="center">
             <Loader size="sm" />
             <Text size="sm" mt="xs" c="dimmed">Memuatkan butiran...</Text>
           </Box>
@@ -756,33 +750,31 @@ export default function RecordsPage() {
               <Text size="sm" fw={500} mb={8}>Item</Text>
               <Stack gap="xs">
                 {editItems.map((item, idx) => (
-                  <Flex
+                  <Paper
                     key={idx}
-                    gap="sm"
-                    align="center"
                     p="xs"
-                    style={{
-                      borderRadius: "8px",
-                      background: "var(--mantine-color-gray-light)",
-                    }}
+                    bg="var(--mantine-color-gray-light)"
+                    radius="md"
                   >
-                    <Text style={{ flex: 1 }} size="sm">
-                      {item.item_name}
-                    </Text>
-                    <NumberInput
-                      value={item.quantity}
-                      onChange={(val) => {
-                        const v = typeof val === "number" ? val : 1;
-                        setEditItems((prev) =>
-                          prev.map((it, i) => (i === idx ? { ...it, quantity: Math.max(1, v) } : it))
-                        );
-                      }}
-                      min={1}
-                      w={70}
-                      size="xs"
-                      hideControls
-                    />
-                  </Flex>
+                    <Flex gap="sm" align="center">
+                      <Text flex={1} size="sm">
+                        {item.item_name}
+                      </Text>
+                      <NumberInput
+                        value={item.quantity}
+                        onChange={(val) => {
+                          const v = typeof val === "number" ? val : 1;
+                          setEditItems((prev) =>
+                            prev.map((it, i) => (i === idx ? { ...it, quantity: Math.max(1, v) } : it))
+                          );
+                        }}
+                        min={1}
+                        w={70}
+                        size="xs"
+                        hideControls
+                      />
+                    </Flex>
+                  </Paper>
                 ))}
                 {editItems.length === 0 && (
                   <Text c="dimmed" size="sm" ta="center" py="xs">
@@ -792,11 +784,11 @@ export default function RecordsPage() {
               </Stack>
             </Box>
 
+            <Divider />
             <Flex
               justify="space-between"
               align="center"
               pt="sm"
-              style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
             >
               <Group gap="sm">
                 {confirmDelete ? (

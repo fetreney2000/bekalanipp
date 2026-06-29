@@ -15,6 +15,7 @@ import {
   Table,
   TableScrollContainer,
   Select,
+  Loader,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -301,7 +302,9 @@ export default function WardsPage() {
               {loading ? (
                 <Table.Tr>
                   <Table.Td colSpan={3}>
-                    <Text c="dimmed" ta="center">Memuat data...</Text>
+                    <Flex justify="center" py="md">
+                      <Loader size="sm" />
+                    </Flex>
                   </Table.Td>
                 </Table.Tr>
               ) : filtered.length === 0 ? (
