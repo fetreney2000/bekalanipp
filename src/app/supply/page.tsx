@@ -337,7 +337,7 @@ export default function SupplyPage() {
               <Box style={{ flex: "1 1 180px" }}>
                 <TextInput
                   label="No. Inden *"
-                  placeholder="Contoh: IND-2026-001"
+                  placeholder="Contoh: 131990 / CKK A No: 057374/19"
                   leftSection={<IconHash size={16} />}
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
