@@ -21,7 +21,7 @@ import {
   IconBook2,
   IconCopyright,
 } from "@tabler/icons-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 const INACTIVITY_TIMEOUT = 3 * 60 * 1000;
@@ -43,6 +43,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [opened, setOpened] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPathnameRef = useRef(pathname);
+
+  const [now, setNow] = useState<Date | null>(null);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/orders/pending-count");
+      if (res.ok) {
+        const data = await res.json();
+        setPendingCount(data.count);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingCount();
+    const timer = setInterval(fetchPendingCount, 30_000);
+    return () => clearInterval(timer);
+  }, [fetchPendingCount]);
 
   useEffect(() => {
     const isSupplyPage = pathname === "/supply";
@@ -138,10 +165,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </MantineAppShell.Main>
 
       <MantineAppShell.Footer p="xs" h="auto">
-        <Group justify="flex-end" gap="xs">
-          <Text size="xs" c="dimmed" mr="auto">
-            Ahmad Fetre Bin Mohammad Zime - 2026
-          </Text>
+        <Group justify="space-between" gap="xs">
+          <Group gap="xs">
+            <Text size="xs" c="dimmed">Ahmad Fetre Bin Mohammad Zime - 2026</Text>
+            <Text size="xs" c="dimmed" component="span" style={{ userSelect: "none" }}>|</Text>
+            {now && (
+              <Text size="xs" c="dimmed">
+                {new Intl.DateTimeFormat("ms-MY", {
+                  timeZone: "Asia/Kuala_Lumpur",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }).format(now)}{" "}
+                {new Intl.DateTimeFormat("ms-MY", {
+                  timeZone: "Asia/Kuala_Lumpur",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                }).format(now)}
+              </Text>
+            )}
+          </Group>
+          <Group gap={4}>
+            <Text size="xs" c="dimmed">Inden Belum Disediakan:</Text>
+            <Text size="xs" c={pendingCount !== null && pendingCount > 0 ? "orange.7" : "dimmed"} fw={600}>
+              {pendingCount !== null ? pendingCount : "..."}
+            </Text>
+          </Group>
         </Group>
       </MantineAppShell.Footer>
     </MantineAppShell>
