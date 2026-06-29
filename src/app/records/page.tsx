@@ -33,7 +33,7 @@ import {
   IconDeviceFloppy,
   IconX,
 } from "@tabler/icons-react";
-import { DatePickerInput, MonthPickerInput } from "@mantine/dates";
+import { DatePickerInput, MonthPickerInput, TimePicker } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
 
 type OrderItem = {
@@ -734,16 +734,16 @@ export default function RecordsPage() {
                   })
                 }
               />
-              <TextInput
+              <TimePicker
                 label="Masa Diterima"
-                type="time"
                 value={editForm.masa_diterima || ""}
-                onChange={(e) =>
+                onChange={(val) =>
                   setEditForm({
                     ...editForm,
-                    masa_diterima: e.target.value || null,
+                    masa_diterima: val || null,
                   })
                 }
+                withDropdown
               />
             </Group>
 
