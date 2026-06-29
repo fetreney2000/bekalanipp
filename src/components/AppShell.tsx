@@ -164,7 +164,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </Box>
       </MantineAppShell.Main>
 
-      <MantineAppShell.Footer p="xs" h="auto">
+      <MantineAppShell.Footer p="xs" h="auto" ps={{ base: 0, md: 260 }}>
         <Group justify="space-between" gap="xs">
           <Group gap="xs">
             <Text size="xs" c="dimmed">Ahmad Fetre Bin Mohammad Zime - 2026</Text>
