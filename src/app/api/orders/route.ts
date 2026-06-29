@@ -44,17 +44,21 @@ export async function GET(request: NextRequest) {
     const orderIds = orders.map((o: any) => o.id);
     const wardIds = [...new Set(orders.map((o: any) => Number(o.ward_id)).filter(Boolean))];
 
-    const [allOrderItems, allWards, allItems] = await Promise.all([
+    const [allOrderItems, allWards] = await Promise.all([
       orderIds.length > 0
         ? db.collection("order_items").find({ order_id: { $in: orderIds } }).toArray()
         : Promise.resolve([]),
       wardIds.length > 0
         ? db.collection("wards").find({ id: { $in: wardIds } }).toArray()
         : Promise.resolve([]),
-      db.collection("items").find({}).toArray(),
     ]);
 
     const wardMap = new Map(allWards.map((w: any) => [w.id, w.name]));
+
+    const uniqueItemIds = [...new Set(allOrderItems.map((oi: any) => oi.item_id).filter(Boolean))];
+    const allItems = uniqueItemIds.length > 0
+      ? await db.collection("items").find({ id: { $in: uniqueItemIds } }).toArray()
+      : [];
     const itemMap = new Map(allItems.map((i: any) => [i.id, i.name]));
 
     const orderItemsByOrder = new Map<number, any[]>();
@@ -87,7 +91,6 @@ export async function GET(request: NextRequest) {
         items: enrichedItems,
         item_count: enrichedItems.length,
         created_at: order.created_at,
-        updated_at: order.updated_at,
       };
     });
 
@@ -134,19 +137,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const itemIds = data.items.map((i) => i.item_id);
+
+    const [catalogEntries, itemDocs] = await Promise.all([
+      db.collection("ward_catalog").find({ ward_id: data.ward_id, item_id: { $in: itemIds } }).toArray(),
+      db.collection("items").find({ id: { $in: itemIds } }).toArray(),
+    ]);
+    const catalogMap = new Map(catalogEntries.map((c: any) => [c.item_id, c]));
+    const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+
+    const quotaItemIds = catalogEntries.filter((c: any) => c.monthly_quota != null).map((c: any) => c.item_id);
+
+    const [yearStr, monthStr] = data.order_date.split("-");
+    const year = parseInt(yearStr);
+    const m = parseInt(monthStr);
+    const startOfMonth = `${yearStr}-${monthStr}-01`;
+    const lastDay = new Date(year, m, 0).getDate();
+    const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
+
+    const monthlyUsageMap = new Map<number, number>();
+    if (quotaItemIds.length > 0) {
+      const monthlyOrderItems = await db
+        .collection("order_items")
+        .aggregate([
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              foreignField: "id",
+              as: "order",
+            },
+          },
+          { $unwind: "$order" },
+          {
+            $match: {
+              "order.ward_id": data.ward_id,
+              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+              item_id: { $in: quotaItemIds },
+            },
+          },
+          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
+        ])
+        .toArray();
+      for (const row of monthlyOrderItems) {
+        monthlyUsageMap.set(row._id, row.total);
+      }
+    }
+
     const notifications: string[] = [];
 
     for (const orderItem of data.items) {
-      const catalogEntry = await db.collection("ward_catalog").findOne({
-        ward_id: data.ward_id,
-        item_id: orderItem.item_id,
-      });
+      const catalogEntry = catalogMap.get(orderItem.item_id);
+      const itemName = itemNameMap.get(orderItem.item_id) || String(orderItem.item_id);
 
       if (!catalogEntry) {
-        const itemDoc = await db
-          .collection("items")
-          .findOne({ id: Number(orderItem.item_id) });
-        const itemName = itemDoc?.name || String(orderItem.item_id);
         return NextResponse.json(
           { error: `Item "${itemName}" tidak tersedia dalam katalog wad ini.` },
           { status: 400 }
@@ -154,69 +198,22 @@ export async function POST(request: NextRequest) {
       }
 
       if (catalogEntry.max_per_order > 0 && orderItem.quantity > catalogEntry.max_per_order) {
-        const itemDoc = await db
-          .collection("items")
-          .findOne({ id: Number(orderItem.item_id) });
-        const itemName = itemDoc?.name || String(orderItem.item_id);
         return NextResponse.json(
-          {
-            error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).`,
-          },
+          { error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).` },
           { status: 400 }
         );
       }
 
       if (catalogEntry.monthly_quota != null) {
-        const [yearStr, monthStr] = data.order_date.split("-");
-        const year = parseInt(yearStr);
-        const m = parseInt(monthStr);
-        const startOfMonth = `${yearStr}-${monthStr}-01`;
-        const lastDay = new Date(year, m, 0).getDate();
-        const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
-
-        const monthOrderItems = await db
-          .collection("order_items")
-          .aggregate([
-            {
-              $lookup: {
-                from: "orders",
-                localField: "order_id",
-                foreignField: "id",
-                as: "order",
-              },
-            },
-            { $unwind: "$order" },
-            {
-              $match: {
-                "order.ward_id": data.ward_id,
-                "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
-                item_id: orderItem.item_id,
-              },
-            },
-            { $group: { _id: null, total: { $sum: "$quantity" } } },
-          ])
-          .toArray();
-
-        const monthUsed = monthOrderItems[0]?.total || 0;
+        const monthUsed = monthlyUsageMap.get(orderItem.item_id) || 0;
         const newTotal = monthUsed + orderItem.quantity;
 
         if (newTotal > catalogEntry.monthly_quota) {
-          const itemDoc = await db
-            .collection("items")
-            .findOne({ id: Number(orderItem.item_id) });
-          const itemName = itemDoc?.name || String(orderItem.item_id);
           return NextResponse.json(
-            {
-              error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.`,
-            },
+            { error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.` },
             { status: 400 }
           );
         }
-
-        const itemDoc = await db
-          .collection("items")
-          .findOne({ id: Number(orderItem.item_id) });
-        const itemName = itemDoc?.name || String(orderItem.item_id);
 
         const remaining = catalogEntry.monthly_quota - newTotal;
         if (remaining <= catalogEntry.monthly_quota * 0.2 && remaining > 0) {

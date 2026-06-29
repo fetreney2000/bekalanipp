@@ -13,6 +13,7 @@ import {
   Alert,
   Table,
   TableScrollContainer,
+  Loader,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -256,7 +257,9 @@ export default function ItemsPage() {
               {loading ? (
                 <Table.Tr>
                   <Table.Td colSpan={2}>
-                    <Text c="dimmed" ta="center">Memuat data...</Text>
+                    <Flex justify="center" py="md">
+                      <Loader size="sm" />
+                    </Flex>
                   </Table.Td>
                 </Table.Tr>
               ) : filtered.length === 0 ? (

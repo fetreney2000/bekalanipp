@@ -125,7 +125,10 @@ export async function GET(request: NextRequest) {
       stats.order_count = orderItemCount.get(itemId)?.size || 0;
     }
 
-    const items = await db.collection("items").find({}).toArray();
+    const neededItemIds = [...itemStats.keys()];
+    const items = neededItemIds.length > 0
+      ? await db.collection("items").find({ id: { $in: neededItemIds } }).toArray()
+      : [];
     const itemMap = new Map(items.map((i) => [i.id, i.name]));
 
     const result: WardItemResult[] = Array.from(itemStats.entries())

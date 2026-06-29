@@ -34,47 +34,56 @@ export async function GET(
       .find({ ward_id: numberWardId })
       .toArray();
 
-    const items = await Promise.all(
-      catalogEntries.map(async (entry) => {
-        const item = await db.collection("items").findOne({ id: entry.item_id });
-        const result: Record<string, unknown> = {
-          ward_id: entry.ward_id,
-          item_id: entry.item_id,
-          item_name: item?.name || "Unknown",
-          max_per_order: entry.max_per_order,
-          monthly_quota: entry.monthly_quota,
-        };
+    const itemIds = catalogEntries.map((e: any) => e.item_id);
+    const itemDocs = itemIds.length > 0
+      ? await db.collection("items").find({ id: { $in: itemIds } }).toArray()
+      : [];
+    const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
 
-        if (month) {
-          const startOfMonth = `${month}-01`;
-          const [yearStr, monthStr] = month.split("-");
-          const year = parseInt(yearStr);
-          const m = parseInt(monthStr);
-          const lastDay = new Date(year, m, 0).getDate();
-          const endOfMonth = `${month}-${String(lastDay).padStart(2, "0")}`;
+    let usageMap = new Map<number, number>();
+    if (month && catalogEntries.length > 0) {
+      const startOfMonth = `${month}-01`;
+      const [yearStr, monthStr] = month.split("-");
+      const year = parseInt(yearStr);
+      const m = parseInt(monthStr);
+      const lastDay = new Date(year, m, 0).getDate();
+      const endOfMonth = `${month}-${String(lastDay).padStart(2, "0")}`;
 
-          const usageAgg = await db
-            .collection("orders")
-            .aggregate([
-              {
-                $match: {
-                  ward_id: String(numberWardId),
-                  order_date: { $gte: startOfMonth, $lte: endOfMonth },
-                  "items.item_id": entry.item_id,
-                },
-              },
-              { $unwind: "$items" },
-              { $match: { "items.item_id": entry.item_id } },
-              { $group: { _id: null, total: { $sum: "$items.quantity" } } },
-            ])
-            .toArray();
+      const usageAgg = await db
+        .collection("order_items")
+        .aggregate([
+          {
+            $lookup: {
+              from: "orders",
+              localField: "order_id",
+              foreignField: "id",
+              as: "order",
+            },
+          },
+          { $unwind: "$order" },
+          {
+            $match: {
+              "order.ward_id": String(numberWardId),
+              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+              item_id: { $in: itemIds },
+            },
+          },
+          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
+        ])
+        .toArray();
+      for (const row of usageAgg) {
+        usageMap.set(row._id, row.total);
+      }
+    }
 
-          result.month_used = usageAgg[0]?.total || 0;
-        }
-
-        return result;
-      })
-    );
+    const items = catalogEntries.map((entry) => ({
+      ward_id: entry.ward_id,
+      item_id: entry.item_id,
+      item_name: itemNameMap.get(entry.item_id) || "Unknown",
+      max_per_order: entry.max_per_order,
+      monthly_quota: entry.monthly_quota,
+      ...(month && { month_used: usageMap.get(entry.item_id) || 0 }),
+    }));
 
     return NextResponse.json({ ward: ward.name, items });
   } catch (error) {

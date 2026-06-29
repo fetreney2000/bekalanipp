@@ -60,7 +60,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchPendingCount();
-    const timer = setInterval(fetchPendingCount, 30_000);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") fetchPendingCount();
+    }, 60_000);
     return () => clearInterval(timer);
   }, [fetchPendingCount]);
 

@@ -62,8 +62,6 @@ export default function DashboardPage() {
       .then((json) => setData(json))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-
-    fetch("/api/admin/indexes", { method: "POST" }).catch(() => {});
   }, []);
 
   return (
@@ -184,9 +182,9 @@ export default function DashboardPage() {
                   <Table.Tr>
                     <Table.Th>Wad/Jabatan</Table.Th>
                     <Table.Th>Item</Table.Th>
-                    <Table.Th style={{ textAlign: "right" }}>Digunakan</Table.Th>
-                    <Table.Th style={{ textAlign: "right" }}>Kuota</Table.Th>
-                    <Table.Th style={{ textAlign: "center" }}>Status</Table.Th>
+                    <Table.Th ta="right">Digunakan</Table.Th>
+                    <Table.Th ta="right">Kuota</Table.Th>
+                    <Table.Th ta="center">Status</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -198,9 +196,9 @@ export default function DashboardPage() {
                         <Table.Tr key={idx}>
                           <Table.Td>{item.ward_name}</Table.Td>
                           <Table.Td>{item.item_name}</Table.Td>
-                          <Table.Td style={{ textAlign: "right" }}>{item.used}</Table.Td>
-                          <Table.Td style={{ textAlign: "right" }}>{item.quota}</Table.Td>
-                          <Table.Td style={{ textAlign: "center" }}>
+                          <Table.Td ta="right">{item.used}</Table.Td>
+                          <Table.Td ta="right">{item.quota}</Table.Td>
+                          <Table.Td ta="center">
                             {pct >= 100 ? <Badge color="red" variant="light" size="sm">100%+</Badge> : pct >= 80 ? <Badge color="yellow" variant="light" size="sm">80%+</Badge> : <Badge color="green" variant="light" size="sm">&lt;80%</Badge>}
                           </Table.Td>
                         </Table.Tr>

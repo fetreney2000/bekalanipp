@@ -30,17 +30,20 @@ export async function GET(request: NextRequest) {
       endOfMonth = `${monthStr}-${String(lastDay).padStart(2, "0")}`;
     }
 
-    const wards = await db.collection("wards").find({}).sort({ name: 1 }).toArray();
-    const catalogEntries = await db.collection("ward_catalog").find({}).toArray();
-
-    const ordersThisMonth = await db
-      .collection("orders")
-      .find({ order_date: { $gte: startOfMonth, $lte: endOfMonth } })
-      .toArray();
+    const [wards, catalogEntries, ordersThisMonth] = await Promise.all([
+      db.collection("wards").find({}).sort({ name: 1 }).toArray(),
+      db.collection("ward_catalog").find({}).toArray(),
+      db.collection("orders")
+        .find({ order_date: { $gte: startOfMonth, $lte: endOfMonth } })
+        .toArray(),
+    ]);
 
     const ordersCount = ordersThisMonth.length;
-    const allItems = await db.collection("items").find({}).sort({ name: 1 }).toArray();
-    const itemsCount = allItems.length;
+    const itemIdsWithQuota = [...new Set(catalogEntries.filter((c: any) => c.monthly_quota > 0).map((c: any) => c.item_id))];
+    const allItems = itemIdsWithQuota.length > 0
+      ? await db.collection("items").find({ id: { $in: itemIdsWithQuota } }).sort({ name: 1 }).toArray()
+      : [];
+    const itemsCount = await db.collection("items").countDocuments();
 
     const orderIds = ordersThisMonth.map((o: any) => o.id);
 
@@ -58,7 +61,7 @@ export async function GET(request: NextRequest) {
       (c: any) => c.monthly_quota != null && c.monthly_quota > 0
     );
 
-    const uniqueOrderItemPairs: { ward_id: number; item_id: number }[] = [];
+    let usageMap = new Map<string, number>();
     if (orderIds.length > 0) {
       const allOrderItems = await db
         .collection("order_items")
@@ -70,106 +73,51 @@ export async function GET(request: NextRequest) {
         orderMap.set(o.id, o);
       }
 
-      const usageMap = new Map<string, number>();
       for (const oi of allOrderItems) {
         const order = orderMap.get(oi.order_id);
         if (!order) continue;
         const key = `${order.ward_id}:${oi.item_id}`;
         usageMap.set(key, (usageMap.get(key) || 0) + (oi.quantity || 0));
       }
-
-      const itemStatus: { ward_name: string; item_name: string; quota: number; used: number }[] = [];
-
-      for (const cat of wardsWithQuota) {
-        const wardName = wardMap.get(cat.ward_id) || "Unknown";
-        const itemName = itemMap.get(cat.item_id) || "Unknown";
-        const key = `${cat.ward_id}:${cat.item_id}`;
-        const used = usageMap.get(key) || 0;
-
-        itemStatus.push({
-          ward_name: wardName,
-          item_name: itemName,
-          quota: cat.monthly_quota,
-          used,
-        });
-      }
-
-      itemStatus.sort((a, b) =>
-        a.ward_name.localeCompare(b.ward_name) || a.item_name.localeCompare(b.item_name)
-      );
-
-      const warnings: typeof itemStatus = [];
-      const exceeded: typeof itemStatus = [];
-
-      for (const item of itemStatus) {
-        if (item.quota > 0 && item.used >= item.quota) {
-          exceeded.push(item);
-        } else if (item.quota > 0 && item.used >= item.quota * 0.8) {
-          warnings.push(item);
-        }
-      }
-
-      const wardUsage: { ward_id: number; ward_name: string; order_count: number }[] = [];
-      for (const ward of wards) {
-        const wardOrders = ordersThisMonth.filter((o: any) => o.ward_id === ward.id);
-        wardUsage.push({
-          ward_id: ward.id,
-          ward_name: ward.name,
-          order_count: wardOrders.length,
-        });
-      }
-      wardUsage.sort((a, b) => b.order_count - a.order_count);
-      const topWard = wardUsage[0] || null;
-
-      return NextResponse.json({
-        month: monthStr,
-        itemStatus,
-        warnings,
-        exceeded,
-        orders_count: ordersCount,
-        items_count: itemsCount,
-        top_ward: topWard,
-      });
     }
 
     const itemStatus: { ward_name: string; item_name: string; quota: number; used: number }[] = [];
-
     for (const cat of wardsWithQuota) {
       const wardName = wardMap.get(cat.ward_id) || "Unknown";
       const itemName = itemMap.get(cat.item_id) || "Unknown";
+      const key = `${cat.ward_id}:${cat.item_id}`;
+      const used = usageMap.get(key) || 0;
+      itemStatus.push({ ward_name: wardName, item_name: itemName, quota: cat.monthly_quota, used });
+    }
+    itemStatus.sort((a, b) => a.ward_name.localeCompare(b.ward_name) || a.item_name.localeCompare(b.item_name));
 
-      itemStatus.push({
-        ward_name: wardName,
-        item_name: itemName,
-        quota: cat.monthly_quota,
-        used: 0,
-      });
+    const warnings: typeof itemStatus = [];
+    const exceeded: typeof itemStatus = [];
+    for (const item of itemStatus) {
+      if (item.quota > 0 && item.used >= item.quota) exceeded.push(item);
+      else if (item.quota > 0 && item.used >= item.quota * 0.8) warnings.push(item);
     }
 
-    itemStatus.sort((a, b) =>
-      a.ward_name.localeCompare(b.ward_name) || a.item_name.localeCompare(b.item_name)
-    );
-
-    const wardUsage2: { ward_id: number; ward_name: string; order_count: number }[] = [];
+    const wardCounts = new Map<number, number>();
+    for (const o of ordersThisMonth) {
+      wardCounts.set(Number(o.ward_id), (wardCounts.get(Number(o.ward_id)) || 0) + 1);
+    }
+    let topWard = null;
     for (const ward of wards) {
-      const wardOrders = ordersThisMonth.filter((o: any) => o.ward_id === ward.id);
-      wardUsage2.push({
-        ward_id: ward.id,
-        ward_name: ward.name,
-        order_count: wardOrders.length,
-      });
+      const count = wardCounts.get(ward.id) || 0;
+      if (!topWard || count > topWard.order_count) {
+        topWard = { ward_id: ward.id, ward_name: ward.name, order_count: count };
+      }
     }
-    wardUsage2.sort((a, b) => b.order_count - a.order_count);
-    const topWard2 = wardUsage2[0] || null;
 
     return NextResponse.json({
       month: monthStr,
       itemStatus,
-      warnings: [],
-      exceeded: [],
+      warnings,
+      exceeded,
       orders_count: ordersCount,
       items_count: itemsCount,
-      top_ward: topWard2,
+      top_ward: topWard,
     });
   } catch (error) {
     console.error("GET /api/dashboard error:", error);

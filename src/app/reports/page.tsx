@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Stack,
   Group,
@@ -37,6 +37,7 @@ import {
   IconTrendingDown,
   IconList,
 } from "@tabler/icons-react";
+import { MonthPickerInput } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly";
@@ -73,7 +74,6 @@ interface UsageReport {
     total_completed: number;
     percentage_within_120: number;
   };
-  recommendations: unknown[];
 }
 
 interface WardItemResult {
@@ -137,10 +137,8 @@ export default function ReportsPage() {
     const weekNum = Math.ceil(dayOfYear / 7);
     return `${now.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
   });
-  const [month, setMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const [monthDate, setMonthDate] = useState<Date>(new Date());
+  const month = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
   const [year, setYear] = useState(() => String(getCurrentYear()));
 
   const [report, setReport] = useState<UsageReport | null>(null);
@@ -160,7 +158,10 @@ export default function ReportsPage() {
   const [wardOrdersLoading, setWardOrdersLoading] = useState(false);
   const [wardOrdersModal, setWardOrdersModal] = useState(false);
 
-  const qs = buildQueryParams(reportType, date, week, month, year);
+  const qs = useMemo(
+    () => buildQueryParams(reportType, date, week, month, year),
+    [reportType, date, week, month, year]
+  );
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -240,7 +241,7 @@ export default function ReportsPage() {
   const wadTotalItems = wMp.jumlah_item + wSmp.jumlah_item;
   const bukanWadTotalItems = nwMp.jumlah_item + nwSmp.jumlah_item;
 
-  const indenCards = [
+  const indenCards = useMemo(() => [
     { label: "Jumlah Inden", value: report?.totals.order_count || 0, icon: IconShoppingBag, color: "cyan" },
     { label: "Masa Pejabat", value: mp.order_count, icon: IconClock, color: "teal" },
     { label: "Selepas Masa Pejabat", value: smp.order_count, icon: IconClockOff, color: "red" },
@@ -250,9 +251,9 @@ export default function ReportsPage() {
     { label: "Wad + Selepas MP", value: wSmp.order_count, icon: IconBuildingHospital, color: "yellow" },
     { label: "Bukan Wad + MP", value: nwMp.order_count, icon: IconBuildingSkyscraper, color: "orange" },
     { label: "Bukan Wad + Selepas MP", value: nwSmp.order_count, icon: IconBuildingSkyscraper, color: "pink" },
-  ];
+  ], [report, mp, smp, wadTotalOrders, bukanWadTotalOrders, wMp, wSmp, nwMp, nwSmp]);
 
-  const itemCards = [
+  const itemCards = useMemo(() => [
     { label: "Jumlah Item", value: report?.totals.jumlah_item || 0, icon: IconPackage, color: "green" },
     { label: "Masa Pejabat", value: mp.jumlah_item, icon: IconClock, color: "teal" },
     { label: "Selepas Masa Pejabat", value: smp.jumlah_item, icon: IconClockOff, color: "red" },
@@ -262,9 +263,9 @@ export default function ReportsPage() {
     { label: "Wad + Selepas MP", value: wSmp.jumlah_item, icon: IconBuildingHospital, color: "yellow" },
     { label: "Bukan Wad + MP", value: nwMp.jumlah_item, icon: IconBuildingSkyscraper, color: "orange" },
     { label: "Bukan Wad + Selepas MP", value: nwSmp.jumlah_item, icon: IconBuildingSkyscraper, color: "pink" },
-  ];
+  ], [report, mp, smp, wadTotalItems, bukanWadTotalItems, wMp, wSmp, nwMp, nwSmp]);
 
-  const bilItemCards = [
+  const bilItemCards = useMemo(() => [
     { label: "Jumlah Bilangan Item", value: report?.totals.bil_item || 0, icon: IconPackage, color: "green" },
     { label: "Masa Pejabat", value: mp.bil_item, icon: IconClock, color: "teal" },
     { label: "Selepas Masa Pejabat", value: smp.bil_item, icon: IconClockOff, color: "red" },
@@ -274,7 +275,7 @@ export default function ReportsPage() {
     { label: "Wad + Selepas MP", value: wSmp.bil_item, icon: IconBuildingHospital, color: "yellow" },
     { label: "Bukan Wad + MP", value: nwMp.bil_item, icon: IconBuildingSkyscraper, color: "orange" },
     { label: "Bukan Wad + Selepas MP", value: nwSmp.bil_item, icon: IconBuildingSkyscraper, color: "pink" },
-  ];
+  ], [report, mp, smp, wMp, wSmp, nwMp, nwSmp]);
 
   const kategoriInden = (report?.summary || []).reduce((acc, s) => {
     const existing = acc.find((a) => a.order_type === s.order_type);
@@ -339,12 +340,15 @@ export default function ReportsPage() {
               )}
 
               {reportType === "monthly" && (
-                <TextInput
+                <MonthPickerInput
                   label="Bulan"
-                  type="month"
-                  value={month}
-                  onChange={(e) => setMonth(e.currentTarget.value)}
-                  style={{ minWidth: 160, flex: 1 }}
+                  value={monthDate}
+                  onChange={(val) => {
+                    if (val) setMonthDate(typeof val === "object" ? val : new Date(val));
+                  }}
+                  miw={160}
+                  flex={1}
+                  valueFormat="MMMM YYYY"
                 />
               )}
 
