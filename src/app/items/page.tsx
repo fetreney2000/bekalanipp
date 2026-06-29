@@ -175,7 +175,7 @@ export default function ItemsPage() {
   return (
     <AppShell>
       <Stack gap="md">
-        <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Paper shadow="sm" p="sm" radius="md" withBorder>
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconPill size={18} color="var(--mantine-color-gray-5)" />
