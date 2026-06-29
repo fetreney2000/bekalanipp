@@ -416,7 +416,7 @@ export default function RecordsPage() {
       <style>{`
         @keyframes inden-warn-pulse {
           0%, 100% { background-color: transparent; }
-          50% { background-color: rgba(255, 0, 0, 0.08); }
+          50% { background-color: var(--mantine-color-red-light); }
         }
       `}</style>
       <Stack gap="md">
