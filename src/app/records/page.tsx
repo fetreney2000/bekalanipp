@@ -424,7 +424,7 @@ export default function RecordsPage() {
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconClock size={18} color="var(--mantine-color-gray-5)" />
-              <Title order={2} fw={700}>Senarai Inden</Title>
+              <Title order={3} fw={700}>Senarai Inden</Title>
             </Group>
           </Group>
         </Paper>

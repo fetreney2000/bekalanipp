@@ -295,7 +295,7 @@ export default function ReportsPage() {
         <Paper shadow="sm" p="sm" radius="md" withBorder>
           <Group gap="xs">
             <IconChartBar size={18} color="var(--mantine-color-gray-5)" />
-            <Title order={2} fw={700}>Laporan</Title>
+            <Title order={3} fw={700}>Laporan</Title>
           </Group>
         </Paper>
 

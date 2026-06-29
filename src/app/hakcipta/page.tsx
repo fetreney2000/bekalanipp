@@ -28,7 +28,7 @@ export default function HakciptaPage() {
         <Paper shadow="sm" p="sm" radius="md" withBorder>
           <Group gap="xs">
             <IconCopyright size={18} color="var(--mantine-color-gray-5)" />
-            <Title order={2} fw={700}>Hakcipta</Title>
+            <Title order={3} fw={700}>Hakcipta</Title>
           </Group>
         </Paper>
 

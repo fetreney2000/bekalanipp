@@ -209,7 +209,7 @@ export default function WardsPage() {
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconHospital size={18} color="var(--mantine-color-gray-5)" />
-              <Title order={2} fw={700}>Urus Wad/Jabatan</Title>
+              <Title order={3} fw={700}>Urus Wad/Jabatan</Title>
             </Group>
             <Button
               leftSection={<IconPlus size={16} />}
