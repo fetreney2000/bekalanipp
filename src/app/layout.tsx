@@ -20,12 +20,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ms" {...mantineHtmlProps}>
+    <html lang="ms" className={inter.variable} {...mantineHtmlProps}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <ColorSchemeScript />
       </head>
-      <body className={inter.variable}>
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>
