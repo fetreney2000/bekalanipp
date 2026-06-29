@@ -748,6 +748,13 @@
   background-color: var(--mantine-color-default-hover) !important;
 }
 
+/* TimePicker - Selected values in dropdown */
+[data-mantine-color-scheme="dark"] .m_154c536b[data-active],
+[data-mantine-color-scheme="dark"] .m_7be09d0c[data-active] {
+  background-color: var(--mantine-primary-color-filled) !important;
+  color: var(--mantine-primary-color-contrast) !important;
+}
+
 /* Spotlight */
 .mantine-Spotlight-root {
   .mantine-Spotlight-content {
