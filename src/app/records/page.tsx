@@ -176,13 +176,12 @@ export default function RecordsPage() {
 
   const range = useMemo(() => getMonthRange(year, month), [year, month]);
 
-  const fetchOrders = useCallback(async (pageNum?: number) => {
+  const fetchOrders = useCallback(async (pageNum: number = 1, pageSize: number = PAGE_SIZE) => {
     setLoading(true);
     setError(null);
     try {
-      const p = pageNum ?? 1;
       const res = await fetch(
-        `/api/orders?from=${range.from}&to=${range.to}&page=${p}&pageSize=${PAGE_SIZE}`
+        `/api/orders?from=${range.from}&to=${range.to}&page=${pageNum}&pageSize=${pageSize}`
       );
       if (!res.ok) throw new Error("Gagal memuatkan data");
       const data = await res.json();
@@ -197,14 +196,26 @@ export default function RecordsPage() {
 
   useEffect(() => {
     setPage(1);
-    fetchOrders(1);
+    const size = searchText.trim() ? 500 : PAGE_SIZE;
+    fetchOrders(1, size);
   }, [fetchOrders]);
 
   useEffect(() => {
-    const handler = () => fetchOrders(1);
+    const handler = () => {
+      const size = searchText.trim() ? 500 : PAGE_SIZE;
+      fetchOrders(1, size);
+    };
     window.addEventListener("idle:refresh-records", handler);
     return () => window.removeEventListener("idle:refresh-records", handler);
-  }, [fetchOrders]);
+  }, [fetchOrders, searchText]);
+
+  useEffect(() => {
+    if (!searchText.trim()) return;
+    const timer = setTimeout(() => {
+      fetchOrders(1, 500);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText, fetchOrders]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -230,11 +241,12 @@ export default function RecordsPage() {
     if (typeof document === "undefined") return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && !selectedOrder) {
-        fetchOrders(page);
+        const size = searchText.trim() ? 500 : PAGE_SIZE;
+        fetchOrders(page, size);
       }
     }, 300000);
     return () => clearInterval(interval);
-  }, [fetchOrders, selectedOrder, page]);
+  }, [fetchOrders, selectedOrder, page, searchText]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -391,7 +403,7 @@ export default function RecordsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
       setModalSuccess("Berjaya disimpan");
-      fetchOrders(page);
+      fetchOrders(page, PAGE_SIZE);
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -412,7 +424,7 @@ export default function RecordsPage() {
         throw new Error(data.error || "Gagal memadam");
       }
       closeModal();
-      fetchOrders(page);
+      fetchOrders(page, PAGE_SIZE);
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -451,7 +463,10 @@ export default function RecordsPage() {
           />
           <Button
             size="compact-sm"
-            onClick={() => fetchOrders(page)}
+            onClick={() => {
+              const size = searchText.trim() ? 500 : PAGE_SIZE;
+              fetchOrders(page, size);
+            }}
             variant="subtle"
             leftSection={<IconRefresh size={14} />}
           >
@@ -487,185 +502,188 @@ export default function RecordsPage() {
         )}
 
         {!loading && !error && (
-          <Table.ScrollContainer minWidth={800}>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>No</Table.Th>
-                  <Table.Th
-                    onClick={() => toggleSort("order_date")}
-                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
-                  >
-                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                      Tarikh
-                      <IconArrowsSort size={14} style={{ opacity: sortKey === "order_date" ? 1 : 0.4, transform: sortKey === "order_date" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                    </Group>
-                  </Table.Th>
-                  <Table.Th style={{ textAlign: "center" }}>Masa Diterima</Table.Th>
-                  <Table.Th
-                    onClick={() => toggleSort("order_number")}
-                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
-                  >
-                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                      No. Inden
-                      <IconArrowsSort size={14} style={{ opacity: sortKey === "order_number" ? 1 : 0.4, transform: sortKey === "order_number" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                    </Group>
-                  </Table.Th>
-                  <Table.Th
-                    onClick={() => toggleSort("ward_name")}
-                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
-                  >
-                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                      Wad
-                      <IconArrowsSort size={14} style={{ opacity: sortKey === "ward_name" ? 1 : 0.4, transform: sortKey === "ward_name" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                    </Group>
-                  </Table.Th>
-                  <Table.Th
-                    onClick={() => toggleSort("order_type")}
-                    style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
-                  >
-                    <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                      Jenis
-                      <IconArrowsSort size={14} style={{ opacity: sortKey === "order_type" ? 1 : 0.4, transform: sortKey === "order_type" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                    </Group>
-                  </Table.Th>
-                  <Table.Th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Bil. Item</Table.Th>
-                  <Table.Th style={{ textAlign: "center" }}>Disediakan</Table.Th>
-                  <Table.Th style={{ textAlign: "center" }}>Masa Pejabat</Table.Th>
-                  <Table.Th style={{ textAlign: "center" }}>Masa</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {filtered.length === 0 && (
+          <>
+            <Flex justify="space-between" align="center" wrap="wrap" gap="sm" pb="xs">
+              <Text size="xs" c="dimmed">
+                {filtered.length} inden dipaparkan (jumlah: {totalOrders})
+              </Text>
+              {!searchText.trim() && (
+              <Group gap="xs">
+                <Button
+                  size="compact-xs"
+                  variant="default"
+                  disabled={page <= 1}
+                  onClick={() => {
+                    const p = page - 1;
+                    setPage(p);
+                    fetchOrders(p, PAGE_SIZE);
+                  }}
+                >
+                  <IconChevronLeft size={14} />
+                </Button>
+                <Text size="sm" fw={500} style={{ minWidth: 60, textAlign: "center" }}>
+                  {page} / {Math.max(1, Math.ceil(totalOrders / PAGE_SIZE))}
+                </Text>
+                <Button
+                  size="compact-xs"
+                  variant="default"
+                  disabled={page >= Math.ceil(totalOrders / PAGE_SIZE)}
+                  onClick={() => {
+                    const p = page + 1;
+                    setPage(p);
+                    fetchOrders(p, PAGE_SIZE);
+                  }}
+                >
+                  <IconChevronRight size={14} />
+                </Button>
+              </Group>
+              )}
+            </Flex>
+            <Table.ScrollContainer minWidth={800}>
+              <Table>
+                <Table.Thead>
                   <Table.Tr>
-                    <Table.Td colSpan={10} ta="center">
-                      <Text c="dimmed" py="md">Tiada data ditemui</Text>
-                    </Table.Td>
-                  </Table.Tr>
-                )}
-                {filtered.map((order, idx) => {
-                  const elapsed = getElapsedMinutes(order);
-                  const elapsedGrad = getElapsedGradient(elapsed);
-                  const isWarning = !order.sudah_disedia && elapsed >= WARN_105;
-                  return (
-                    <Table.Tr
-                      key={order.id}
-                      onClick={() => openDetailModal(order)}
-                      style={{
-                        cursor: "pointer",
-                        ...(isWarning
-                          ? { fontWeight: 600, animation: "inden-warn-pulse 1.5s ease-in-out infinite" }
-                          : {}),
-                      }}
+                    <Table.Th>No</Table.Th>
+                    <Table.Th
+                      onClick={() => toggleSort("order_date")}
+                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
                     >
-                      <Table.Td>{idx + 1}</Table.Td>
-                      <Table.Td style={{ whiteSpace: "nowrap" }}>
-                        {order.order_date}
-                      </Table.Td>
-                      <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                        {order.masa_diterima || <Text c="dimmed" size="sm">-</Text>}
-                      </Table.Td>
-                      <Table.Td style={{ fontWeight: 600 }}>
-                        {order.order_number}
-                      </Table.Td>
-                      <Table.Td>{order.ward_name}</Table.Td>
-                      <Table.Td>
-                        <Badge
-                          color={ORDER_TYPE_COLOR[order.order_type] || "gray"}
-                          variant="filled"
-                          radius="xl"
-                          size="sm"
-                        >
-                          {order.order_type}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td style={{ textAlign: "center" }}>
-                        {order.items.length}
-                      </Table.Td>
-                      <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                        <Switch
-                          checked={order.sudah_disedia}
-                          onChange={(event) =>
-                            handleToggleReady(order.id, event.currentTarget.checked)
-                          }
-                          disabled={togglingReady === order.id}
-                          size="sm"
-                          labelPosition="left"
-                        />
-                      </Table.Td>
-                      <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                        <Switch
-                          checked={order.masa_pejabat}
-                          onChange={(event) =>
-                            handleTogglePejabat(order.id, event.currentTarget.checked)
-                          }
-                          disabled={togglingPejabat === order.id}
-                          size="sm"
-                          labelPosition="left"
-                        />
-                      </Table.Td>
-                      <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                        <Badge
-                          color={isWarning ? "red" : elapsedGrad}
-                          variant={isWarning ? "filled" : "light"}
-                          radius="xl"
-                          size="sm"
-                          tt="none"
-                        >
-                          <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                            {order.sudah_disedia && order.completion_minutes != null ? (
-                              <IconCircleCheck size={12} />
-                            ) : isWarning ? (
-                              <IconAlertTriangle size={12} />
-                            ) : (
-                              <IconClock size={12} />
-                            )}
-                            {formatElapsed(elapsed)}
-                          </Group>
-                        </Badge>
+                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                        Tarikh
+                        <IconArrowsSort size={14} style={{ opacity: sortKey === "order_date" ? 1 : 0.4, transform: sortKey === "order_date" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                      </Group>
+                    </Table.Th>
+                    <Table.Th style={{ textAlign: "center" }}>Masa Diterima</Table.Th>
+                    <Table.Th
+                      onClick={() => toggleSort("order_number")}
+                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                    >
+                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                        No. Inden
+                        <IconArrowsSort size={14} style={{ opacity: sortKey === "order_number" ? 1 : 0.4, transform: sortKey === "order_number" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                      </Group>
+                    </Table.Th>
+                    <Table.Th
+                      onClick={() => toggleSort("ward_name")}
+                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                    >
+                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                        Wad
+                        <IconArrowsSort size={14} style={{ opacity: sortKey === "ward_name" ? 1 : 0.4, transform: sortKey === "ward_name" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                      </Group>
+                    </Table.Th>
+                    <Table.Th
+                      onClick={() => toggleSort("order_type")}
+                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                    >
+                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                        Jenis
+                        <IconArrowsSort size={14} style={{ opacity: sortKey === "order_type" ? 1 : 0.4, transform: sortKey === "order_type" && !sortAsc ? "scaleY(-1)" : undefined }} />
+                      </Group>
+                    </Table.Th>
+                    <Table.Th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Bil. Item</Table.Th>
+                    <Table.Th style={{ textAlign: "center" }}>Disediakan</Table.Th>
+                    <Table.Th style={{ textAlign: "center" }}>Masa Pejabat</Table.Th>
+                    <Table.Th style={{ textAlign: "center" }}>Masa</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {filtered.length === 0 && (
+                    <Table.Tr>
+                      <Table.Td colSpan={10} ta="center">
+                        <Text c="dimmed" py="md">Tiada data ditemui</Text>
                       </Table.Td>
                     </Table.Tr>
-                  );
-                })}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
+                  )}
+                  {filtered.map((order, idx) => {
+                    const elapsed = getElapsedMinutes(order);
+                    const elapsedGrad = getElapsedGradient(elapsed);
+                    const isWarning = !order.sudah_disedia && elapsed >= WARN_105;
+                    return (
+                      <Table.Tr
+                        key={order.id}
+                        onClick={() => openDetailModal(order)}
+                        style={{
+                          cursor: "pointer",
+                          ...(isWarning
+                            ? { fontWeight: 600, animation: "inden-warn-pulse 1.5s ease-in-out infinite" }
+                            : {}),
+                        }}
+                      >
+                        <Table.Td>{idx + 1}</Table.Td>
+                        <Table.Td style={{ whiteSpace: "nowrap" }}>
+                          {order.order_date}
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                          {order.masa_diterima || <Text c="dimmed" size="sm">-</Text>}
+                        </Table.Td>
+                        <Table.Td style={{ fontWeight: 600 }}>
+                          {order.order_number}
+                        </Table.Td>
+                        <Table.Td>{order.ward_name}</Table.Td>
+                        <Table.Td>
+                          <Badge
+                            color={ORDER_TYPE_COLOR[order.order_type] || "gray"}
+                            variant="filled"
+                            radius="xl"
+                            size="sm"
+                          >
+                            {order.order_type}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "center" }}>
+                          {order.items.length}
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <Switch
+                            checked={order.sudah_disedia}
+                            onChange={(event) =>
+                              handleToggleReady(order.id, event.currentTarget.checked)
+                            }
+                            disabled={togglingReady === order.id}
+                            size="sm"
+                            labelPosition="left"
+                          />
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                          <Switch
+                            checked={order.masa_pejabat}
+                            onChange={(event) =>
+                              handleTogglePejabat(order.id, event.currentTarget.checked)
+                            }
+                            disabled={togglingPejabat === order.id}
+                            size="sm"
+                            labelPosition="left"
+                          />
+                        </Table.Td>
+                        <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                          <Badge
+                            color={isWarning ? "red" : elapsedGrad}
+                            variant={isWarning ? "filled" : "light"}
+                            radius="xl"
+                            size="sm"
+                            tt="none"
+                          >
+                            <Group gap={4} style={{ flexWrap: "nowrap" }}>
+                              {order.sudah_disedia && order.completion_minutes != null ? (
+                                <IconCircleCheck size={12} />
+                              ) : isWarning ? (
+                                <IconAlertTriangle size={12} />
+                              ) : (
+                                <IconClock size={12} />
+                              )}
+                              {formatElapsed(elapsed)}
+                            </Group>
+                          </Badge>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+          </>
         )}
-
-        <Flex justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Text size="xs" c="dimmed">
-            {filtered.length} inden dipaparkan (jumlah: {totalOrders})
-          </Text>
-          <Group gap="xs">
-            <Button
-              size="compact-xs"
-              variant="default"
-              disabled={page <= 1}
-              onClick={() => {
-                const p = page - 1;
-                setPage(p);
-                fetchOrders(p);
-              }}
-            >
-              <IconChevronLeft size={14} />
-            </Button>
-            <Text size="sm" fw={500} style={{ minWidth: 60, textAlign: "center" }}>
-              {page} / {Math.max(1, Math.ceil(totalOrders / PAGE_SIZE))}
-            </Text>
-            <Button
-              size="compact-xs"
-              variant="default"
-              disabled={page >= Math.ceil(totalOrders / PAGE_SIZE)}
-              onClick={() => {
-                const p = page + 1;
-                setPage(p);
-                fetchOrders(p);
-              }}
-            >
-              <IconChevronRight size={14} />
-            </Button>
-          </Group>
-        </Flex>
       </Stack>
 
       <Modal
