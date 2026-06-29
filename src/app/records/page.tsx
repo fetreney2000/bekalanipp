@@ -33,7 +33,7 @@ import {
   IconDeviceFloppy,
   IconX,
 } from "@tabler/icons-react";
-import { MonthPickerInput } from "@mantine/dates";
+import { DatePickerInput, MonthPickerInput } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
 
 type OrderItem = {
@@ -157,7 +157,7 @@ export default function RecordsPage() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
-    order_date: "",
+    order_date: "" as string | null,
     order_number: "",
     order_type: "FS",
     masa_pejabat: false,
@@ -689,13 +689,14 @@ export default function RecordsPage() {
               </Alert>
             )}
 
-            <TextInput
+            <DatePickerInput
               label="Tarikh Inden"
-              type="date"
               value={editForm.order_date}
-              onChange={(e) =>
-                setEditForm({ ...editForm, order_date: e.target.value })
+              onChange={(val) =>
+                setEditForm({ ...editForm, order_date: val })
               }
+              valueFormat="DD/MM/YYYY"
+              clearable
             />
 
             <TextInput
