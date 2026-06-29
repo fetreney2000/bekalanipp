@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import AppShell from "@/components/AppShell";
+import { cachedFetch } from "@/lib/fetch-cache";
 import {
   Stack,
   Group,
@@ -112,8 +113,7 @@ export default function SupplyPage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/wards")
-      .then((res) => res.json())
+    cachedFetch<any[]>("/api/wards", 60000)
       .then((data) => setWards(data))
       .catch(() => {});
   }, []);

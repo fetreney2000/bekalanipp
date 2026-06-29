@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
     const orderItems = await db
       .collection("order_items")
       .find({ item_id: Number(itemId) })
+      .project({ _id: 0, order_id: 1, quantity: 1 })
       .toArray();
 
     const orderIds = orderItems.map((oi: any) => oi.order_id);
@@ -94,6 +95,7 @@ export async function GET(request: NextRequest) {
       ? await db
           .collection("orders")
           .find({ id: { $in: orderIds }, order_date: { $gte: start, $lte: end } })
+          .project({ _id: 0, id: 1, order_number: 1, order_date: 1, ward_id: 1, masa_pejabat: 1, sudah_disedia: 1 })
           .toArray()
       : [];
 
@@ -101,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     const referencedWardIds = [...new Set(orders.map((o: any) => Number(o.ward_id)).filter(Boolean))];
     const wards = referencedWardIds.length > 0
-      ? await db.collection("wards").find({ id: { $in: referencedWardIds } }).toArray()
+      ? await db.collection("wards").find({ id: { $in: referencedWardIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
       : [];
     const wardMap = new Map(wards.map((w: any) => [w.id, w.name]));
 
@@ -121,7 +123,10 @@ export async function GET(request: NextRequest) {
       })
       .sort((a: any, b: any) => b.order_date.localeCompare(a.order_date));
 
-    return NextResponse.json({ orders: result });
+    return NextResponse.json(
+      { orders: result },
+      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+    );
   } catch (error) {
     console.error("GET /api/reports/item-orders error:", error);
     return NextResponse.json(

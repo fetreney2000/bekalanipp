@@ -12,6 +12,7 @@ export async function GET(_request: NextRequest) {
     const items = await db
       .collection("items")
       .find({})
+      .project({ _id: 0, id: 1, name: 1 })
       .sort({ name: 1 })
       .toArray();
 

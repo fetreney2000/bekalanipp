@@ -31,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
+import { cachedFetch } from "@/lib/fetch-cache";
 
 interface Ward {
   id: string;
@@ -76,12 +77,10 @@ export default function CatalogPage() {
   const [addQuota, setAddQuota] = useState(50);
 
   useEffect(() => {
-    fetch("/api/wards")
-      .then((r) => r.json())
+    cachedFetch<any[]>("/api/wards", 60000)
       .then(setWards)
       .catch(() => {});
-    fetch("/api/items")
-      .then((r) => r.json())
+    cachedFetch<any[]>("/api/items", 60000)
       .then(setAllItems)
       .catch(() => {});
   }, []);
