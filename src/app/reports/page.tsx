@@ -36,6 +36,7 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconList,
+  IconArrowsSort,
 } from "@tabler/icons-react";
 import { MonthPickerInput } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
@@ -147,6 +148,21 @@ export default function ReportsPage() {
 
   const [wardItems, setWardItems] = useState<WardItemResult[]>([]);
   const [wardItemsLoading, setWardItemsLoading] = useState(false);
+
+  const [itemSortKey, setItemSortKey] = useState<"item_name" | "order_count" | "quantity_sum">("item_name");
+  const [itemSortDir, setItemSortDir] = useState<"asc" | "desc">("asc");
+
+  const sortedWardItems = useMemo(() => {
+    const sorted = [...wardItems].sort((a, b) => {
+      const aVal = a[itemSortKey];
+      const bVal = b[itemSortKey];
+      const cmp = typeof aVal === "string"
+        ? aVal.localeCompare(bVal as string)
+        : (aVal as number) - (bVal as number);
+      return itemSortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [wardItems, itemSortKey, itemSortDir]);
 
   const [selectedItem, setSelectedItem] = useState<WardItemResult | null>(null);
   const [itemOrders, setItemOrders] = useState<ItemOrder[]>([]);
@@ -623,13 +639,78 @@ export default function ReportsPage() {
                   <Table striped highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Item</Table.Th>
-                        <Table.Th ta="right">Bil. Inden</Table.Th>
-                        <Table.Th ta="right">Jumlah Kuantiti</Table.Th>
+                        <Table.Th
+                          style={{ cursor: "pointer" }}
+                          onClick={() => {
+                            if (itemSortKey === "item_name") {
+                              setItemSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                            } else {
+                              setItemSortKey("item_name");
+                              setItemSortDir("asc");
+                            }
+                          }}
+                        >
+                          <Group gap={4} wrap="nowrap">
+                            Item
+                            <IconArrowsSort
+                              size={14}
+                              style={{
+                                opacity: itemSortKey === "item_name" ? 1 : 0.4,
+                                transform: itemSortKey === "item_name" && itemSortDir === "desc" ? "scaleY(-1)" : undefined,
+                              }}
+                            />
+                          </Group>
+                        </Table.Th>
+                        <Table.Th
+                          ta="right"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => {
+                            if (itemSortKey === "order_count") {
+                              setItemSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                            } else {
+                              setItemSortKey("order_count");
+                              setItemSortDir("desc");
+                            }
+                          }}
+                        >
+                          <Group gap={4} wrap="nowrap" justify="flex-end">
+                            Bil. Inden
+                            <IconArrowsSort
+                              size={14}
+                              style={{
+                                opacity: itemSortKey === "order_count" ? 1 : 0.4,
+                                transform: itemSortKey === "order_count" && itemSortDir === "desc" ? "scaleY(-1)" : undefined,
+                              }}
+                            />
+                          </Group>
+                        </Table.Th>
+                        <Table.Th
+                          ta="right"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => {
+                            if (itemSortKey === "quantity_sum") {
+                              setItemSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                            } else {
+                              setItemSortKey("quantity_sum");
+                              setItemSortDir("desc");
+                            }
+                          }}
+                        >
+                          <Group gap={4} wrap="nowrap" justify="flex-end">
+                            Jumlah Kuantiti
+                            <IconArrowsSort
+                              size={14}
+                              style={{
+                                opacity: itemSortKey === "quantity_sum" ? 1 : 0.4,
+                                transform: itemSortKey === "quantity_sum" && itemSortDir === "desc" ? "scaleY(-1)" : undefined,
+                              }}
+                            />
+                          </Group>
+                        </Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {wardItems.map((wi) => (
+                      {sortedWardItems.map((wi) => (
                         <Table.Tr
                           key={wi.item_id}
                           style={{ cursor: "pointer" }}
