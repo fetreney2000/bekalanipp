@@ -610,7 +610,7 @@ export default function RecordsPage() {
                             : {}),
                         }}
                       >
-                        <Table.Td>{idx + 1}</Table.Td>
+                        <Table.Td>{(page - 1) * PAGE_SIZE + idx + 1}</Table.Td>
                         <Table.Td style={{ whiteSpace: "nowrap" }}>
                           {order.order_date}
                         </Table.Td>
