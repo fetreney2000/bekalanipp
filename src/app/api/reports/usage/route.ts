@@ -215,8 +215,8 @@ export async function GET(request: NextRequest) {
         selepas_masa_pejabat: masaCatMap.get("ward_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
       },
       not_ward: {
-        masa_pejabat: masaCatMap.get("bukan wad_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
-        selepas_masa_pejabat: masaCatMap.get("bukan wad_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+        masa_pejabat: masaCatMap.get("not_ward_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
+        selepas_masa_pejabat: masaCatMap.get("not_ward_selepas_masa_pejabat") || { order_count: 0, bil_item: 0, jumlah_item: 0 },
       },
     };
 
