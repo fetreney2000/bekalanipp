@@ -291,6 +291,12 @@ export default function SupplyPage() {
 
   return (
     <AppShell>
+      <style>{`
+        .mantine-Combobox-option[data-combobox-option-active] {
+          color: var(--mantine-color-gray-9) !important;
+          background-color: var(--mantine-color-blue-6) !important;
+        }
+      `}</style>
       <Stack gap="lg" pb="xl">
         <Paper shadow="sm" p="sm" radius="md" withBorder>
           <Group gap="xs">
@@ -441,17 +447,35 @@ export default function SupplyPage() {
                     <Table.Tr key={row.id}>
                       <Table.Td ta="center">{idx + 1}</Table.Td>
                       <Table.Td miw={200}>
-                        <Select
-                          placeholder="Cari item..."
-                          data={getAvailableItems(row.id)}
-                          searchable
-                          value={row.item_id ? String(row.item_id) : null}
-                          onChange={(value) => {
-                            updateRow(row.id, "item_id", value ? Number(value) : null);
+                        <div
+                          onKeyDownCapture={(e: React.KeyboardEvent) => {
+                            if (e.key === "Tab") {
+                              const active = document.querySelector(
+                                '[data-combobox-option-active][data-combobox-value]'
+                              );
+                              if (active) {
+                                const val = active.getAttribute("data-combobox-value");
+                                if (val) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  updateRow(row.id, "item_id", Number(val));
+                                }
+                              }
+                            }
                           }}
-                          size="xs"
-                          error={errors[`item_${row.id}`]}
-                        />
+                        >
+                          <Select
+                            placeholder="Cari item..."
+                            data={getAvailableItems(row.id)}
+                            searchable
+                            value={row.item_id ? String(row.item_id) : null}
+                            onChange={(value) => {
+                              updateRow(row.id, "item_id", value ? Number(value) : null);
+                            }}
+                            size="xs"
+                            error={errors[`item_${row.id}`]}
+                          />
+                        </div>
                       </Table.Td>
                       <Table.Td>
                         <NumberInput
