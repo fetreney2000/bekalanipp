@@ -10,6 +10,9 @@ import {
   Stack,
   Box,
   Burger,
+  ActionIcon,
+  useComputedColorScheme,
+  useMantineColorScheme,
 } from "@mantine/core";
 import {
   IconDashboard,
@@ -20,6 +23,8 @@ import {
   IconPill,
   IconBook2,
   IconCopyright,
+  IconSun,
+  IconMoon,
 } from "@tabler/icons-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -44,6 +49,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPathnameRef = useRef(pathname);
 
+  const { setColorScheme } = useMantineColorScheme();
+  const colorScheme = useComputedColorScheme("light");
   const [pendingCount, setPendingCount] = useState<number | null>(null);
 
   const fetchPendingCount = useCallback(async () => {
@@ -124,6 +131,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <IconPill size={22} color="cyan.6" />
               <Text fw={700} size="sm">Sistem Rekod FS, EMT, AOH - Jabatan Farmasi Hospital Keningau</Text>
             </Group>
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={() => setColorScheme(colorScheme === "light" ? "dark" : "light")}
+              title={colorScheme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              {colorScheme === "light" ? <IconMoon size={18} /> : <IconSun size={18} />}
+            </ActionIcon>
           </Group>
         </Group>
       </MantineAppShell.Header>
