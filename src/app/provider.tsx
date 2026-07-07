@@ -12,7 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <MantineProvider
       theme={shadcnTheme}
       cssVariablesResolver={shadcnCssVariableResolver}
-      defaultColorScheme="dark"
+      defaultColorScheme="light"
     >
       <NavigationProgress />
       <Notifications position="top-right" />
