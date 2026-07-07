@@ -131,15 +131,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <IconPill size={22} color="cyan.6" />
               <Text fw={700} size="sm">Sistem Rekod FS, EMT, AOH - Jabatan Farmasi Hospital Keningau</Text>
             </Group>
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              onClick={() => setColorScheme(colorScheme === "light" ? "dark" : "light")}
-              title={colorScheme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            >
-              {colorScheme === "light" ? <IconMoon size={18} /> : <IconSun size={18} />}
-            </ActionIcon>
           </Group>
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            onClick={() => setColorScheme(colorScheme === "light" ? "dark" : "light")}
+            title={colorScheme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          >
+            {colorScheme === "light" ? <IconMoon size={18} /> : <IconSun size={18} />}
+          </ActionIcon>
         </Group>
       </MantineAppShell.Header>
 
