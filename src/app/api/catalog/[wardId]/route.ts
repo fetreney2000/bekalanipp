@@ -64,7 +64,7 @@ export async function GET(
           { $unwind: "$order" },
           {
             $match: {
-              "order.ward_id": String(numberWardId),
+              "order.ward_id": numberWardId,
               "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
               item_id: { $in: itemIds },
             },
