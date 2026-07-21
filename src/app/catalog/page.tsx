@@ -29,6 +29,7 @@ import {
   IconX,
   IconAlertTriangle,
   IconBuildingHospital,
+  IconSearch,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
@@ -78,6 +79,7 @@ export default function CatalogPage() {
   const [addMax, setAddMax] = useState(10);
   const [addQuota, setAddQuota] = useState(0);
   const [addHasQuota, setAddHasQuota] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     cachedFetch<any[]>("/api/wards", 60000)
@@ -116,6 +118,12 @@ export default function CatalogPage() {
     const inCatalog = new Set(catalogItems.map((ci) => ci.item_id));
     return allItems.filter((i) => !inCatalog.has(i.id));
   }, [allItems, catalogItems]);
+
+  const filteredCatalogItems = useMemo(() => {
+    if (!searchQuery.trim()) return catalogItems;
+    const q = searchQuery.toLowerCase();
+    return catalogItems.filter((ci) => ci.item_name.toLowerCase().includes(q));
+  }, [catalogItems, searchQuery]);
 
   function getUsageColor(used: number, quota: number): "red" | "yellow" | "green" | "gray" {
     if (quota === 0) return "gray";
@@ -344,6 +352,17 @@ export default function CatalogPage() {
           </Alert>
         )}
 
+        {selectedWard && catalogItems.length > 0 && (
+          <TextInput
+            placeholder="Cari item..."
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            maw={300}
+            size="sm"
+          />
+        )}
+
         {selectedWard && (
           <TableScrollContainer minWidth={600}>
             {loading ? (
@@ -370,8 +389,17 @@ export default function CatalogPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {catalogItems.map((ci) => {
-                    const used = ci.month_used || 0;
+                  {filteredCatalogItems.length === 0 && catalogItems.length > 0 ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={6}>
+                        <Text size="sm" ta="center" c="dimmed" py="xs">
+                          Tiada item ditemui untuk &quot;{searchQuery}&quot;
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    filteredCatalogItems.map((ci) => {
+                      const used = ci.month_used || 0;
                     const hasQuota = ci.monthly_quota != null && ci.monthly_quota > 0;
                     const baki = hasQuota ? (ci.monthly_quota as number) - used : null;
                     const usageColor = getUsageColor(used, hasQuota ? (ci.monthly_quota as number) : 0);
@@ -483,7 +511,8 @@ export default function CatalogPage() {
                         </Table.Td>
                       </Table.Tr>
                     );
-                  })}
+                    })
+                  )}
                 </Table.Tbody>
               </Table>
             )}
