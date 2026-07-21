@@ -5,7 +5,7 @@ import { z } from "zod";
 const catalogUpsertSchema = z.object({
   item_id: z.number().int(),
   max_per_order: z.number().int().min(0),
-  monthly_quota: z.number().int().min(0),
+  monthly_quota: z.number().int().min(0).nullable(),
 });
 
 export async function GET(

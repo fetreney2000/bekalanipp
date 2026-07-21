@@ -18,6 +18,7 @@ import {
   Select,
   Loader,
   Paper,
+  Switch,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -49,7 +50,7 @@ interface CatalogItem {
   item_id: string;
   item_name: string;
   max_per_order: number;
-  monthly_quota: number;
+  monthly_quota: number | null;
   month_used?: number;
 }
 
@@ -70,11 +71,13 @@ export default function CatalogPage() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editMax, setEditMax] = useState(0);
   const [editQuota, setEditQuota] = useState(0);
+  const [editHasQuota, setEditHasQuota] = useState(false);
 
   const [showAdd, setShowAdd] = useState(false);
   const [addItemId, setAddItemId] = useState("");
   const [addMax, setAddMax] = useState(10);
-  const [addQuota, setAddQuota] = useState(50);
+  const [addQuota, setAddQuota] = useState(0);
+  const [addHasQuota, setAddHasQuota] = useState(false);
 
   useEffect(() => {
     cachedFetch<any[]>("/api/wards", 60000)
@@ -125,7 +128,8 @@ export default function CatalogPage() {
   function startEdit(ci: CatalogItem) {
     setEditingKey(ci.item_id);
     setEditMax(ci.max_per_order);
-    setEditQuota(ci.monthly_quota);
+    setEditQuota(ci.monthly_quota ?? 0);
+    setEditHasQuota(ci.monthly_quota != null && ci.monthly_quota > 0);
     setError("");
   }
 
@@ -141,7 +145,7 @@ export default function CatalogPage() {
       const res = await fetch(`/api/catalog/${ci.ward_id}/items/${ci.item_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ max_per_order: editMax, monthly_quota: editQuota }),
+        body: JSON.stringify({ max_per_order: editMax, monthly_quota: editHasQuota ? editQuota : null }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -151,7 +155,7 @@ export default function CatalogPage() {
       setCatalogItems((prev) =>
         prev.map((c) =>
           c.item_id === ci.item_id
-            ? { ...c, max_per_order: editMax, monthly_quota: editQuota }
+            ? { ...c, max_per_order: editMax, monthly_quota: editHasQuota ? editQuota : 0 }
             : c
         )
       );
@@ -178,7 +182,7 @@ export default function CatalogPage() {
         body: JSON.stringify({
           item_id: addItemId,
           max_per_order: addMax,
-          monthly_quota: addQuota,
+          monthly_quota: addHasQuota ? addQuota : null,
         }),
       });
       if (!res.ok) {
@@ -190,7 +194,8 @@ export default function CatalogPage() {
       setShowAdd(false);
       setAddItemId("");
       setAddMax(10);
-      setAddQuota(50);
+      setAddQuota(0);
+      setAddHasQuota(false);
       fetchCatalog();
     } catch {
       setError("Ralat sambungan");
@@ -296,20 +301,27 @@ export default function CatalogPage() {
               )}
               <Group wrap="wrap" gap="md">
                 <NumberInput
-                  label="Max/Order"
+                  label="Max/Order (0 = tiada had)"
                   value={addMax}
                   onChange={(val) => setAddMax(typeof val === "number" ? val : 0)}
                   min={0}
-                  w={160}
+                  w={180}
                 />
+              </Group>
+              <Switch
+                label="Tetapkan kuota bulanan"
+                checked={addHasQuota}
+                onChange={(event) => setAddHasQuota(event.currentTarget.checked)}
+              />
+              {addHasQuota && (
                 <NumberInput
                   label="Kuota Bulanan"
                   value={addQuota}
                   onChange={(val) => setAddQuota(typeof val === "number" ? val : 0)}
-                  min={0}
+                  min={1}
                   w={160}
                 />
-              </Group>
+              )}
               <Group justify="flex-end" gap="sm">
                 <Button
                   variant="subtle"
@@ -360,8 +372,9 @@ export default function CatalogPage() {
                 <Table.Tbody>
                   {catalogItems.map((ci) => {
                     const used = ci.month_used || 0;
-                    const baki = ci.monthly_quota - used;
-                    const usageColor = getUsageColor(used, ci.monthly_quota);
+                    const hasQuota = ci.monthly_quota != null && ci.monthly_quota > 0;
+                    const baki = hasQuota ? (ci.monthly_quota as number) - used : null;
+                    const usageColor = getUsageColor(used, hasQuota ? (ci.monthly_quota as number) : 0);
                     const editKey = ci.item_id;
 
                     return (
@@ -377,34 +390,53 @@ export default function CatalogPage() {
                               w={100}
                             />
                           ) : (
-                            ci.max_per_order
+                            ci.max_per_order > 0 ? ci.max_per_order : "—"
                           )}
                         </Table.Td>
                         <Table.Td>
                           {editingKey === editKey ? (
-                            <NumberInput
-                              size="xs"
-                              value={editQuota}
-                              onChange={(val) => setEditQuota(typeof val === "number" ? val : 0)}
-                              min={0}
-                              w={100}
-                            />
-                          ) : (
+                            <Stack gap="xs">
+                              <Switch
+                                size="xs"
+                                checked={editHasQuota}
+                                onChange={(event) => setEditHasQuota(event.currentTarget.checked)}
+                              />
+                              {editHasQuota && (
+                                <NumberInput
+                                  size="xs"
+                                  value={editQuota}
+                                  onChange={(val) => setEditQuota(typeof val === "number" ? val : 0)}
+                                  min={1}
+                                  w={100}
+                                />
+                              )}
+                            </Stack>
+                          ) : hasQuota ? (
                             ci.monthly_quota
+                          ) : (
+                            <Text c="dimmed" size="sm">Tiada</Text>
                           )}
                         </Table.Td>
                         <Table.Td>
-                          <Badge color={usageColor} variant="light">
-                            {used}
-                          </Badge>
+                          {hasQuota ? (
+                            <Badge color={usageColor} variant="light">
+                              {used}
+                            </Badge>
+                          ) : (
+                            <Text c="dimmed" size="sm">—</Text>
+                          )}
                         </Table.Td>
                         <Table.Td>
-                          <Text
-                            fw={600}
-                            c={baki < 0 ? "red" : baki === 0 ? "yellow" : "green"}
-                          >
-                            {baki}
-                          </Text>
+                          {baki !== null ? (
+                            <Text
+                              fw={600}
+                              c={baki < 0 ? "red" : baki === 0 ? "yellow" : "green"}
+                            >
+                              {baki}
+                            </Text>
+                          ) : (
+                            <Text c="dimmed" size="sm">—</Text>
+                          )}
                         </Table.Td>
                         <Table.Td style={{ textAlign: "right" }}>
                           {editingKey === editKey ? (

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const catalogUpdateSchema = z.object({
   max_per_order: z.number().int().min(0),
-  monthly_quota: z.number().int().min(0),
+  monthly_quota: z.number().int().min(0).nullable(),
 });
 
 export async function PUT(
