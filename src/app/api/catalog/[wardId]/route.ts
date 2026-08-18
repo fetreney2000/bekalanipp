@@ -37,9 +37,10 @@ export async function GET(
 
     const itemIds = catalogEntries.map((e: any) => e.item_id);
     const itemDocs = itemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: itemIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
+      ? await db.collection("items").find({ id: { $in: itemIds } }).project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 }).toArray()
       : [];
     const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+    const itemQuickRxMap = new Map(itemDocs.map((i: any) => [i.id, !!i.quick_rx_record]));
 
     let usageMap = new Map<number, number>();
     if (month && catalogEntries.length > 0) {
@@ -81,6 +82,7 @@ export async function GET(
       ward_id: entry.ward_id,
       item_id: entry.item_id,
       item_name: itemNameMap.get(entry.item_id) || "Unknown",
+      quick_rx_record: itemQuickRxMap.get(entry.item_id) || false,
       max_per_order: entry.max_per_order,
       monthly_quota: entry.monthly_quota,
       ...(month && { month_used: usageMap.get(entry.item_id) || 0 }),

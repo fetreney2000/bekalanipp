@@ -50,6 +50,7 @@ interface CatalogItem {
   ward_id: number;
   item_id: number;
   item_name: string;
+  quick_rx_record?: boolean;
   max_per_order: number;
   monthly_quota: number;
   month_used: number;
@@ -150,7 +151,15 @@ export default function SupplyPage() {
     const selectedIds = new Set(
       orderRows.filter((r) => r.id !== currentRowId && r.item_id).map((r) => String(r.item_id))
     );
-    return catalogData.filter((item) => !selectedIds.has(item.value));
+    return catalogData
+      .filter((item) => !selectedIds.has(item.value))
+      .map((item) => {
+        const cat = getCatalogInfo(Number(item.value));
+        return {
+          ...item,
+          label: `${item.label}${cat && cat.quick_rx_record ? " [QuickRx]" : ""}`,
+        };
+      });
   }, [catalogData, orderRows]);
 
   const handleWardChange = (value: string | null) => {
@@ -180,6 +189,9 @@ export default function SupplyPage() {
 
   const getCatalogInfo = (itemId: number | null) =>
     catalogItems.find((c) => c.item_id === itemId);
+
+  const getCatalogQuickRx = (itemId: number | null) =>
+    !!getCatalogInfo(itemId)?.quick_rx_record;
 
   const getUsagePct = (itemId: number | null) => {
     const cat = getCatalogInfo(itemId);
@@ -446,7 +458,10 @@ export default function SupplyPage() {
                   return (
                     <Table.Tr key={row.id}>
                       <Table.Td ta="center">{idx + 1}</Table.Td>
-                      <Table.Td miw={200}>
+                      <Table.Td miw={200} style={getCatalogQuickRx(row.item_id) ? {
+                        backgroundImage: "linear-gradient(90deg, var(--mantine-color-cyan-light), var(--mantine-color-cyan-light))",
+                        boxShadow: "inset 4px 0 0 var(--mantine-color-cyan-6)",
+                      } : undefined}>
                         <div
                           onKeyDownCapture={(e: React.KeyboardEvent) => {
                             if (e.key === "Tab") {
@@ -475,6 +490,18 @@ export default function SupplyPage() {
                             size="xs"
                             error={errors[`item_${row.id}`]}
                           />
+                          {row.item_id && getCatalogQuickRx(row.item_id) && (
+                            <Badge
+                              color="cyan"
+                              variant="filled"
+                              radius="xl"
+                              size="xs"
+                              mt={4}
+                              style={{ display: "inline-flex" }}
+                            >
+                              QuickRx
+                            </Badge>
+                          )}
                         </div>
                       </Table.Td>
                       <Table.Td>
