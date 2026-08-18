@@ -425,11 +425,11 @@ export default function RecordsPage() {
         }
       `}</style>
       <Stack gap="md">
-        <Paper shadow="sm" p="sm" radius="md" withBorder>
+        <Paper>
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconClock size={18} color="var(--mantine-color-gray-5)" />
-              <Title order={3} fw={700}>Senarai Inden</Title>
+              <Title order={3}>Senarai Inden</Title>
             </Group>
           </Group>
         </Paper>
@@ -536,7 +536,15 @@ export default function RecordsPage() {
                   {filtered.length === 0 && (
                     <Table.Tr>
                       <Table.Td colSpan={10} ta="center">
-                        <Text c="dimmed" py="md">Tiada data ditemui</Text>
+                        <Stack align="center" gap={4} py="lg">
+                          <IconSearch size={22} color="var(--mantine-color-gray-4)" />
+                          <Text fw={500} size="sm" c="dimmed">
+                            Tiada inden ditemui
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            Tukar bulan atau ubah carian untuk melihat rekod.
+                          </Text>
+                        </Stack>
                       </Table.Td>
                     </Table.Tr>
                   )}
@@ -562,15 +570,21 @@ export default function RecordsPage() {
                             : {}),
                         }}
                       >
-                        <Table.Td>{idx + 1}</Table.Td>
+                        <Table.Td>
+                          <Text className="mono" c="dimmed" size="sm">{idx + 1}</Text>
+                        </Table.Td>
                         <Table.Td style={{ whiteSpace: "nowrap" }}>
-                          {order.order_date}
+                          <Text className="mono" size="sm">{order.order_date}</Text>
                         </Table.Td>
                         <Table.Td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                          {order.masa_diterima || <Text c="dimmed" size="sm">-</Text>}
+                          {order.masa_diterima ? (
+                            <Text className="mono" size="sm">{order.masa_diterima}</Text>
+                          ) : (
+                            <Text c="dimmed" size="sm">-</Text>
+                          )}
                         </Table.Td>
                         <Table.Td style={{ fontWeight: 600 }}>
-                          {order.order_number}
+                          <Text className="mono" fw={600} size="sm">{order.order_number}</Text>
                         </Table.Td>
                         <Table.Td>{order.ward_name}</Table.Td>
                         <Table.Td>
@@ -585,7 +599,7 @@ export default function RecordsPage() {
                         </Table.Td>
                         <Table.Td style={{ textAlign: "center" }}>
                           <Group gap={6} justify="center" style={{ flexWrap: "nowrap" }}>
-                            {order.items.length}
+                            <Text className="mono" size="sm">{order.items.length}</Text>
                             {hasQuickRx && (
                               <Badge
                                 color={QUICK_RX_COLOR}
@@ -629,15 +643,15 @@ export default function RecordsPage() {
                             tt="none"
                           >
                             <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                              {order.sudah_disedia && order.completion_minutes != null ? (
-                                <IconCircleCheck size={12} />
-                              ) : isWarning ? (
-                                <IconAlertTriangle size={12} />
-                              ) : (
-                                <IconClock size={12} />
-                              )}
-                              {formatElapsed(elapsed)}
-                            </Group>
+                                {order.sudah_disedia && order.completion_minutes != null ? (
+                                  <IconCircleCheck size={12} />
+                                ) : isWarning ? (
+                                  <IconAlertTriangle size={12} />
+                                ) : (
+                                  <IconClock size={12} />
+                                )}
+                                <Text component="span" className="mono">{formatElapsed(elapsed)}</Text>
+                              </Group>
                           </Badge>
                         </Table.Td>
                       </Table.Tr>
