@@ -9,18 +9,22 @@ import {
   Paper,
   Stack,
   Group,
+  Box,
   Loader,
   Center,
   ThemeIcon,
   Title,
   Table,
   TableScrollContainer,
+  Progress,
 } from "@mantine/core";
 import {
   IconShoppingBag,
   IconPackage,
   IconBuildingHospital,
   IconCalendar,
+  IconCircleCheck,
+  IconChartPie,
 } from "@tabler/icons-react";
 
 interface ItemStatus {
@@ -65,20 +69,26 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Presentational derivations only — no data transform, no logic change.
+  const quotaRows = (data?.itemStatus ?? []).filter((item) => item.quota > 0);
+  const hasQuotaData =
+    quotaRows.length > 0 ||
+    (data?.warnings.length ?? 0) > 0 ||
+    (data?.exceeded.length ?? 0) > 0;
+
   return (
     <AppShell>
       {loading && (
-        <Center h={400}>
-          <Loader size="lg" color="blue" />
+        <Center h={320}>
+          <Stack align="center" gap="xs">
+            <Loader size="md" />
+            <Text size="sm" c="dimmed">Memuatkan data...</Text>
+          </Stack>
         </Center>
       )}
 
       {error && (
-        <Paper
-          p="md"
-          radius="md"
-          style={{ backgroundColor: "var(--mantine-color-red-light)", border: "1px solid var(--mantine-color-red-4)" }}
-        >
+        <Paper style={{ backgroundColor: "var(--mantine-color-red-light)" }}>
           <Group gap="xs">
             <ThemeIcon size="sm" variant="light" color="red">
               <IconBuildingHospital size={18} />
@@ -90,132 +100,196 @@ export default function DashboardPage() {
 
       {data && (
         <Stack gap="lg">
-          <Paper shadow="sm" p="sm" radius="md" withBorder>
+          <Paper>
             <Group justify="space-between" align="center">
               <Group gap="xs">
                 <IconCalendar size={18} color="var(--mantine-color-gray-5)" />
-                <Title order={3} fw={700}>
-                  Dashboard - {data.month}
-                </Title>
+                <Title order={3}>Dashboard</Title>
               </Group>
+              <Text size="sm" c="dimmed" className="mono">{data.month}</Text>
             </Group>
           </Paper>
 
-          <SimpleGrid cols={3}>
-            <Paper shadow="sm" p="md" radius="md" withBorder>
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+            <Paper>
               <Group gap="sm" align="center">
                 <ThemeIcon size="lg" radius="md" variant="light" color="cyan">
                   <IconShoppingBag size={22} />
                 </ThemeIcon>
                 <Stack gap={0}>
                   <Text size="xs" c="dimmed">Jumlah Pesanan</Text>
-                  <Text size="xl" fw={700}>{data.orders_count}</Text>
+                  <Text size="xl" fw={700} className="mono">{data.orders_count}</Text>
                 </Stack>
               </Group>
             </Paper>
-            <Paper shadow="sm" p="md" radius="md" withBorder>
+
+            <Paper>
               <Group gap="sm" align="center">
                 <ThemeIcon size="lg" radius="md" variant="light" color="green">
                   <IconPackage size={22} />
                 </ThemeIcon>
                 <Stack gap={0}>
                   <Text size="xs" c="dimmed">Jumlah Item</Text>
-                  <Text size="xl" fw={700}>{data.items_count}</Text>
+                  <Text size="xl" fw={700} className="mono">{data.items_count}</Text>
                 </Stack>
               </Group>
             </Paper>
-            <Paper shadow="sm" p="md" radius="md" withBorder>
-              <Group gap="sm" align="center">
+
+            <Paper>
+              <Group gap="sm" align="center" wrap="nowrap">
                 <ThemeIcon size="lg" radius="md" variant="light" color="yellow">
                   <IconBuildingHospital size={22} />
                 </ThemeIcon>
-                <Stack gap={0}>
+                <Stack gap={0} style={{ minWidth: 0 }}>
                   <Text size="xs" c="dimmed">Pesanan Terbanyak</Text>
-                  <Text size="xl" fw={700}>
-                    {data.top_ward
-                      ? `${data.top_ward.ward_name} (${data.top_ward.order_count})`
-                      : "Tiada data"}
-                  </Text>
+                  {data.top_ward ? (
+                    <>
+                      <Text fw={700} size="md" truncate>{data.top_ward.ward_name}</Text>
+                      <Text size="xs" c="dimmed" className="mono">
+                        {data.top_ward.order_count.toLocaleString("ms-MY")} pesanan
+                      </Text>
+                    </>
+                  ) : (
+                    <Text size="sm" c="dimmed">Tiada data</Text>
+                  )}
                 </Stack>
               </Group>
             </Paper>
           </SimpleGrid>
 
-          <SimpleGrid cols={3}>
-            <Paper p="md" radius="md" withBorder>
-              <Title order={5} fw={600} mb="md">Amaran Kuota (Bulan Ini)</Title>
-              <Text size="sm">
-                Jumlah amaran: {data.warnings.length} (80%+) | Jumlah kritikal: {data.exceeded.length} (100%+)
-              </Text>
-            </Paper>
-
-            <Paper p="md" radius="md" withBorder>
-              <Title order={5} fw={600} mb="md">Wad/Jabatan Melebihi 80%</Title>
-              {data.warnings.length === 0 ? (
-                <Text c="dimmed">Tiada</Text>
-              ) : (
-                <Stack gap="xs">
-                  {data.warnings.map((item, idx) => (
-                    <Group key={idx} gap="xs">
-                      <Badge color="yellow" variant="light" size="sm">80%+</Badge>
-                      <Text size="sm"><strong>{item.ward_name}</strong> - {item.item_name} ({item.used}/{item.quota})</Text>
+          {hasQuotaData ? (
+            <>
+              <Paper>
+                <Group gap="sm" mb="md">
+                  <IconChartPie size={18} color="var(--mantine-color-gray-5)" />
+                  <Title order={4}>Kuota Bulanan</Title>
+                </Group>
+                <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+                  <Paper>
+                    <Group justify="space-between" align="center" mb="sm">
+                      <Text size="sm" fw={600}>Melebihi 80%</Text>
+                      <Badge color="yellow" variant="light" size="sm" className="mono">
+                        {data.warnings.length}
+                      </Badge>
                     </Group>
-                  ))}
-                </Stack>
-              )}
-            </Paper>
+                    {data.warnings.length === 0 ? (
+                      <Text size="sm" c="dimmed">Tiada amaran kuota.</Text>
+                    ) : (
+                      <Stack gap="xs">
+                        {data.warnings.map((item, idx) => {
+                          const pct = Math.round((item.used / item.quota) * 100);
+                          return (
+                            <Box key={idx}>
+                              <Group justify="space-between" gap="xs" wrap="nowrap">
+                                <Text size="sm" truncate style={{ minWidth: 0 }}>
+                                  <strong>{item.ward_name}</strong>
+                                  <Text component="span" c="dimmed"> · {item.item_name}</Text>
+                                </Text>
+                                <Text size="xs" c="dimmed" className="mono" style={{ whiteSpace: "nowrap" }}>
+                                  {item.used}/{item.quota}
+                                </Text>
+                              </Group>
+                              <Progress value={Math.min(100, pct)} size="xs" mt={4} color="yellow" />
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </Paper>
 
-            <Paper p="md" radius="md" withBorder>
-              <Title order={5} fw={600} mb="md">Wad/Jabatan Habis Kuota</Title>
-              {data.exceeded.length === 0 ? (
-                <Text c="dimmed">Tiada</Text>
-              ) : (
-                <Stack gap="xs">
-                  {data.exceeded.map((item, idx) => (
-                    <Group key={idx} gap="xs">
-                      <Badge color="red" variant="light" size="sm">100%+</Badge>
-                      <Text size="sm"><strong>{item.ward_name}</strong> - {item.item_name} ({item.used}/{item.quota})</Text>
+                  <Paper>
+                    <Group justify="space-between" align="center" mb="sm">
+                      <Text size="sm" fw={600}>Habis Kuota (100%+)</Text>
+                      <Badge color="red" variant="light" size="sm" className="mono">
+                        {data.exceeded.length}
+                      </Badge>
                     </Group>
-                  ))}
-                </Stack>
-              )}
-            </Paper>
-          </SimpleGrid>
+                    {data.exceeded.length === 0 ? (
+                      <Text size="sm" c="dimmed">Tiada kuota yang habis.</Text>
+                    ) : (
+                      <Stack gap="xs">
+                        {data.exceeded.map((item, idx) => {
+                          const pct = Math.round((item.used / item.quota) * 100);
+                          return (
+                            <Box key={idx}>
+                              <Group justify="space-between" gap="xs" wrap="nowrap">
+                                <Text size="sm" truncate style={{ minWidth: 0 }}>
+                                  <strong>{item.ward_name}</strong>
+                                  <Text component="span" c="dimmed"> · {item.item_name}</Text>
+                                </Text>
+                                <Text size="xs" c="red" className="mono" style={{ whiteSpace: "nowrap" }}>
+                                  {item.used}/{item.quota}
+                                </Text>
+                              </Group>
+                              <Progress value={Math.min(100, pct)} size="xs" mt={4} color="red" />
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </Paper>
+                </SimpleGrid>
+              </Paper>
 
-          <Paper shadow="sm" p="md" radius="md" withBorder>
-            <Title order={5} fw={600} mb="md">Butiran Item Kuota Kritikal</Title>
-            <TableScrollContainer minWidth={500}>
-              <Table striped highlightOnHover withTableBorder>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Wad/Jabatan</Table.Th>
-                    <Table.Th>Item</Table.Th>
-                    <Table.Th ta="right">Digunakan</Table.Th>
-                    <Table.Th ta="right">Kuota</Table.Th>
-                    <Table.Th ta="center">Status</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {data.itemStatus
-                    .filter((item) => item.quota > 0)
-                    .map((item, idx) => {
-                      const pct = Math.round((item.used / item.quota) * 100);
-                      return (
-                        <Table.Tr key={idx}>
-                          <Table.Td>{item.ward_name}</Table.Td>
-                          <Table.Td>{item.item_name}</Table.Td>
-                          <Table.Td ta="right">{item.used}</Table.Td>
-                          <Table.Td ta="right">{item.quota}</Table.Td>
-                          <Table.Td ta="center">
-                            {pct >= 100 ? <Badge color="red" variant="light" size="sm">100%+</Badge> : pct >= 80 ? <Badge color="yellow" variant="light" size="sm">80%+</Badge> : <Badge color="green" variant="light" size="sm">&lt;80%</Badge>}
-                          </Table.Td>
-                        </Table.Tr>
-                      );
-                    })}
-                </Table.Tbody>
-              </Table>
-            </TableScrollContainer>
-          </Paper>
+              <Paper>
+                <Title order={4} mb="md">Butiran Item Kuota</Title>
+                <TableScrollContainer minWidth={520}>
+                  <Table striped highlightOnHover withTableBorder>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Wad/Jabatan</Table.Th>
+                        <Table.Th>Item</Table.Th>
+                        <Table.Th ta="right">Digunakan</Table.Th>
+                        <Table.Th ta="right">Kuota</Table.Th>
+                        <Table.Th ta="center">Status</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {quotaRows.map((item, idx) => {
+                        const pct = Math.round((item.used / item.quota) * 100);
+                        const over = item.used > item.quota;
+                        return (
+                          <Table.Tr key={idx}>
+                            <Table.Td>{item.ward_name}</Table.Td>
+                            <Table.Td>{item.item_name}</Table.Td>
+                            <Table.Td ta="right">
+                              <Text className="mono" fw={600} c={over ? "red" : undefined}>{item.used}</Text>
+                            </Table.Td>
+                            <Table.Td ta="right">
+                              <Text className="mono" c="dimmed">{item.quota}</Text>
+                            </Table.Td>
+                            <Table.Td ta="center">
+                              {pct >= 100 ? (
+                                <Badge color="red" variant="light" size="sm" className="mono">100%+</Badge>
+                              ) : pct >= 80 ? (
+                                <Badge color="yellow" variant="light" size="sm" className="mono">80%+</Badge>
+                              ) : (
+                                <Badge color="green" variant="light" size="sm" className="mono">&lt;80%</Badge>
+                              )}
+                            </Table.Td>
+                          </Table.Tr>
+                        );
+                      })}
+                    </Table.Tbody>
+                  </Table>
+                </TableScrollContainer>
+              </Paper>
+            </>
+          ) : (
+            <Paper>
+              <Center py={48}>
+                <Stack align="center" gap="xs" ta="center" maw={420}>
+                  <ThemeIcon size="xl" radius="md" variant="light" color="green">
+                    <IconCircleCheck size={28} />
+                  </ThemeIcon>
+                  <Text fw={600}>Tiada amaran kuota bagi bulan ini</Text>
+                  <Text size="sm" c="dimmed">
+                    Semua wad/jabatan masih dalam had kuota. Tiada tindakan diperlukan.
+                  </Text>
+                </Stack>
+              </Center>
+            </Paper>
+          )}
         </Stack>
       )}
     </AppShell>
