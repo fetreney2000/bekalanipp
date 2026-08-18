@@ -627,6 +627,11 @@
   --table-striped-color: var(--mantine-color-default-hover);
   --table-border-color: var(--mantine-color-default-border);
 
+  [data-mantine-color-scheme="dark"] & {
+    --table-striped-color: rgba(255, 255, 255, 0.04);
+    --table-hover-color: rgba(255, 255, 255, 0.06);
+  }
+
   &:where([data-with-table-border]) {
     border: rem(1px) solid var(--table-border-color);
   }
