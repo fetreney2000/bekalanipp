@@ -170,7 +170,7 @@
 
 /* Segmented Control */
 .mantine-SegmentedControl-root {
-  background-color: var(--mantine-color-secondary-outline-hover);
+  background-color: var(--mantine-color-default);
 
   .mantine-SegmentedControl-label {
     color: var(--mantine-color-dimmed);
@@ -231,7 +231,7 @@
 [data-mantine-color-scheme="light"],
 [data-mantine-color-scheme="dark"] {
   .mantine-Slider-root {
-    --slider-track-bg: var(--mantine-color-secondary-outline-hover);
+    --slider-track-bg: var(--mantine-color-default);
   }
 }
 .mantine-Slider-root {
@@ -415,7 +415,7 @@
 
 /* Notification */
 .mantine-Notification-root {
-  background-color: var(--mantine-color-secondary-filled);
+  background-color: var(--mantine-color-default);
 
   &:where([data-with-border]) {
     border: 1px solid var(--mantine-color-default-border);
@@ -557,8 +557,8 @@
 .mantine-Badge-root {
   --badge-color: var(--mantine-primary-color-contrast);
   &[data-variant="dot"] {
-    background-color: var(--mantine-color-secondary-light);
-    border-color: var(--mantine-color-secondary-light);
+    background-color: var(--mantine-color-default-hover);
+    border-color: var(--mantine-color-default-hover);
     color: var(--mantine-color-text);
   }
 }
@@ -580,7 +580,7 @@
     border-color: var(--mantine-color-default-border);
 
     &:where([data-with-child]) {
-      background-color: var(--mantine-color-secondary-light);
+      background-color: var(--mantine-color-default-hover);
     }
 
     &:where([data-active]) {
@@ -598,7 +598,7 @@
 
 /* Code */
 .mantine-Code-root {
-  background-color: var(--code-bg, var(--mantine-color-secondary-filled));
+  background-color: var(--code-bg, var(--mantine-color-default));
   color: var(--mantine-color-text);
 }
 
