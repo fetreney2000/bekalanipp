@@ -310,10 +310,10 @@ export default function SupplyPage() {
         }
       `}</style>
       <Stack gap="lg" pb="xl">
-        <Paper shadow="sm" p="sm" radius="md" withBorder>
+        <Paper>
           <Group gap="xs">
             <IconPackage size={18} color="var(--mantine-color-gray-5)" />
-            <Title order={3} fw={700}>Rekod Inden Baharu</Title>
+            <Title order={3}>Rekod Inden Baharu</Title>
           </Group>
         </Paper>
 
@@ -329,9 +329,9 @@ export default function SupplyPage() {
           </Alert>
         )}
 
-        <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Paper>
           <Stack gap="md">
-            <Title order={5} fw={600}>Maklumat Inden</Title>
+            <Title order={4}>Maklumat Inden</Title>
 
             <Group gap="md" align="flex-start" wrap="wrap">
               <Box flex="1 1 220px">
@@ -362,6 +362,7 @@ export default function SupplyPage() {
                   label="No. Inden *"
                   placeholder="Contoh: 131990 / CKK A No: 057374/19"
                   leftSection={<IconHash size={16} />}
+                  styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
                   onFocus={(e) => e.target.select()}
@@ -401,11 +402,11 @@ export default function SupplyPage() {
           </Stack>
         </Paper>
 
-        <Paper shadow="sm" p="md" radius="md" withBorder>
+        <Paper>
           <Flex justify="space-between" align="center" mb="md">
             <Group gap="xs">
               <IconPackage size={16} />
-              <Title order={5} fw={600}>Item Pesanan</Title>
+              <Title order={4}>Item Pesanan</Title>
             </Group>
             <Button
               size="compact-sm"
@@ -457,7 +458,9 @@ export default function SupplyPage() {
                   const pct = getUsagePct(row.item_id);
                   return (
                     <Table.Tr key={row.id}>
-                      <Table.Td ta="center">{idx + 1}</Table.Td>
+                      <Table.Td ta="center">
+                        <Text className="mono" c="dimmed" size="sm">{idx + 1}</Text>
+                      </Table.Td>
                       <Table.Td miw={200} style={getCatalogQuickRx(row.item_id) ? {
                         backgroundImage: "linear-gradient(90deg, var(--mantine-color-cyan-light), var(--mantine-color-cyan-light))",
                         boxShadow: "inset 4px 0 0 var(--mantine-color-cyan-6)",
@@ -516,13 +519,13 @@ export default function SupplyPage() {
                           onFocus={(e) => e.target.select()}
                         />
                       </Table.Td>
-                      <Table.Td style={{ fontSize: 13 }}>{cat ? cat.max_per_order : "—"}</Table.Td>
-                      <Table.Td style={{ fontSize: 13 }}>{cat && cat.monthly_quota > 0 ? cat.monthly_quota : "—"}</Table.Td>
-                      <Table.Td style={{ fontSize: 13 }}>{cat && cat.monthly_quota > 0 ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Table.Td>
+                      <Table.Td><Text className="mono" size="sm">{cat ? cat.max_per_order : "—"}</Text></Table.Td>
+                      <Table.Td><Text className="mono" size="sm">{cat && cat.monthly_quota > 0 ? cat.monthly_quota : "—"}</Text></Table.Td>
+                      <Table.Td><Text className="mono" size="sm" c={pct !== null && pct >= 100 ? "red" : undefined}>{cat && cat.monthly_quota > 0 ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Text></Table.Td>
                       <Table.Td ta="center">
                         {pct !== null ? (
                           <Badge color={getUsageBadgeColor(pct)} variant="light" size="sm">
-                            {pct}%
+                            <Text component="span" className="mono" size="xs">{pct}%</Text>
                           </Badge>
                         ) : "—"}
                       </Table.Td>
