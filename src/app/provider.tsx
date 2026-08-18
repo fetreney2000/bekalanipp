@@ -3,15 +3,13 @@
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { NavigationProgress } from "@mantine/nprogress";
-import { shadcnTheme } from "./theme";
-import { shadcnCssVariableResolver } from "./cssVariableResolver";
+import { mantineTheme } from "./theme";
 import "./style.css";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MantineProvider
-      theme={shadcnTheme}
-      cssVariablesResolver={shadcnCssVariableResolver}
+      theme={mantineTheme}
       defaultColorScheme="light"
     >
       <NavigationProgress />
