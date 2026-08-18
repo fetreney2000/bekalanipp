@@ -26,6 +26,7 @@ import {
   IconSun,
   IconMoon,
 } from "@tabler/icons-react";
+import Logo from "./Logo";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
@@ -127,9 +128,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               hiddenFrom="md"
               size="sm"
             />
-            <Group gap="xs">
-              <IconPill size={22} color="cyan.6" />
-              <Text fw={700} size="sm">Sistem Rekod FS, EMT, AOH - Jabatan Farmasi Hospital Keningau</Text>
+            <Group gap="xs" wrap="nowrap">
+              <Logo />
+              <Text size="xs" c="dimmed" visibleFrom="md" style={{ whiteSpace: "nowrap" }}>
+                Jabatan Farmasi Hospital Keningau
+              </Text>
             </Group>
           </Group>
           <ActionIcon
