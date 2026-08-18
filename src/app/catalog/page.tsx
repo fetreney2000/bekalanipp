@@ -10,7 +10,7 @@ import {
   Text,
   Badge,
   ActionIcon,
-  Flex,
+  Box,
   Title,
   Alert,
   Table,
@@ -240,11 +240,11 @@ export default function CatalogPage() {
   return (
     <AppShell>
       <Stack gap="md">
-        <Paper shadow="sm" p="sm" radius="md" withBorder>
+        <Paper>
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconBook2 size={18} color="var(--mantine-color-gray-5)" />
-              <Title order={3} fw={700}>Katalog Wad/Jabatan</Title>
+              <Title order={3}>Katalog Wad/Jabatan</Title>
             </Group>
           </Group>
         </Paper>
@@ -366,9 +366,12 @@ export default function CatalogPage() {
         {selectedWard && (
           <TableScrollContainer minWidth={600}>
             {loading ? (
-              <Flex justify="center" py="md">
-                <Loader size="sm" />
-              </Flex>
+              <Box py="xl" ta="center">
+                <Stack align="center" gap="xs">
+                  <Loader size="sm" />
+                  <Text size="sm" c="dimmed">Memuatkan katalog...</Text>
+                </Stack>
+              </Box>
             ) : catalogItems.length === 0 ? (
               <Stack align="center" gap="xs" py="md" c="dimmed">
                 <IconAlertTriangle size={20} />
@@ -418,7 +421,7 @@ export default function CatalogPage() {
                               w={100}
                             />
                           ) : (
-                            ci.max_per_order > 0 ? ci.max_per_order : "—"
+                            <Text className="mono" size="sm">{ci.max_per_order > 0 ? ci.max_per_order : "—"}</Text>
                           )}
                         </Table.Td>
                         <Table.Td>
@@ -440,7 +443,7 @@ export default function CatalogPage() {
                               )}
                             </Stack>
                           ) : hasQuota ? (
-                            ci.monthly_quota
+                            <Text className="mono" size="sm">{ci.monthly_quota}</Text>
                           ) : (
                             <Text c="dimmed" size="sm">Tiada</Text>
                           )}
@@ -448,7 +451,7 @@ export default function CatalogPage() {
                         <Table.Td>
                           {hasQuota ? (
                             <Badge color={usageColor} variant="light">
-                              {used}
+                              <Text component="span" className="mono" size="xs">{used}</Text>
                             </Badge>
                           ) : (
                             <Text c="dimmed" size="sm">—</Text>
@@ -457,6 +460,7 @@ export default function CatalogPage() {
                         <Table.Td>
                           {baki !== null ? (
                             <Text
+                              className="mono"
                               fw={600}
                               c={baki < 0 ? "red" : baki === 0 ? "yellow" : "green"}
                             >
@@ -521,7 +525,7 @@ export default function CatalogPage() {
 
         {selectedWard && catalogItems.length > 0 && (
           <Text size="xs" c="dimmed">
-            Jumlah: {catalogItems.length} item dalam katalog
+            Jumlah: <Text component="span" className="mono" size="xs">{catalogItems.length}</Text> item dalam katalog
           </Text>
         )}
       </Stack>

@@ -212,11 +212,11 @@ export default function ItemsPage() {
   return (
     <AppShell>
       <Stack gap="md">
-        <Paper shadow="sm" p="sm" radius="md" withBorder>
+        <Paper>
           <Group justify="space-between" align="center">
             <Group gap="xs">
               <IconPill size={18} color="var(--mantine-color-gray-5)" />
-              <Title order={3} fw={700}>Urus Item/Ubat</Title>
+              <Title order={3}>Urus Item/Ubat</Title>
             </Group>
             <Button
               leftSection={<IconPlus size={16} />}
@@ -387,7 +387,7 @@ export default function ItemsPage() {
 
         <Group justify="space-between" align="center">
           <Text size="xs" c="dimmed">
-            Jumlah: {filtered.length} item
+            Jumlah: <Text component="span" className="mono" size="xs">{filtered.length}</Text> item
           </Text>
           <Badge color="cyan" variant="light" size="md" radius="md">
             QuickRx: item yang ditanda akan menyerlahkan baris inden yang mengandunginya
