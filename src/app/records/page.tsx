@@ -40,6 +40,7 @@ type OrderItem = {
   item_id: string;
   item_name: string;
   quantity: number;
+  quick_rx_record?: boolean;
 };
 
 type Order = {
@@ -78,6 +79,8 @@ const ORDER_TYPE_COLOR: Record<string, string> = {
   EMT: "red",
   AOH: "orange",
 };
+
+const QUICK_RX_COLOR = "cyan";
 
 function getMonthRange(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
@@ -541,12 +544,19 @@ export default function RecordsPage() {
                     const elapsed = getElapsedMinutes(order);
                     const elapsedGrad = getElapsedGradient(elapsed);
                     const isWarning = !order.sudah_disedia && elapsed >= WARN_105;
+                    const hasQuickRx = order.items.some((i) => i.quick_rx_record);
                     return (
                       <Table.Tr
                         key={order.id}
                         onClick={() => openDetailModal(order)}
                         style={{
                           cursor: "pointer",
+                          ...(hasQuickRx
+                            ? {
+                                backgroundImage: "linear-gradient(90deg, var(--mantine-color-cyan-light), var(--mantine-color-cyan-light))",
+                                boxShadow: "inset 4px 0 0 var(--mantine-color-cyan-6)",
+                              }
+                            : {}),
                           ...(isWarning
                             ? { fontWeight: 600, animation: "inden-warn-pulse 1.5s ease-in-out infinite" }
                             : {}),
@@ -574,7 +584,19 @@ export default function RecordsPage() {
                           </Badge>
                         </Table.Td>
                         <Table.Td style={{ textAlign: "center" }}>
-                          {order.items.length}
+                          <Group gap={6} justify="center" style={{ flexWrap: "nowrap" }}>
+                            {order.items.length}
+                            {hasQuickRx && (
+                              <Badge
+                                color={QUICK_RX_COLOR}
+                                variant="filled"
+                                radius="xl"
+                                size="xs"
+                              >
+                                QuickRx
+                              </Badge>
+                            )}
+                          </Group>
                         </Table.Td>
                         <Table.Td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                           <Switch
@@ -760,9 +782,16 @@ export default function RecordsPage() {
                     radius="md"
                   >
                     <Flex gap="sm" align="center">
-                      <Text flex={1} size="sm">
-                        {item.item_name}
-                      </Text>
+                      <Group gap={6} style={{ flexWrap: "nowrap" }} flex={1}>
+                        <Text size="sm" style={{ background: item.quick_rx_record ? "var(--mantine-color-cyan-light)" : undefined, borderRadius: 4, padding: item.quick_rx_record ? "0 4px" : undefined }}>
+                          {item.item_name}
+                        </Text>
+                        {item.quick_rx_record && (
+                          <Badge color={QUICK_RX_COLOR} variant="filled" radius="xl" size="xs">
+                            QuickRx
+                          </Badge>
+                        )}
+                      </Group>
                       <NumberInput
                         value={item.quantity}
                         onChange={(val) => {

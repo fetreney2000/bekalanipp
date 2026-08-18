@@ -12,7 +12,7 @@ export async function GET(_request: NextRequest) {
     const items = await db
       .collection("items")
       .find({})
-      .project({ _id: 0, id: 1, name: 1 })
+      .project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 })
       .sort({ name: 1 })
       .toArray();
 
@@ -20,6 +20,7 @@ export async function GET(_request: NextRequest) {
       items.map((item) => ({
         id: item.id,
         name: item.name,
+        quick_rx_record: !!item.quick_rx_record,
       })),
       { headers: { "Cache-Control": "no-cache" } }
     );
@@ -66,10 +67,11 @@ export async function POST(request: NextRequest) {
     await db.collection("items").insertOne({
       id: nextId,
       name: parsed.data.name,
+      quick_rx_record: false,
     });
 
     return NextResponse.json(
-      { id: nextId, name: parsed.data.name },
+      { id: nextId, name: parsed.data.name, quick_rx_record: false },
       { status: 201 }
     );
   } catch (error) {

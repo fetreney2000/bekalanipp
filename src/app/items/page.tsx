@@ -15,6 +15,8 @@ import {
   TableScrollContainer,
   Loader,
   Paper,
+  Switch,
+  Badge,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -33,6 +35,7 @@ import AppShell from "@/components/AppShell";
 interface Item {
   id: string;
   name: string;
+  quick_rx_record: boolean;
 }
 
 export default function ItemsPage() {
@@ -41,6 +44,7 @@ export default function ItemsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [togglingQuickRx, setTogglingQuickRx] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -172,6 +176,39 @@ export default function ItemsPage() {
     }
   }
 
+  async function toggleQuickRx(item: Item) {
+    const next = !item.quick_rx_record;
+    setTogglingQuickRx(item.id);
+    setError("");
+    try {
+      const res = await fetch(`/api/items/${item.id}/quick-rx`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quick_rx_record: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Ralat menyimpan");
+        return;
+      }
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, quick_rx_record: data.quick_rx_record }
+            : i
+        )
+      );
+      notifications.show({
+        message: next ? "Item ditanda sebagai QuickRx" : "Tandaan QuickRx dibuang",
+        color: next ? "cyan" : "gray",
+      });
+    } catch {
+      setError("Ralat sambungan");
+    } finally {
+      setTogglingQuickRx(null);
+    }
+  }
+
   return (
     <AppShell>
       <Stack gap="md">
@@ -238,7 +275,7 @@ export default function ItemsPage() {
           maw={360}
         />
 
-        <TableScrollContainer minWidth={500}>
+        <TableScrollContainer minWidth={600}>
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -251,6 +288,9 @@ export default function ItemsPage() {
                     <IconArrowsSort size={14} style={{ transform: sortDir === "desc" ? "scaleY(-1)" : undefined }} />
                   </Group>
                 </Table.Th>
+                <Table.Th style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                  QuickRx
+                </Table.Th>
                 <Table.Th style={{ textAlign: "right" }}>
                   Aksi
                 </Table.Th>
@@ -259,7 +299,7 @@ export default function ItemsPage() {
             <Table.Tbody>
               {loading ? (
                 <Table.Tr>
-                  <Table.Td colSpan={2}>
+                  <Table.Td colSpan={3}>
                     <Flex justify="center" py="md">
                       <Loader size="sm" />
                     </Flex>
@@ -267,7 +307,7 @@ export default function ItemsPage() {
                 </Table.Tr>
               ) : filtered.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={2}>
+                  <Table.Td colSpan={3}>
                     <Text c="dimmed" ta="center">Tiada item ditemui</Text>
                   </Table.Td>
                 </Table.Tr>
@@ -285,6 +325,15 @@ export default function ItemsPage() {
                       ) : (
                         <Text fw={500}>{item.name}</Text>
                       )}
+                    </Table.Td>
+                    <Table.Td ta="center">
+                      <Switch
+                        checked={!!item.quick_rx_record}
+                        onChange={() => toggleQuickRx(item)}
+                        disabled={togglingQuickRx === item.id}
+                        size="sm"
+                        color="cyan"
+                      />
                     </Table.Td>
                     <Table.Td style={{ textAlign: "right" }}>
                       {editingId === item.id ? (
@@ -336,9 +385,14 @@ export default function ItemsPage() {
           </Table>
         </TableScrollContainer>
 
-        <Text size="xs" c="dimmed">
-          Jumlah: {filtered.length} item
-        </Text>
+        <Group justify="space-between" align="center">
+          <Text size="xs" c="dimmed">
+            Jumlah: {filtered.length} item
+          </Text>
+          <Badge color="cyan" variant="light" size="md" radius="md">
+            QuickRx: item yang ditanda akan menyerlahkan baris inden yang mengandunginya
+          </Badge>
+        </Group>
       </Stack>
     </AppShell>
   );

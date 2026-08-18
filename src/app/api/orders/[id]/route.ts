@@ -27,10 +27,12 @@ async function getOrderItems(db: Awaited<ReturnType<typeof connectToDatabase>>["
     ? await db.collection("items").find({ id: { $in: itemIds } }).toArray()
     : [];
   const itemMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+  const itemQuickRxMap = new Map(itemDocs.map((i: any) => [i.id, !!i.quick_rx_record]));
   return orderItemsDocs.map((item: any) => ({
     item_id: item.item_id,
     item_name: item.item_id != null ? itemMap.get(item.item_id) || "Unknown" : "Unknown",
     quantity: item.quantity,
+    quick_rx_record: item.item_id != null ? itemQuickRxMap.get(item.item_id) || false : false,
   }));
 }
 
