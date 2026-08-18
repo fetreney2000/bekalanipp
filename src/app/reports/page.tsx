@@ -299,14 +299,14 @@ export default function ReportsPage() {
   return (
     <AppShell>
       <Stack gap="lg">
-        <Paper shadow="sm" p="sm" radius="md" withBorder>
+        <Paper>
           <Group gap="xs">
             <IconChartBar size={18} color="var(--mantine-color-gray-5)" />
-            <Title order={3} fw={700}>Laporan</Title>
+            <Title order={3}>Laporan</Title>
           </Group>
         </Paper>
 
-        <Paper shadow="sm" p="md" radius="md">
+        <Paper p="md" radius="md">
           <Stack gap="md">
             <Group gap="md" wrap="wrap" align="flex-end">
               <Select
@@ -410,7 +410,7 @@ export default function ReportsPage() {
 
         {report && !loading && (
           <>
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconClockCheck size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
@@ -418,43 +418,43 @@ export default function ReportsPage() {
                 </Title>
               </Group>
               <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-                <Paper shadow="sm" p="md" radius="md" withBorder>
+                <Paper p="md" radius="md" withBorder>
                   <Group gap="sm" align="center">
                     <ThemeIcon size="lg" radius="md" variant="light" color="green">
                       <IconTrendingUp size={22} />
                     </ThemeIcon>
                     <Stack gap={0}>
                       <Text size="xs" c="dimmed">Inden Dibekal &le; 120 Minit</Text>
-                      <Text size="xl" fw={700}>{formatNumber(report.timing.completed_within_120)}</Text>
+                      <Text size="xl" fw={700} className="mono">{formatNumber(report.timing.completed_within_120)}</Text>
                     </Stack>
                   </Group>
                 </Paper>
-                <Paper shadow="sm" p="md" radius="md" withBorder>
+                <Paper p="md" radius="md" withBorder>
                   <Group gap="sm" align="center">
                     <ThemeIcon size="lg" radius="md" variant="light" color="red">
                       <IconTrendingDown size={22} />
                     </ThemeIcon>
                     <Stack gap={0}>
                       <Text size="xs" c="dimmed">Inden Dibekal &gt; 120 Minit</Text>
-                      <Text size="xl" fw={700}>{formatNumber(report.timing.completed_over_120)}</Text>
+                      <Text size="xl" fw={700} className="mono">{formatNumber(report.timing.completed_over_120)}</Text>
                     </Stack>
                   </Group>
                 </Paper>
-                <Paper shadow="sm" p="md" radius="md" withBorder>
+                <Paper p="md" radius="md" withBorder>
                   <Group gap="sm" align="center">
                     <ThemeIcon size="lg" radius="md" variant="light" color="teal">
                       <IconClockCheck size={22} />
                     </ThemeIcon>
                     <Stack gap={0}>
                       <Text size="xs" c="dimmed">Peratus &le; 120 Minit</Text>
-                      <Text size="xl" fw={700}>{report.timing.percentage_within_120}%</Text>
+                      <Text size="xl" fw={700} className="mono">{report.timing.percentage_within_120}%</Text>
                     </Stack>
                   </Group>
                 </Paper>
               </SimpleGrid>
             </Paper>
 
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconShoppingBag size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
@@ -465,14 +465,14 @@ export default function ReportsPage() {
                 {indenCards.map((card) => {
                   const Icon = card.icon;
                   return (
-                    <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
+                    <Paper key={card.label} p="md" radius="md" withBorder>
                       <Group gap="sm" align="center">
                         <ThemeIcon size="lg" radius="md" variant="light" color={card.color}>
                           <Icon size={22} />
                         </ThemeIcon>
                         <Stack gap={0}>
                           <Text size="xs" c="dimmed">{card.label}</Text>
-                          <Text size="xl" fw={700}>{formatNumber(card.value)}</Text>
+                          <Text size="xl" fw={700} className="mono">{formatNumber(card.value)}</Text>
                         </Stack>
                       </Group>
                     </Paper>
@@ -481,7 +481,7 @@ export default function ReportsPage() {
               </SimpleGrid>
             </Paper>
 
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconList size={18} color="blue.6" />
                 <Title order={4} fw={700}>
@@ -492,14 +492,14 @@ export default function ReportsPage() {
                 {bilItemCards.map((card) => {
                   const Icon = card.icon;
                   return (
-                    <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
+                    <Paper key={card.label} p="md" radius="md" withBorder>
                       <Group gap="sm" align="center">
                         <ThemeIcon size="lg" radius="md" variant="light" color={card.color}>
                           <Icon size={22} />
                         </ThemeIcon>
                         <Stack gap={0}>
                           <Text size="xs" c="dimmed">{card.label}</Text>
-                          <Text size="xl" fw={700}>{formatNumber(card.value)}</Text>
+                          <Text size="xl" fw={700} className="mono">{formatNumber(card.value)}</Text>
                         </Stack>
                       </Group>
                     </Paper>
@@ -508,7 +508,7 @@ export default function ReportsPage() {
               </SimpleGrid>
             </Paper>
 
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconPackage size={18} color="green.6" />
                 <Title order={4} fw={700}>
@@ -519,14 +519,14 @@ export default function ReportsPage() {
                 {itemCards.map((card) => {
                   const Icon = card.icon;
                   return (
-                    <Paper key={card.label} shadow="sm" p="md" radius="md" withBorder>
+                    <Paper key={card.label} p="md" radius="md" withBorder>
                       <Group gap="sm" align="center">
                         <ThemeIcon size="lg" radius="md" variant="light" color={card.color}>
                           <Icon size={22} />
                         </ThemeIcon>
                         <Stack gap={0}>
                           <Text size="xs" c="dimmed">{card.label}</Text>
-                          <Text size="xl" fw={700}>{formatNumber(card.value)}</Text>
+                          <Text size="xl" fw={700} className="mono">{formatNumber(card.value)}</Text>
                         </Stack>
                       </Group>
                     </Paper>
@@ -535,7 +535,7 @@ export default function ReportsPage() {
               </SimpleGrid>
             </Paper>
 
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconFileText size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
@@ -572,7 +572,7 @@ export default function ReportsPage() {
               </Table.ScrollContainer>
             </Paper>
 
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconFileText size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
@@ -610,7 +610,7 @@ export default function ReportsPage() {
               </Table.ScrollContainer>
             </Paper>
 
-            <Paper shadow="sm" p="md" radius="md">
+            <Paper p="md" radius="md">
               <Group gap="sm" style={{ marginBottom: "var(--mantine-spacing-md)" }}>
                 <IconPill size={18} color="cyan.6" />
                 <Title order={4} fw={700}>
