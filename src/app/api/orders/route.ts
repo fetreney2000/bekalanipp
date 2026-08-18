@@ -68,9 +68,10 @@ export async function GET(request: NextRequest) {
 
     const uniqueItemIds = [...new Set(allOrderItems.map((oi: any) => oi.item_id).filter(Boolean))];
     const allItems = uniqueItemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: uniqueItemIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
+      ? await db.collection("items").find({ id: { $in: uniqueItemIds } }).project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 }).toArray()
       : [];
     const itemMap = new Map(allItems.map((i: any) => [i.id, i.name]));
+    const itemQuickRxMap = new Map(allItems.map((i: any) => [i.id, !!i.quick_rx_record]));
 
     const orderItemsByOrder = new Map<number, any[]>();
     for (const oi of allOrderItems) {
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
         item_id: item.item_id,
         item_name: itemMap.get(item.item_id) || "Unknown",
         quantity: item.quantity,
+        quick_rx_record: itemQuickRxMap.get(item.item_id) || false,
       }));
       return {
         id: order.id,
