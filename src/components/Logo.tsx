@@ -36,7 +36,7 @@ export default function Logo({ compact = false }: { compact?: boolean }) {
       </svg>
       {!compact && (
         <Text fw={700} size="sm" style={{ whiteSpace: "nowrap" }}>
-          Bekalanipp
+          Bekalan FS, EMT & AOH
         </Text>
       )}
     </Group>
