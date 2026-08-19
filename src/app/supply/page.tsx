@@ -12,7 +12,6 @@ import {
   Button,
   TextInput,
   Select,
-  NumberInput,
   Switch,
   Alert,
   Table,
@@ -59,7 +58,7 @@ interface CatalogItem {
 interface OrderRow {
   id: number;
   item_id: number | null;
-  quantity: number;
+  quantity: string;
 }
 
 function nowTimeStr() {
@@ -105,7 +104,7 @@ export default function SupplyPage() {
   const [masaDiterima, setMasaDiterima] = useState(nowTimeStr());
   const [masaPejabat, setMasaPejabat] = useState(isOfficeHour());
   const [orderRows, setOrderRows] = useState<OrderRow[]>([
-    { id: 1, item_id: null, quantity: 1 },
+    { id: 1, item_id: null, quantity: "" },
   ]);
   const [nextRowId, setNextRowId] = useState(2);
   const [submitting, setSubmitting] = useState(false);
@@ -168,14 +167,14 @@ export default function SupplyPage() {
     if (numId) {
       fetchCatalog(numId);
     }
-    setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
+    setOrderRows([{ id: 1, item_id: null, quantity: "" }]);
     setNextRowId(2);
     setErrors({});
     setSuccessId(null);
   };
 
   const addRow = () => {
-    setOrderRows((prev) => [...prev, { id: nextRowId, item_id: null, quantity: 1 }]);
+    setOrderRows((prev) => [...prev, { id: nextRowId, item_id: null, quantity: "" }]);
     setNextRowId((n) => n + 1);
   };
 
@@ -183,7 +182,7 @@ export default function SupplyPage() {
     setOrderRows((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const updateRow = (id: number, field: "item_id" | "quantity", value: number | null) => {
+  const updateRow = (id: number, field: "item_id" | "quantity", value: number | string | null) => {
     setOrderRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
@@ -218,14 +217,15 @@ export default function SupplyPage() {
 
     orderRows.forEach((row) => {
       if (!row.item_id) errs[`item_${row.id}`] = "Pilih item";
-      if (row.quantity < 1) errs[`qty_${row.id}`] = "Kuantiti mesti >= 1";
+      const qty = Number(row.quantity);
+      if (!row.quantity.trim() || isNaN(qty) || qty < 1) errs[`qty_${row.id}`] = "Kuantiti mesti >= 1";
 
       const cat = getCatalogInfo(row.item_id);
-      if (cat && cat.max_per_order > 0 && row.quantity > cat.max_per_order) {
+      if (cat && cat.max_per_order > 0 && qty > cat.max_per_order) {
         errs[`qty_${row.id}`] = `Maksimum ${cat.max_per_order} setiap pesanan`;
       }
       if (cat && cat.monthly_quota > 0) {
-        const newTotal = cat.month_used + row.quantity;
+        const newTotal = cat.month_used + qty;
         if (newTotal > cat.monthly_quota) {
           errs[`qty_${row.id}`] = `Akan melebihi kuota bulanan (${cat.monthly_quota})`;
         }
@@ -252,7 +252,7 @@ export default function SupplyPage() {
         sudah_disedia: false,
         items: orderRows.filter((r) => r.item_id).map((r) => ({
           item_id: r.item_id,
-          quantity: r.quantity,
+          quantity: Number(r.quantity),
         })),
       };
 
@@ -286,7 +286,7 @@ export default function SupplyPage() {
       setOrderType("FS");
       setMasaDiterima(nowTimeStr());
       setMasaPejabat(isOfficeHour());
-      setOrderRows([{ id: 1, item_id: null, quantity: 1 }]);
+setOrderRows([{ id: 1, item_id: null, quantity: "" }]);
       setNextRowId(2);
       setErrors({});
       setCatalogItems([]);
@@ -508,15 +508,19 @@ export default function SupplyPage() {
                         </div>
                       </Table.Td>
                       <Table.Td>
-                        <NumberInput
-                          min={1}
+                        <TextInput
                           value={row.quantity}
-                          onChange={(value) => updateRow(row.id, "quantity", typeof value === "number" ? value : 0)}
+                          onChange={(e) => {
+                            const val = e.currentTarget.value;
+                            if (val === "" || /^\d*$/.test(val)) {
+                              updateRow(row.id, "quantity", val);
+                            }
+                          }}
                           size="xs"
                           w={70}
-                          hideControls
                           error={errors[`qty_${row.id}`]}
                           onFocus={(e) => e.target.select()}
+                          placeholder="0"
                         />
                       </Table.Td>
                       <Table.Td><Text className="mono" size="sm">{cat ? cat.max_per_order : "—"}</Text></Table.Td>
