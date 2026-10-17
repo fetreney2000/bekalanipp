@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { groupItems, statusError, isDuplicateKeyError } from "@/lib/order-utils";
+import { checkMaxPerOrder, checkMonthlyQuota, formatViolation } from "@/lib/quota";
+import { ORDER_TYPES } from "@/lib/types";
+import type { ItemRow, OrderItemRow } from "@/lib/types";
+import { getMonthRange, isValidDate } from "@/lib/date-range";
 import { z } from "zod";
+
+type CounterDoc = { _id: string; seq: number };
+type CatalogDoc = { item_id: number; max_per_order: number; monthly_quota: number | null };
+type ItemDoc = { id: number; name: string };
 
 const orderItemSchema = z.object({
   item_id: z.number().int(),
@@ -8,27 +17,34 @@ const orderItemSchema = z.object({
 });
 
 const orderUpdateSchema = z.object({
-  order_date: z.string().min(1),
+  order_date: z
+    .string()
+    .refine(isValidDate, { message: "Tarikh mesti berformat YYYY-MM-DD" }),
   order_number: z.string().min(1),
-  order_type: z.string().min(1),
-  masa_pejabat: z.boolean().optional().default(false),
+  order_type: z.enum(ORDER_TYPES),
+  // Optional with NO default: if the client omits them we must not silently
+  // overwrite with false (that's how a stale modal save reverted switches).
+  masa_pejabat: z.boolean().optional(),
   masa_diterima: z.string().optional().nullable(),
-  sudah_disedia: z.boolean().optional().default(false),
+  sudah_disedia: z.boolean().optional(),
+  // Optimistic-lock token: the updated_at the client loaded. When present we
+  // refuse the write if someone else changed the order underneath.
+  expected_updated_at: z.string().optional(),
   items: z.array(orderItemSchema).min(1, "Sekurang-kurangnya satu item diperlukan"),
 });
 
 async function getOrderItems(db: Awaited<ReturnType<typeof connectToDatabase>>["db"], orderId: number) {
-  const orderItemsDocs = await db
+  const orderItemsDocs = (await db
     .collection("order_items")
     .find({ order_id: orderId })
-    .toArray();
-  const itemIds = [...new Set(orderItemsDocs.map((i: any) => i.item_id).filter(Boolean))];
+    .toArray()) as unknown as OrderItemRow[];
+  const itemIds = [...new Set(orderItemsDocs.map((i) => i.item_id).filter(Boolean))];
   const itemDocs = itemIds.length > 0
-    ? await db.collection("items").find({ id: { $in: itemIds } }).toArray()
+    ? ((await db.collection("items").find({ id: { $in: itemIds } }).toArray()) as unknown as ItemRow[])
     : [];
-  const itemMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
-  const itemQuickRxMap = new Map(itemDocs.map((i: any) => [i.id, !!i.quick_rx_record]));
-  return orderItemsDocs.map((item: any) => ({
+  const itemMap = new Map(itemDocs.map((i) => [i.id, i.name]));
+  const itemQuickRxMap = new Map(itemDocs.map((i) => [i.id, !!i.quick_rx_record]));
+  return orderItemsDocs.map((item) => ({
     item_id: item.item_id,
     item_name: item.item_id != null ? itemMap.get(item.item_id) || "Unknown" : "Unknown",
     quantity: item.quantity,
@@ -117,7 +133,7 @@ export async function PUT(
     }
 
     const data = parsed.data;
-    const { db } = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
 
     const existingOrder = await db
       .collection("orders")
@@ -140,114 +156,182 @@ export async function PUT(
       );
     }
 
-    const itemIds = data.items.map((i) => i.item_id);
+    // Merge duplicate lines so limits are enforced against the true total.
+    const items = groupItems(data.items);
+    const itemIds = items.map((i) => i.item_id);
 
     const [catalogEntries, itemDocs] = await Promise.all([
-      db.collection("ward_catalog").find({ ward_id: existingOrder.ward_id, item_id: { $in: itemIds } }).toArray(),
-      db.collection("items").find({ id: { $in: itemIds } }).toArray(),
+      db.collection<CatalogDoc>("ward_catalog").find({ ward_id: existingOrder.ward_id, item_id: { $in: itemIds } }).toArray(),
+      db.collection<ItemDoc>("items").find({ id: { $in: itemIds } }).toArray(),
     ]);
-    const catalogMap = new Map(catalogEntries.map((c: any) => [c.item_id, c]));
-    const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+    const catalogMap = new Map<number, CatalogDoc>(catalogEntries.map((c) => [c.item_id, c]));
+    const itemNameMap = new Map<number, string>(itemDocs.map((i) => [i.id, i.name]));
+    const nameOf = (itemId: number) => itemNameMap.get(itemId) || String(itemId);
 
-    const quotaItemIds = catalogEntries.filter((c: any) => c.monthly_quota != null).map((c: any) => c.item_id);
-
-    const [yearStr, monthStr] = data.order_date.split("-");
-    const year = parseInt(yearStr);
-    const m = parseInt(monthStr);
-    const startOfMonth = `${yearStr}-${monthStr}-01`;
-    const lastDay = new Date(year, m, 0).getDate();
-    const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
-
-    const monthlyUsageMap = new Map<number, number>();
-    if (quotaItemIds.length > 0) {
-      const monthlyOrderItems = await db
-        .collection("order_items")
-        .aggregate([
-          {
-            $lookup: {
-              from: "orders",
-              localField: "order_id",
-              foreignField: "id",
-              as: "order",
-            },
-          },
-          { $unwind: "$order" },
-          {
-            $match: {
-              "order.ward_id": existingOrder.ward_id,
-              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
-              "order.id": { $ne: numberId },
-              item_id: { $in: quotaItemIds },
-            },
-          },
-          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
-        ])
-        .toArray();
-      for (const row of monthlyOrderItems) {
-        monthlyUsageMap.set(row._id, row.total);
-      }
-    }
-
-    for (const orderItem of data.items) {
-      const catalogEntry = catalogMap.get(orderItem.item_id);
-      const itemName = itemNameMap.get(orderItem.item_id) || String(orderItem.item_id);
-
+    // Catalog membership and per-order max don't depend on other orders,
+    // so validate them up front for fast, friendly failures.
+    for (const item of items) {
+      const catalogEntry = catalogMap.get(item.item_id);
       if (!catalogEntry) {
         return NextResponse.json(
-          { error: `Item "${itemName}" tidak tersedia dalam katalog wad ini.` },
+          { error: `Item "${nameOf(item.item_id)}" tidak tersedia dalam katalog wad ini.` },
           { status: 400 }
         );
       }
-
-      if (catalogEntry.max_per_order > 0 && orderItem.quantity > catalogEntry.max_per_order) {
+      const violation = checkMaxPerOrder(catalogEntry, item.quantity);
+      if (violation) {
         return NextResponse.json(
-          { error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).` },
+          { error: formatViolation(violation, nameOf(item.item_id)) },
           { status: 400 }
         );
-      }
-
-      if (catalogEntry.monthly_quota != null) {
-        const monthUsed = monthlyUsageMap.get(orderItem.item_id) || 0;
-        const newTotal = monthUsed + orderItem.quantity;
-
-        if (newTotal > catalogEntry.monthly_quota) {
-          return NextResponse.json(
-            { error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.` },
-            { status: 400 }
-          );
-        }
       }
     }
 
-    const now = new Date().toISOString();
-    await db.collection("orders").updateOne(
-      { id: numberId },
-      {
-        $set: {
+    const quotaItemIds = catalogEntries
+      .filter((c) => c.monthly_quota != null && c.monthly_quota > 0)
+      .map((c) => c.item_id);
+
+    const orderMonth = data.order_date.slice(0, 7);
+    const { start: startOfMonth, end: endOfMonth } = getMonthRange(orderMonth);
+
+    const session = client.startSession();
+    try {
+      await session.withTransaction(async () => {
+        // Serialize concurrent edits for the same ward + month so the quota
+        // check cannot race with another in-flight order.
+        await db.collection<CounterDoc>("counters").findOneAndUpdate(
+          { _id: `order_lock_${existingOrder.ward_id}_${startOfMonth.slice(0, 7)}` },
+          { $inc: { seq: 1 } },
+          { upsert: true, session }
+        );
+
+        // Re-check uniqueness inside the lock; the unique index on
+        // order_number remains the final guard (E11000 handled below).
+        const duplicate = await db.collection("orders").findOne(
+          { order_number: data.order_number, id: { $ne: numberId } },
+          { session }
+        );
+        if (duplicate) {
+          throw statusError(400, "Nombor pesanan sudah wujud.");
+        }
+
+        // Read the month's usage (excluding this order) inside the
+        // transaction so the quota check sees every other committed order.
+        const monthlyUsageMap = new Map<number, number>();
+        if (quotaItemIds.length > 0) {
+          const monthlyOrderItems = await db
+            .collection("order_items")
+            .aggregate(
+              [
+                {
+                  $lookup: {
+                    from: "orders",
+                    localField: "order_id",
+                    foreignField: "id",
+                    as: "order",
+                  },
+                },
+                { $unwind: "$order" },
+                {
+                  $match: {
+                    "order.ward_id": existingOrder.ward_id,
+                    "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+                    "order.id": { $ne: numberId },
+                    item_id: { $in: quotaItemIds },
+                  },
+                },
+                { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
+              ],
+              { session }
+            )
+            .toArray();
+          for (const row of monthlyOrderItems) {
+            monthlyUsageMap.set(row._id, row.total);
+          }
+        }
+
+        for (const item of items) {
+          const catalogEntry = catalogMap.get(item.item_id);
+          if (!catalogEntry) continue;
+
+          const monthUsed = monthlyUsageMap.get(item.item_id) || 0;
+          const violation = checkMonthlyQuota(catalogEntry, item.quantity, monthUsed);
+          if (violation) {
+            throw statusError(400, formatViolation(violation, nameOf(item.item_id)));
+          }
+        }
+
+        const now = new Date().toISOString();
+
+        // Optimistic lock: if the client loaded a specific version, only
+        // write when the stored updated_at still matches. A mismatch means
+        // another pharmacist edited this inden since the modal was opened.
+        const filter: Record<string, unknown> = { id: numberId };
+        if (data.expected_updated_at) {
+          filter.updated_at = data.expected_updated_at;
+        }
+
+        // Only touch the two status flags the client actually sent — omitting
+        // one must not silently reset it to false.
+        const setStatus: Record<string, unknown> = {
           order_date: data.order_date,
           order_number: data.order_number,
           order_type: data.order_type,
-          masa_pejabat: data.masa_pejabat,
           masa_diterima: data.masa_diterima || null,
-          sudah_disedia: data.sudah_disedia,
           updated_at: now,
-        },
-      }
-    );
+        };
+        if (data.masa_pejabat !== undefined) setStatus.masa_pejabat = data.masa_pejabat;
+        if (data.sudah_disedia !== undefined) setStatus.sudah_disedia = data.sudah_disedia;
 
-    await db.collection("order_items").deleteMany({ order_id: numberId });
-    if (data.items.length > 0) {
-      await db.collection("order_items").insertMany(
-        data.items.map((i) => ({
-          order_id: numberId,
-          item_id: i.item_id,
-          quantity: i.quantity,
-        }))
-      );
+        const updateResult = await db.collection("orders").updateOne(
+          filter,
+          { $set: setStatus },
+          { session }
+        );
+
+        if (updateResult.matchedCount === 0) {
+          // Distinguish "never existed" from "someone else changed it first".
+          const stillThere = await db
+            .collection("orders")
+            .findOne({ id: numberId }, { session });
+          if (!stillThere) {
+            throw statusError(404, "Pesanan tidak dijumpai.");
+          }
+          throw statusError(
+            409,
+            "Inden ini telah dikemas kini oleh pengguna lain. Muat semula dan cuba lagi."
+          );
+        }
+
+        await db.collection("order_items").deleteMany({ order_id: numberId }, { session });
+        await db.collection("order_items").insertMany(
+          items.map((i) => ({
+            order_id: numberId,
+            item_id: i.item_id,
+            quantity: i.quantity,
+          })),
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return NextResponse.json(
+        { error: "Nombor pesanan sudah wujud." },
+        { status: 400 }
+      );
+    }
+    const status = (error as { status?: number })?.status;
+    if (status === 400 || status === 404 || status === 409) {
+      return NextResponse.json(
+        { error: (error as Error).message },
+        { status }
+      );
+    }
     console.error("PUT /api/orders/[id] error:", error);
     return NextResponse.json(
       { error: "Ralat mengemaskini pesanan." },
@@ -268,15 +352,25 @@ export async function DELETE(
       return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
     }
 
-    const { db } = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
 
-    await db.collection("order_items").deleteMany({ order_id: numberId });
+    // Delete items and header in one transaction so a failure can't leave
+    // orphaned order_items behind.
+    const session = client.startSession();
+    let existed = false;
+    try {
+      await session.withTransaction(async () => {
+        const result = await db
+          .collection("orders")
+          .deleteOne({ id: numberId }, { session });
+        existed = result.deletedCount > 0;
+        await db.collection("order_items").deleteMany({ order_id: numberId }, { session });
+      });
+    } finally {
+      await session.endSession();
+    }
 
-    const result = await db
-      .collection("orders")
-      .deleteOne({ id: numberId });
-
-    if (result.deletedCount === 0) {
+    if (!existed) {
       return NextResponse.json(
         { error: "Pesanan tidak ditemui." },
         { status: 404 }

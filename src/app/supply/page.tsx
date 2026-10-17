@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import AppShell from "@/components/AppShell";
-import { cachedFetch } from "@/lib/fetch-cache";
 import {
   Stack,
   Group,
@@ -38,22 +37,9 @@ import {
   IconList,
   IconClock,
 } from "@tabler/icons-react";
-
-interface Ward {
-  id: number;
-  name: string;
-  category: string;
-}
-
-interface CatalogItem {
-  ward_id: number;
-  item_id: number;
-  item_name: string;
-  quick_rx_record?: boolean;
-  max_per_order: number;
-  monthly_quota: number;
-  month_used: number;
-}
+import type { CatalogItem, Ward } from "@/lib/types";
+import { isOfficeHour as isOfficeHourInKuching } from "@/lib/office-hours";
+import { checkMaxPerOrder, checkMonthlyQuota } from "@/lib/quota";
 
 interface OrderRow {
   id: number;
@@ -76,33 +62,47 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function isOfficeHour(): boolean {
-  const now = new Date();
-  const myTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Kuching" })
-  );
-  const day = myTime.getDay();
-  if (day === 0 || day === 6) return false;
+/**
+ * Whether a given instant falls in office hours (Mon-Fri, 08:00-17:00,
+ * excluding Sabah public holidays), evaluated in Asia/Kuching.
+ *
+ * The rule itself lives in the shared lib so it is unit tested; here we just
+ * supply the real Sabah (MY-12) holiday checker that the lib injects.
+ *
+ * `when` is passed in explicitly so callers can pass the *server* clock
+ * (from /api/time) rather than trusting the workstation's clock — a machine
+ * with a wrong clock would otherwise write wrong masa_pejabat flags, which
+ * feed the totals_by_masa KPIs.
+ */
+const sabahHolidays = new Holidays("MY", "12");
+const isOfficeHour = (when: Date): boolean =>
+  isOfficeHourInKuching(when, (isoDate) => Boolean(sabahHolidays.isHoliday(isoDate)));
 
-  const hd = new Holidays("MY", "12");
-  const year = myTime.getFullYear();
-  const month = String(myTime.getMonth() + 1).padStart(2, "0");
-  const date = String(myTime.getDate()).padStart(2, "0");
-  if (hd.isHoliday(`${year}-${month}-${date}`)) return false;
-
-  const mins = myTime.getHours() * 60 + myTime.getMinutes();
-  return mins >= 480 && mins < 1020;
+/** Fetch the server's current instant, falling back to the local clock. */
+async function fetchServerNow(): Promise<Date> {
+  try {
+    const res = await fetch("/api/time");
+    if (!res.ok) throw new Error("bad status");
+    const data = await res.json();
+    if (data?.iso) return new Date(data.iso);
+  } catch {
+    /* fall through to local clock */
+  }
+  return new Date();
 }
 
 export default function SupplyPage() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  // Monotonic token so a slow catalog response for a previously selected ward
+  // can't land after the current ward's and populate the wrong item list.
+  const catalogSeq = useRef(0);
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
   const [orderDate, setOrderDate] = useState(todayStr());
   const [orderNumber, setOrderNumber] = useState("");
   const [orderType, setOrderType] = useState<string | null>("FS");
   const [masaDiterima, setMasaDiterima] = useState(nowTimeStr());
-  const [masaPejabat, setMasaPejabat] = useState(isOfficeHour());
+  const [masaPejabat, setMasaPejabat] = useState(false);
   const [orderRows, setOrderRows] = useState<OrderRow[]>([
     { id: 1, item_id: null, quantity: "" },
   ]);
@@ -113,18 +113,40 @@ export default function SupplyPage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
 
   useEffect(() => {
-    cachedFetch<any[]>("/api/wards", 60000)
+    fetch("/api/wards")
+      .then((res) => res.json())
       .then((data) => setWards(data))
       .catch(() => {});
   }, []);
 
+  // Seed the office-hours flag from the *server* clock, not this
+  // workstation's — a wrong client clock would otherwise write an
+  // unauditable masa_pejabat flag into the totals_by_masa KPIs.
+  useEffect(() => {
+    let cancelled = false;
+    fetchServerNow().then((serverNow) => {
+      if (!cancelled) setMasaPejabat(isOfficeHour(serverNow));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const fetchCatalog = useCallback((wardId: number) => {
+    const seq = ++catalogSeq.current;
+    const stale = () => seq !== catalogSeq.current;
     setCatalogLoading(true);
     fetch(`/api/catalog/${wardId}?month=${currentMonth()}`)
       .then((res) => res.json())
-      .then((data) => setCatalogItems(data.items || []))
-      .catch(() => setCatalogItems([]))
-      .finally(() => setCatalogLoading(false));
+      .then((data) => {
+        if (!stale()) setCatalogItems(data.items || []);
+      })
+      .catch(() => {
+        if (!stale()) setCatalogItems([]);
+      })
+      .finally(() => {
+        if (!stale()) setCatalogLoading(false);
+      });
   }, []);
 
   const wardData = useMemo(
@@ -146,6 +168,25 @@ export default function SupplyPage() {
     [catalogItems]
   );
 
+  const getCatalogInfo = (itemId: number | null) =>
+    catalogItems.find((c) => c.item_id === itemId);
+
+  const getCatalogQuickRx = (itemId: number | null) =>
+    !!getCatalogInfo(itemId)?.quick_rx_record;
+
+  const getUsagePct = (itemId: number | null) => {
+    const cat = getCatalogInfo(itemId);
+    if (!cat || !cat.monthly_quota) return null;
+    return Math.round(((cat.month_used ?? 0) / cat.monthly_quota) * 100);
+  };
+
+  const getUsageBadgeColor = (pct: number | null) => {
+    if (pct === null) return "gray";
+    if (pct >= 100) return "red";
+    if (pct >= 80) return "yellow";
+    return "green";
+  };
+
   const getAvailableItems = useCallback((currentRowId: number) => {
     const selectedIds = new Set(
       orderRows.filter((r) => r.id !== currentRowId && r.item_id).map((r) => String(r.item_id))
@@ -153,19 +194,25 @@ export default function SupplyPage() {
     return catalogData
       .filter((item) => !selectedIds.has(item.value))
       .map((item) => {
-        const cat = getCatalogInfo(Number(item.value));
+        const cat = catalogItems.find((c) => c.item_id === Number(item.value));
         return {
           ...item,
           label: `${item.label}${cat && cat.quick_rx_record ? " [QuickRx]" : ""}`,
         };
       });
-  }, [catalogData, orderRows]);
+  }, [catalogData, catalogItems, orderRows]);
 
   const handleWardChange = (value: string | null) => {
     setSelectedWardId(value);
     const numId = Number(value);
     if (numId) {
       fetchCatalog(numId);
+    } else {
+      // Ward cleared: invalidate any in-flight fetch so its items can't be
+      // shown (and picked) without a ward selected.
+      catalogSeq.current += 1;
+      setCatalogItems([]);
+      setCatalogLoading(false);
     }
     setOrderRows([{ id: 1, item_id: null, quantity: "" }]);
     setNextRowId(2);
@@ -186,25 +233,6 @@ export default function SupplyPage() {
     setOrderRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
-  const getCatalogInfo = (itemId: number | null) =>
-    catalogItems.find((c) => c.item_id === itemId);
-
-  const getCatalogQuickRx = (itemId: number | null) =>
-    !!getCatalogInfo(itemId)?.quick_rx_record;
-
-  const getUsagePct = (itemId: number | null) => {
-    const cat = getCatalogInfo(itemId);
-    if (!cat || !cat.monthly_quota) return null;
-    return Math.round((cat.month_used / cat.monthly_quota) * 100);
-  };
-
-  const getUsageBadgeColor = (pct: number | null) => {
-    if (pct === null) return "gray";
-    if (pct >= 100) return "red";
-    if (pct >= 80) return "yellow";
-    return "green";
-  };
-
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
     if (!selectedWardId) errs.ward = "Pilih wad/jabatan";
@@ -221,13 +249,17 @@ export default function SupplyPage() {
       if (!row.quantity.trim() || isNaN(qty) || qty < 1) errs[`qty_${row.id}`] = "Kuantiti mesti >= 1";
 
       const cat = getCatalogInfo(row.item_id);
-      if (cat && cat.max_per_order > 0 && qty > cat.max_per_order) {
-        errs[`qty_${row.id}`] = `Maksimum ${cat.max_per_order} setiap pesanan`;
-      }
-      if (cat && cat.monthly_quota > 0) {
-        const newTotal = cat.month_used + qty;
-        if (newTotal > cat.monthly_quota) {
-          errs[`qty_${row.id}`] = `Akan melebihi kuota bulanan (${cat.monthly_quota})`;
+      if (cat) {
+        // Same rule as the server (single source of truth in lib/quota), but
+        // with short inline messages that fit a form field.
+        const maxViolation = checkMaxPerOrder(cat, qty);
+        if (maxViolation) {
+          errs[`qty_${row.id}`] = `Maksimum ${maxViolation.limit} setiap pesanan`;
+        } else {
+          const quotaViolation = checkMonthlyQuota(cat, qty, cat.month_used ?? 0);
+          if (quotaViolation) {
+            errs[`qty_${row.id}`] = `Akan melebihi kuota bulanan (${quotaViolation.limit})`;
+          }
         }
       }
     });
@@ -285,10 +317,14 @@ export default function SupplyPage() {
       setOrderDate(todayStr());
       setOrderType("FS");
       setMasaDiterima(nowTimeStr());
-      setMasaPejabat(isOfficeHour());
+      // Re-derive the flag from the server clock for the fresh form.
+      fetchServerNow().then((serverNow) => setMasaPejabat(isOfficeHour(serverNow)));
 setOrderRows([{ id: 1, item_id: null, quantity: "" }]);
       setNextRowId(2);
       setErrors({});
+      // Invalidate any in-flight catalog fetch so it can't repopulate the
+      // cleared list after the reset above.
+      catalogSeq.current += 1;
       setCatalogItems([]);
     } catch {
       notifications.show({
@@ -303,12 +339,6 @@ setOrderRows([{ id: 1, item_id: null, quantity: "" }]);
 
   return (
     <AppShell>
-      <style>{`
-        .mantine-Combobox-option[data-combobox-option-active] {
-          color: var(--mantine-color-gray-9) !important;
-          background-color: var(--mantine-color-blue-6) !important;
-        }
-      `}</style>
       <Stack gap="lg" pb="xl">
         <Paper>
           <Group gap="xs">
@@ -524,8 +554,8 @@ setOrderRows([{ id: 1, item_id: null, quantity: "" }]);
                         />
                       </Table.Td>
                       <Table.Td><Text className="mono" size="sm">{cat ? cat.max_per_order : "—"}</Text></Table.Td>
-                      <Table.Td><Text className="mono" size="sm">{cat && cat.monthly_quota > 0 ? cat.monthly_quota : "—"}</Text></Table.Td>
-                      <Table.Td><Text className="mono" size="sm" c={pct !== null && pct >= 100 ? "red" : undefined}>{cat && cat.monthly_quota > 0 ? `${cat.month_used} / ${cat.monthly_quota}` : "—"}</Text></Table.Td>
+                      <Table.Td><Text className="mono" size="sm">{cat && (cat.monthly_quota ?? 0) > 0 ? cat.monthly_quota : "—"}</Text></Table.Td>
+                      <Table.Td><Text className="mono" size="sm" c={pct !== null && pct >= 100 ? "red" : undefined}>{cat && (cat.monthly_quota ?? 0) > 0 ? `${cat.month_used ?? 0} / ${cat.monthly_quota}` : "—"}</Text></Table.Td>
                       <Table.Td ta="center">
                         {pct !== null ? (
                           <Badge color={getUsageBadgeColor(pct)} variant="light" size="sm">

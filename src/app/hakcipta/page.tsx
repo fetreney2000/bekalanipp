@@ -9,7 +9,6 @@ import {
   ThemeIcon,
   Divider,
   SimpleGrid,
-  Box,
 } from "@mantine/core";
 import {
   IconCopyright,

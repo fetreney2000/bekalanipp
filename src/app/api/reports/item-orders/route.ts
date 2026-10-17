@@ -1,69 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-
-function getDateRange(
-  type: string,
-  date?: string | null,
-  week?: string | null,
-  month?: string | null,
-  year?: string | null
-): { start: string; end: string } {
-  const now = new Date();
-
-  switch (type) {
-    case "daily": {
-      const d = date || now.toISOString().slice(0, 10);
-      return { start: d, end: d };
-    }
-    case "weekly": {
-      if (week) {
-        const [y, w] = week.split("-W").map(Number);
-        const jan1 = new Date(y, 0, 1);
-        const dayOffset = jan1.getDay() || 7;
-        const weekStart = new Date(y, 0, 1 + (w - 1) * 7 - (dayOffset - 1));
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        return {
-          start: weekStart.toISOString().slice(0, 10),
-          end: weekEnd.toISOString().slice(0, 10),
-        };
-      }
-      const today = now;
-      const dayOfWeek = today.getDay() || 7;
-      const start = new Date(today);
-      start.setDate(today.getDate() - dayOfWeek + 1);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return {
-        start: start.toISOString().slice(0, 10),
-        end: end.toISOString().slice(0, 10),
-      };
-    }
-    case "monthly": {
-      if (month) {
-        const [y, m] = month.split("-").map(Number);
-        const start = `${y}-${String(m).padStart(2, "0")}-01`;
-        const lastDay = new Date(y, m, 0).getDate();
-        const end = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-        return { start, end };
-      }
-      const y = now.getFullYear();
-      const m = now.getMonth() + 1;
-      const start = `${y}-${String(m).padStart(2, "0")}-01`;
-      const lastDay = new Date(y, m, 0).getDate();
-      const end = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-      return { start, end };
-    }
-    case "yearly": {
-      const yr = year ? parseInt(year) : now.getFullYear();
-      return { start: `${yr}-01-01`, end: `${yr}-12-31` };
-    }
-    default: {
-      const d = date || now.toISOString().slice(0, 10);
-      return { start: d, end: d };
-    }
-  }
-}
+import { getDateRange } from "@/lib/date-range";
+import type { WardRow } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,38 +17,63 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "item_id diperlukan." }, { status: 400 });
     }
 
-    const { start, end } = getDateRange(type, date, week, month, year);
+    const { start, end } = getDateRange({ type, date, week, month, year });
 
     const { db } = await connectToDatabase();
 
-    const orderItems = await db
-      .collection("order_items")
-      .find({ item_id: Number(itemId) })
-      .project({ _id: 0, order_id: 1, quantity: 1 })
-      .toArray();
+    // Match orders by date FIRST, then pull only this item's lines for those
+    // orders. The previous order loaded every order_items row for the item
+    // across all time and filtered by date in memory.
+    // This projection omits order_type, so a narrower row type fits it exactly.
+    interface ItemOrderRow {
+      id: number;
+      ward_id: number;
+      order_number: string;
+      order_date: string;
+      masa_pejabat: boolean;
+      sudah_disedia: boolean;
+    }
 
-    const orderIds = orderItems.map((oi: any) => oi.order_id);
+    const orders = (await db
+      .collection("orders")
+      .find({ order_date: { $gte: start, $lte: end } })
+      .project({ _id: 0, id: 1, order_number: 1, order_date: 1, ward_id: 1, masa_pejabat: 1, sudah_disedia: 1 })
+      .toArray()) as ItemOrderRow[];
 
-    const orders = orderIds.length > 0
-      ? await db
-          .collection("orders")
-          .find({ id: { $in: orderIds }, order_date: { $gte: start, $lte: end } })
-          .project({ _id: 0, id: 1, order_number: 1, order_date: 1, ward_id: 1, masa_pejabat: 1, sudah_disedia: 1 })
-          .toArray()
+    const orderMap = new Map(orders.map((o) => [o.id, o]));
+    const orderIds = orders.map((o) => o.id);
+
+    // This projection selects order_id + quantity only (item_id is the filter).
+    type OrderItemLite = { order_id: number; quantity: number };
+
+    const orderItems = orderIds.length > 0
+      ? ((await db
+          .collection("order_items")
+          .find({ item_id: Number(itemId), order_id: { $in: orderIds } })
+          .project({ _id: 0, order_id: 1, quantity: 1 })
+          .toArray()) as OrderItemLite[])
       : [];
 
-    const orderMap = new Map(orders.map((o: any) => [o.id, o]));
-
-    const referencedWardIds = [...new Set(orders.map((o: any) => Number(o.ward_id)).filter(Boolean))];
+    const referencedWardIds = [...new Set(orders.map((o) => Number(o.ward_id)).filter(Boolean))];
     const wards = referencedWardIds.length > 0
-      ? await db.collection("wards").find({ id: { $in: referencedWardIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
+      ? ((await db.collection("wards").find({ id: { $in: referencedWardIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()) as WardRow[])
       : [];
-    const wardMap = new Map(wards.map((w: any) => [w.id, w.name]));
+    const wardMap = new Map(wards.map((w) => [w.id, w.name]));
+
+    interface ItemOrderResult {
+      order_id: number;
+      order_number: string;
+      order_date: string;
+      ward_name: string;
+      quantity: number;
+      masa_pejabat: boolean;
+      sudah_disedia: boolean;
+    }
 
     const result = orderItems
-      .filter((oi: any) => orderMap.has(oi.order_id))
-      .map((oi: any) => {
-        const order = orderMap.get(oi.order_id);
+      .filter((oi) => orderMap.has(oi.order_id))
+      .map((oi): ItemOrderResult => {
+        const order = orderMap.get(oi.order_id)!;
         return {
           order_id: order.id,
           order_number: order.order_number,
@@ -121,7 +84,7 @@ export async function GET(request: NextRequest) {
           sudah_disedia: order.sudah_disedia,
         };
       })
-      .sort((a: any, b: any) => b.order_date.localeCompare(a.order_date));
+      .sort((a, b) => b.order_date.localeCompare(a.order_date));
 
     return NextResponse.json(
       { orders: result },

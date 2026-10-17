@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { groupItems, statusError, isDuplicateKeyError } from "@/lib/order-utils";
+import { checkMaxPerOrder, checkMonthlyQuota, formatViolation } from "@/lib/quota";
+import { ORDER_TYPES } from "@/lib/types";
+import type { ItemRow, OrderItemRow, OrderRow, WardRow } from "@/lib/types";
+import { getMonthRange, isValidDate } from "@/lib/date-range";
 import { z } from "zod";
+
+type CounterDoc = { _id: string; seq: number };
+type CatalogDoc = { item_id: number; max_per_order: number; monthly_quota: number | null };
+type ItemDoc = { id: number; name: string };
 
 const orderItemSchema = z.object({
   item_id: z.number().int(),
@@ -9,9 +18,11 @@ const orderItemSchema = z.object({
 
 const orderCreateSchema = z.object({
   ward_id: z.number().int(),
-  order_date: z.string().min(1),
+  order_date: z
+    .string()
+    .refine(isValidDate, { message: "Tarikh mesti berformat YYYY-MM-DD" }),
   order_number: z.string().min(1),
-  order_type: z.string().min(1),
+  order_type: z.enum(ORDER_TYPES),
   masa_pejabat: z.boolean().optional().default(false),
   masa_diterima: z.string().nullable().optional().default(null),
   sudah_disedia: z.boolean().optional().default(false),
@@ -39,41 +50,41 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * pageSize;
 
     const [orders, total] = await Promise.all([
-      db
+      (db
         .collection("orders")
         .find(filter)
         .project({ _id: 0, id: 1, ward_id: 1, order_date: 1, order_number: 1, order_type: 1, masa_pejabat: 1, masa_diterima: 1, sudah_disedia: 1, completion_minutes: 1, masa_selesai: 1, created_at: 1 })
         .sort({ order_date: -1, created_at: -1 })
         .skip(skip)
         .limit(pageSize)
-        .toArray(),
+        .toArray()) as Promise<OrderRow[]>,
       db.collection("orders").countDocuments(
         Object.keys(filter).length ? filter : {}
       ),
     ]);
 
-    const orderIds = orders.map((o: any) => o.id);
-    const wardIds = [...new Set(orders.map((o: any) => Number(o.ward_id)).filter(Boolean))];
+    const orderIds = orders.map((o) => o.id);
+    const wardIds = [...new Set(orders.map((o) => Number(o.ward_id)).filter(Boolean))];
 
     const [allOrderItems, allWards] = await Promise.all([
       orderIds.length > 0
-        ? db.collection("order_items").find({ order_id: { $in: orderIds } }).project({ _id: 0, order_id: 1, item_id: 1, quantity: 1 }).toArray()
-        : Promise.resolve([]),
+        ? (db.collection("order_items").find({ order_id: { $in: orderIds } }).project({ _id: 0, order_id: 1, item_id: 1, quantity: 1 }).toArray() as Promise<OrderItemRow[]>)
+        : Promise.resolve([] as OrderItemRow[]),
       wardIds.length > 0
-        ? db.collection("wards").find({ id: { $in: wardIds } }).project({ _id: 0, id: 1, name: 1 }).toArray()
-        : Promise.resolve([]),
+        ? (db.collection("wards").find({ id: { $in: wardIds } }).project({ _id: 0, id: 1, name: 1 }).toArray() as Promise<WardRow[]>)
+        : Promise.resolve([] as WardRow[]),
     ]);
 
-    const wardMap = new Map(allWards.map((w: any) => [w.id, w.name]));
+    const wardMap = new Map(allWards.map((w) => [w.id, w.name]));
 
-    const uniqueItemIds = [...new Set(allOrderItems.map((oi: any) => oi.item_id).filter(Boolean))];
+    const uniqueItemIds = [...new Set(allOrderItems.map((oi) => oi.item_id).filter(Boolean))];
     const allItems = uniqueItemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: uniqueItemIds } }).project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 }).toArray()
+      ? ((await db.collection("items").find({ id: { $in: uniqueItemIds } }).project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 }).toArray()) as ItemRow[])
       : [];
-    const itemMap = new Map(allItems.map((i: any) => [i.id, i.name]));
-    const itemQuickRxMap = new Map(allItems.map((i: any) => [i.id, !!i.quick_rx_record]));
+    const itemMap = new Map(allItems.map((i) => [i.id, i.name]));
+    const itemQuickRxMap = new Map(allItems.map((i) => [i.id, !!i.quick_rx_record]));
 
-    const orderItemsByOrder = new Map<number, any[]>();
+    const orderItemsByOrder = new Map<number, OrderItemRow[]>();
     for (const oi of allOrderItems) {
       const oid = oi.order_id;
       if (!orderItemsByOrder.has(oid)) orderItemsByOrder.set(oid, []);
@@ -83,7 +94,7 @@ export async function GET(request: NextRequest) {
     const enrichedOrders = orders.map((order) => {
       const wardName = wardMap.get(Number(order.ward_id)) || "Unknown";
       const orderItemsDocs = orderItemsByOrder.get(order.id) || [];
-      const enrichedItems = orderItemsDocs.map((item: any) => ({
+      const enrichedItems = orderItemsDocs.map((item) => ({
         item_id: item.item_id,
         item_name: itemMap.get(item.item_id) || "Unknown",
         quantity: item.quantity,
@@ -133,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
-    const { db } = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
 
     const ward = await db.collection("wards").findOne({ id: Number(data.ward_id) });
     if (!ward) {
@@ -153,129 +164,170 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const itemIds = data.items.map((i) => i.item_id);
+    // Merge duplicate lines so limits are enforced against the true total.
+    const items = groupItems(data.items);
+    const itemIds = items.map((i) => i.item_id);
 
     const [catalogEntries, itemDocs] = await Promise.all([
-      db.collection("ward_catalog").find({ ward_id: data.ward_id, item_id: { $in: itemIds } }).toArray(),
-      db.collection("items").find({ id: { $in: itemIds } }).toArray(),
+      db.collection<CatalogDoc>("ward_catalog").find({ ward_id: data.ward_id, item_id: { $in: itemIds } }).toArray(),
+      db.collection<ItemDoc>("items").find({ id: { $in: itemIds } }).toArray(),
     ]);
-    const catalogMap = new Map(catalogEntries.map((c: any) => [c.item_id, c]));
-    const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
+    const catalogMap = new Map<number, CatalogDoc>(catalogEntries.map((c) => [c.item_id, c]));
+    const itemNameMap = new Map<number, string>(itemDocs.map((i) => [i.id, i.name]));
+    const nameOf = (itemId: number) => itemNameMap.get(itemId) || String(itemId);
 
-    const quotaItemIds = catalogEntries.filter((c: any) => c.monthly_quota != null).map((c: any) => c.item_id);
-
-    const [yearStr, monthStr] = data.order_date.split("-");
-    const year = parseInt(yearStr);
-    const m = parseInt(monthStr);
-    const startOfMonth = `${yearStr}-${monthStr}-01`;
-    const lastDay = new Date(year, m, 0).getDate();
-    const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
-
-    const monthlyUsageMap = new Map<number, number>();
-    if (quotaItemIds.length > 0) {
-      const monthlyOrderItems = await db
-        .collection("order_items")
-        .aggregate([
-          {
-            $lookup: {
-              from: "orders",
-              localField: "order_id",
-              foreignField: "id",
-              as: "order",
-            },
-          },
-          { $unwind: "$order" },
-          {
-            $match: {
-              "order.ward_id": data.ward_id,
-              "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
-              item_id: { $in: quotaItemIds },
-            },
-          },
-          { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
-        ])
-        .toArray();
-      for (const row of monthlyOrderItems) {
-        monthlyUsageMap.set(row._id, row.total);
-      }
-    }
-
-    const notifications: string[] = [];
-
-    for (const orderItem of data.items) {
-      const catalogEntry = catalogMap.get(orderItem.item_id);
-      const itemName = itemNameMap.get(orderItem.item_id) || String(orderItem.item_id);
-
+    // Catalog membership and per-order max don't depend on other orders,
+    // so validate them up front for fast, friendly failures.
+    for (const item of items) {
+      const catalogEntry = catalogMap.get(item.item_id);
       if (!catalogEntry) {
         return NextResponse.json(
-          { error: `Item "${itemName}" tidak tersedia dalam katalog wad ini.` },
+          { error: `Item "${nameOf(item.item_id)}" tidak tersedia dalam katalog wad ini.` },
           { status: 400 }
         );
       }
-
-      if (catalogEntry.max_per_order > 0 && orderItem.quantity > catalogEntry.max_per_order) {
+      const violation = checkMaxPerOrder(catalogEntry, item.quantity);
+      if (violation) {
         return NextResponse.json(
-          { error: `Kuantiti untuk "${itemName}" melebihi had setiap pesanan (maksimum: ${catalogEntry.max_per_order}).` },
+          { error: formatViolation(violation, nameOf(item.item_id)) },
           { status: 400 }
         );
-      }
-
-      if (catalogEntry.monthly_quota != null) {
-        const monthUsed = monthlyUsageMap.get(orderItem.item_id) || 0;
-        const newTotal = monthUsed + orderItem.quantity;
-
-        if (newTotal > catalogEntry.monthly_quota) {
-          return NextResponse.json(
-            { error: `Kuota bulanan untuk "${itemName}" akan dilampaui. Kuota: ${catalogEntry.monthly_quota}, sudah digunakan: ${monthUsed}, pesanan ini: ${orderItem.quantity}.` },
-            { status: 400 }
-          );
-        }
-
-        const remaining = catalogEntry.monthly_quota - newTotal;
-        if (remaining <= catalogEntry.monthly_quota * 0.2 && remaining > 0) {
-          notifications.push(
-            `Amaran: Kuota "${itemName}" tinggal ${remaining} lagi (${newTotal}/${catalogEntry.monthly_quota}).`
-          );
-        }
-        if (newTotal === catalogEntry.monthly_quota) {
-          notifications.push(
-            `Peringatan: Kuota "${itemName}" telah digunakan sepenuhnya (${newTotal}/${catalogEntry.monthly_quota}).`
-          );
-        }
       }
     }
 
-    const counter = await db.collection("counters").findOneAndUpdate(
-      { _id: "orders" } as any,
-      { $inc: { seq: 1 } },
-      { upsert: true, returnDocument: "after" }
-    );
-    const nextId = counter?.seq ?? 1;
+    const quotaItemIds = catalogEntries
+      .filter((c) => c.monthly_quota != null && c.monthly_quota > 0)
+      .map((c) => c.item_id);
 
+    const orderMonth = data.order_date.slice(0, 7);
+    const { start: startOfMonth, end: endOfMonth } = getMonthRange(orderMonth);
+
+    const notifications: string[] = [];
+    let nextId = 0;
     const now = new Date().toISOString();
-    await db.collection("orders").insertOne({
-      id: nextId,
-      ward_id: data.ward_id,
-      order_date: data.order_date,
-      order_number: data.order_number,
-      order_type: data.order_type,
-      masa_pejabat: data.masa_pejabat,
-      masa_diterima: data.masa_diterima || null,
-      sudah_disedia: data.sudah_disedia,
-      completion_minutes: null,
-      masa_selesai: null,
-      created_at: now,
-      updated_at: now,
-    });
 
-    if (data.items.length > 0) {
-      await db.collection("order_items").insertMany(
-        data.items.map((i) => ({
-          order_id: nextId,
-          item_id: i.item_id,
-          quantity: i.quantity,
-        }))
-      );
+    const session = client.startSession();
+    try {
+      await session.withTransaction(async () => {
+        // withTransaction may retry on transient errors; don't duplicate warnings.
+        notifications.length = 0;
+
+        // Serialize concurrent creations for the same ward + month so the
+        // quota check below cannot race with another in-flight order.
+        await db.collection<CounterDoc>("counters").findOneAndUpdate(
+          { _id: `order_lock_${data.ward_id}_${startOfMonth.slice(0, 7)}` },
+          { $inc: { seq: 1 } },
+          { upsert: true, session }
+        );
+
+        // Re-check uniqueness inside the lock; the unique index on
+        // order_number remains the final guard (E11000 handled below).
+        const duplicate = await db.collection("orders").findOne(
+          { order_number: data.order_number },
+          { session }
+        );
+        if (duplicate) {
+          throw statusError(400, "Nombor pesanan sudah wujud.");
+        }
+
+        // Read the month's usage inside the transaction so the quota check
+        // sees every order committed before this one.
+        const monthlyUsageMap = new Map<number, number>();
+        if (quotaItemIds.length > 0) {
+          const monthlyOrderItems = await db
+            .collection("order_items")
+            .aggregate(
+              [
+                {
+                  $lookup: {
+                    from: "orders",
+                    localField: "order_id",
+                    foreignField: "id",
+                    as: "order",
+                  },
+                },
+                { $unwind: "$order" },
+                {
+                  $match: {
+                    "order.ward_id": data.ward_id,
+                    "order.order_date": { $gte: startOfMonth, $lte: endOfMonth },
+                    item_id: { $in: quotaItemIds },
+                  },
+                },
+                { $group: { _id: "$item_id", total: { $sum: "$quantity" } } },
+              ],
+              { session }
+            )
+            .toArray();
+          for (const row of monthlyOrderItems) {
+            monthlyUsageMap.set(row._id, row.total);
+          }
+        }
+
+        for (const item of items) {
+          const catalogEntry = catalogMap.get(item.item_id);
+          if (!catalogEntry) continue;
+
+          const monthUsed = monthlyUsageMap.get(item.item_id) || 0;
+          const violation = checkMonthlyQuota(catalogEntry, item.quantity, monthUsed);
+          if (violation) {
+            throw statusError(400, formatViolation(violation, nameOf(item.item_id)));
+          }
+
+          // Soft-limit notifications (presentation, not the rule itself).
+          const quota = catalogEntry.monthly_quota;
+          if (quota != null && quota > 0) {
+            const newTotal = monthUsed + item.quantity;
+            const remaining = quota - newTotal;
+            if (remaining <= quota * 0.2 && remaining > 0) {
+              notifications.push(
+                `Amaran: Kuota "${nameOf(item.item_id)}" tinggal ${remaining} lagi (${newTotal}/${quota}).`
+              );
+            }
+            if (newTotal === quota) {
+              notifications.push(
+                `Peringatan: Kuota "${nameOf(item.item_id)}" telah digunakan sepenuhnya (${newTotal}/${quota}).`
+              );
+            }
+          }
+        }
+
+        const counter = await db.collection<CounterDoc>("counters").findOneAndUpdate(
+          { _id: "orders" },
+          { $inc: { seq: 1 } },
+          { upsert: true, returnDocument: "after", session }
+        );
+        nextId = counter?.seq ?? 1;
+
+        await db.collection("orders").insertOne(
+          {
+            id: nextId,
+            ward_id: data.ward_id,
+            order_date: data.order_date,
+            order_number: data.order_number,
+            order_type: data.order_type,
+            masa_pejabat: data.masa_pejabat,
+            masa_diterima: data.masa_diterima || null,
+            sudah_disedia: data.sudah_disedia,
+            completion_minutes: null,
+            masa_selesai: null,
+            created_at: now,
+            updated_at: now,
+          },
+          { session }
+        );
+
+        await db.collection("order_items").insertMany(
+          items.map((i) => ({
+            order_id: nextId,
+            item_id: i.item_id,
+            quantity: i.quantity,
+          })),
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
     }
 
     return NextResponse.json(
@@ -283,6 +335,19 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return NextResponse.json(
+        { error: "Nombor pesanan sudah wujud." },
+        { status: 400 }
+      );
+    }
+    const status = (error as { status?: number })?.status;
+    if (status === 400) {
+      return NextResponse.json(
+        { error: (error as Error).message },
+        { status: 400 }
+      );
+    }
     console.error("POST /api/orders error:", error);
     return NextResponse.json(
       { error: "Ralat mencipta pesanan." },

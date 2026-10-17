@@ -26,11 +26,12 @@ import {
   IconPill,
   IconDeviceFloppy,
   IconX,
-  IconArrowsSort,
   IconAlertCircle,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
+import SortableTh from "@/components/SortableTh";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface Item {
   id: string;
@@ -53,6 +54,12 @@ export default function ItemsPage() {
   const [addName, setAddName] = useState("");
 
   const [saving, setSaving] = useState(false);
+  // Pending destructive action, confirmed via ConfirmDialog instead of
+  // native window.confirm().
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   async function fetchItems() {
     try {
@@ -68,7 +75,9 @@ export default function ItemsPage() {
   }
 
   useEffect(() => {
-    fetchItems();
+    // Defer to a microtask so the fetcher's synchronous setLoading(true) does
+    // not run inside the effect body (react-hooks/set-state-in-effect).
+    Promise.resolve().then(() => fetchItems());
   }, []);
 
   const filtered = useMemo(() => {
@@ -156,8 +165,8 @@ export default function ItemsPage() {
     }
   }
 
-  async function deleteItem(id: string, name: string) {
-    if (!confirm(`Padam item "${name}"?`)) return;
+  async function deleteItem(id: string) {
+    setPendingDelete(null);
     setSaving(true);
     setError("");
     try {
@@ -279,15 +288,13 @@ export default function ItemsPage() {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                  onClick={handleSort}
+                <SortableTh
+                  active
+                  dir={sortDir}
+                  onSort={handleSort}
                 >
-                  <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                    Nama
-                    <IconArrowsSort size={14} style={{ transform: sortDir === "desc" ? "scaleY(-1)" : undefined }} />
-                  </Group>
-                </Table.Th>
+                  Nama
+                </SortableTh>
                 <Table.Th style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                   QuickRx
                 </Table.Th>
@@ -370,7 +377,7 @@ export default function ItemsPage() {
                             color="red"
                             variant="light"
                             size="sm"
-                            onClick={() => deleteItem(item.id, item.name)}
+                            onClick={() => setPendingDelete({ id: item.id, name: item.name })}
                             loading={saving}
                           >
                             <IconTrash size={14} />
@@ -394,6 +401,14 @@ export default function ItemsPage() {
           </Badge>
         </Group>
       </Stack>
+
+      <ConfirmDialog
+        opened={!!pendingDelete}
+        message={`Padam item "${pendingDelete?.name ?? ""}"?`}
+        loading={saving}
+        onConfirm={() => pendingDelete && deleteItem(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </AppShell>
   );
 }

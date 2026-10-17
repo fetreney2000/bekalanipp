@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { z } from "zod";
 
+type CounterDoc = { _id: string; seq: number };
+
 const itemSchema = z.object({
   name: z.string().min(1, "Nama item diperlukan"),
 });
@@ -57,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const counter = await db.collection("counters").findOneAndUpdate(
-      { _id: "items" } as any,
+    const counter = await db.collection<CounterDoc>("counters").findOneAndUpdate(
+      { _id: "items" },
       { $inc: { seq: 1 } },
       { upsert: true, returnDocument: "after" }
     );

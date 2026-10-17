@@ -2,6 +2,7 @@ import { MongoClient } from "mongodb";
 import Database from "better-sqlite3";
 import { config } from "dotenv";
 import { resolve } from "path";
+import { ensureIndexes } from "../src/lib/ensure-indexes";
 
 config({ path: resolve(__dirname, "../.env.local") });
 
@@ -117,16 +118,9 @@ async function migrate() {
     console.log(`  ✓ order_items: ${docs.length} documents inserted`);
   }
 
-  // Create indexes
+  // Create indexes (shared with POST /api/admin/indexes so they can't drift)
   console.log("\nCreating indexes...");
-
-  await db.collection("wards").createIndex({ name: 1 }, { unique: true });
-  await db.collection("items").createIndex({ name: 1 }, { unique: true });
-  await db.collection("ward_catalog").createIndex({ ward_id: 1, item_id: 1 }, { unique: true });
-  await db.collection("orders").createIndex({ order_number: 1 }, { unique: true });
-  await db.collection("orders").createIndex({ order_date: 1 });
-  await db.collection("orders").createIndex({ ward_id: 1 });
-  await db.collection("order_items").createIndex({ order_id: 1, item_id: 1 }, { unique: true });
+  await ensureIndexes(db);
   console.log("  ✓ All indexes created");
 
   // Create counters for auto-increment IDs

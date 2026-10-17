@@ -810,3 +810,22 @@
 .mantine-ChartTooltip-tooltip {
   border: 1px solid var(--mantine-color-default-border);
 }
+
+/* Records: pulse row background for orders approaching the elapsed-time
+   warning thresholds (previously an inline <style> in records/page.tsx). */
+@keyframes inden-warn-pulse {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: var(--mantine-color-red-light);
+  }
+}
+
+/* Supply: restyle the active option in item Selects
+   (previously an inline <style> in supply/page.tsx). */
+.mantine-Combobox-option[data-combobox-option-active] {
+  color: var(--mantine-color-gray-9) !important;
+  background-color: var(--mantine-color-blue-6) !important;
+}

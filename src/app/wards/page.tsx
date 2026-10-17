@@ -26,12 +26,13 @@ import {
   IconHospital,
   IconDeviceFloppy,
   IconX,
-  IconArrowsSort,
   IconAlertCircle,
   IconBuildingSkyscraper,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
+import SortableTh from "@/components/SortableTh";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface Ward {
   id: string;
@@ -56,6 +57,12 @@ export default function WardsPage() {
   const [addCategory, setAddCategory] = useState("ward");
 
   const [saving, setSaving] = useState(false);
+  // Pending destructive action, confirmed via ConfirmDialog instead of
+  // native window.confirm().
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   async function fetchWards() {
     try {
@@ -71,7 +78,9 @@ export default function WardsPage() {
   }
 
   useEffect(() => {
-    fetchWards();
+    // Defer to a microtask so the fetcher's synchronous setLoading(true) does
+    // not run inside the effect body (react-hooks/set-state-in-effect).
+    Promise.resolve().then(() => fetchWards());
   }, []);
 
   const filtered = useMemo(() => {
@@ -177,8 +186,8 @@ export default function WardsPage() {
     }
   }
 
-  async function deleteWard(id: string, name: string) {
-    if (!confirm(`Padam wad/jabatan "${name}"?`)) return;
+  async function deleteWard(id: string) {
+    setPendingDelete(null);
     setSaving(true);
     setError("");
     try {
@@ -278,24 +287,20 @@ export default function WardsPage() {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                  onClick={() => handleSort("name")}
+                <SortableTh
+                  active={sortKey === "name"}
+                  dir={sortDir}
+                  onSort={() => handleSort("name")}
                 >
-                  <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                    Nama
-                    <IconArrowsSort size={14} style={{ opacity: sortKey === "name" ? 1 : 0.4, transform: sortKey === "name" && sortDir === "desc" ? "scaleY(-1)" : undefined }} />
-                  </Group>
-                </Table.Th>
-                <Table.Th
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                  onClick={() => handleSort("category")}
+                  Nama
+                </SortableTh>
+                <SortableTh
+                  active={sortKey === "category"}
+                  dir={sortDir}
+                  onSort={() => handleSort("category")}
                 >
-                  <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                    Kategori
-                    <IconArrowsSort size={14} style={{ opacity: sortKey === "category" ? 1 : 0.4, transform: sortKey === "category" && sortDir === "desc" ? "scaleY(-1)" : undefined }} />
-                  </Group>
-                </Table.Th>
+                  Kategori
+                </SortableTh>
                 <Table.Th style={{ textAlign: "right" }}>
                   Aksi
                 </Table.Th>
@@ -384,7 +389,7 @@ export default function WardsPage() {
                             color="red"
                             variant="light"
                             size="sm"
-                            onClick={() => deleteWard(w.id, w.name)}
+                            onClick={() => setPendingDelete({ id: w.id, name: w.name })}
                             loading={saving}
                           >
                             <IconTrash size={14} />
@@ -403,6 +408,14 @@ export default function WardsPage() {
           Jumlah: {filtered.length} wad/jabatan
         </Text>
       </Stack>
+
+      <ConfirmDialog
+        opened={!!pendingDelete}
+        message={`Padam wad/jabatan "${pendingDelete?.name ?? ""}"?`}
+        loading={saving}
+        onConfirm={() => pendingDelete && deleteWard(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </AppShell>
   );
 }

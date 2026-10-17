@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Stack,
   Group,
@@ -33,27 +33,8 @@ import {
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
-import { cachedFetch } from "@/lib/fetch-cache";
-
-interface Ward {
-  id: string;
-  name: string;
-  category: string;
-}
-
-interface Item {
-  id: string;
-  name: string;
-}
-
-interface CatalogItem {
-  ward_id: string;
-  item_id: string;
-  item_name: string;
-  max_per_order: number;
-  monthly_quota: number | null;
-  month_used?: number;
-}
+import ConfirmDialog from "@/components/ConfirmDialog";
+import type { CatalogItem, Item, Ward } from "@/lib/types";
 
 export default function CatalogPage() {
   const [wards, setWards] = useState<Ward[]>([]);
@@ -69,7 +50,7 @@ export default function CatalogPage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editingKey, setEditingKey] = useState<number | null>(null);
   const [editMax, setEditMax] = useState(0);
   const [editQuota, setEditQuota] = useState(0);
   const [editHasQuota, setEditHasQuota] = useState(false);
@@ -80,23 +61,35 @@ export default function CatalogPage() {
   const [addQuota, setAddQuota] = useState(0);
   const [addHasQuota, setAddHasQuota] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  // Pending destructive action, confirmed via ConfirmDialog instead of
+  // native window.confirm().
+  const [pendingDelete, setPendingDelete] = useState<CatalogItem | null>(null);
 
   useEffect(() => {
-    cachedFetch<any[]>("/api/wards", 60000)
+    fetch("/api/wards")
+      .then((res) => res.json())
       .then(setWards)
       .catch(() => {});
-    cachedFetch<any[]>("/api/items", 60000)
+    fetch("/api/items")
+      .then((res) => res.json())
       .then(setAllItems)
       .catch(() => {});
   }, []);
 
-  async function fetchCatalog() {
+  // Monotonic token so a slow response for the previously selected ward can't
+  // overwrite the catalog (and ward name) of the one selected now.
+  const catalogSeq = useRef(0);
+
+  const fetchCatalog = useCallback(async () => {
     if (!selectedWard) return;
+    const seq = ++catalogSeq.current;
+    const stale = () => seq !== catalogSeq.current;
     setLoading(true);
     setError("");
     try {
       const res = await fetch(`/api/catalog/${selectedWard}?month=${currentMonth}`);
       const data = await res.json();
+      if (stale()) return;
       if (!res.ok) {
         setError(data.error || "Ralat memuatkan katalog");
         return;
@@ -104,15 +97,19 @@ export default function CatalogPage() {
       setWardName(data.ward || "");
       setCatalogItems(data.items || []);
     } catch {
+      if (stale()) return;
       setError("Ralat sambungan");
     } finally {
-      setLoading(false);
+      if (!stale()) setLoading(false);
     }
-  }
+  }, [selectedWard, currentMonth]);
 
   useEffect(() => {
-    if (selectedWard) fetchCatalog();
-  }, [selectedWard, currentMonth]);
+    if (!selectedWard) return;
+    // Defer to a microtask so the fetcher's synchronous setLoading(true) does
+    // not run inside the effect body (react-hooks/set-state-in-effect).
+    Promise.resolve().then(() => fetchCatalog());
+  }, [selectedWard, currentMonth, fetchCatalog]);
 
   const availableItems = useMemo(() => {
     const inCatalog = new Set(catalogItems.map((ci) => ci.item_id));
@@ -163,7 +160,13 @@ export default function CatalogPage() {
       setCatalogItems((prev) =>
         prev.map((c) =>
           c.item_id === ci.item_id
-            ? { ...c, max_per_order: editMax, monthly_quota: editHasQuota ? editQuota : 0 }
+            ? {
+                ...c,
+                max_per_order: editMax,
+                // Match the server's stored value: without a quota it keeps
+                // null, not 0, so later rendering paths (hasQuota) agree.
+                monthly_quota: editHasQuota ? editQuota : null,
+              }
             : c
         )
       );
@@ -188,7 +191,7 @@ export default function CatalogPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          item_id: addItemId,
+          item_id: Number(addItemId),
           max_per_order: addMax,
           monthly_quota: addHasQuota ? addQuota : null,
         }),
@@ -213,7 +216,7 @@ export default function CatalogPage() {
   }
 
   async function deleteCatalogItem(ci: CatalogItem) {
-    if (!confirm(`Padam "${ci.item_name}" daripada katalog?`)) return;
+    setPendingDelete(null);
     setSaving(true);
     setError("");
     try {
@@ -234,8 +237,9 @@ export default function CatalogPage() {
     }
   }
 
-  const wardSelectData = wards.map((w) => ({ value: w.id, label: w.name }));
-  const itemSelectData = availableItems.map((i) => ({ value: i.id, label: i.name }));
+  // Mantine Select values must be strings; the underlying ids are numbers.
+  const wardSelectData = wards.map((w) => ({ value: String(w.id), label: w.name }));
+  const itemSelectData = availableItems.map((i) => ({ value: String(i.id), label: i.name }));
 
   return (
     <AppShell>
@@ -266,6 +270,16 @@ export default function CatalogPage() {
               setSelectedWard(val || "");
               setShowAdd(false);
               setError("");
+              // Reset the previous ward's state: a staged inline edit must not
+              // be saved into the newly selected ward, and its rows/name must
+              // not stay on screen while the new catalog loads.
+              setEditingKey(null);
+              setEditMax(0);
+              setEditQuota(0);
+              setEditHasQuota(false);
+              setPendingDelete(null);
+              setWardName("");
+              setCatalogItems([]);
             }}
             searchable
             clearable
@@ -505,7 +519,7 @@ export default function CatalogPage() {
                                 color="red"
                                 variant="light"
                                 size="sm"
-                                onClick={() => deleteCatalogItem(ci)}
+                                onClick={() => setPendingDelete(ci)}
                                 loading={saving}
                               >
                                 <IconTrash size={14} />
@@ -529,6 +543,14 @@ export default function CatalogPage() {
           </Text>
         )}
       </Stack>
+
+      <ConfirmDialog
+        opened={!!pendingDelete}
+        message={`Padam "${pendingDelete?.item_name ?? ""}" daripada katalog?`}
+        loading={saving}
+        onConfirm={() => pendingDelete && deleteCatalogItem(pendingDelete)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </AppShell>
   );
 }

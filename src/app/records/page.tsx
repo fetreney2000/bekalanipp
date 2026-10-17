@@ -24,7 +24,6 @@ import {
 } from "@mantine/core";
 import {
   IconRefresh,
-  IconArrowsSort,
   IconClock,
   IconCircleCheck,
   IconAlertTriangle,
@@ -34,31 +33,10 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { DatePickerInput, MonthPickerInput, TimePicker } from "@mantine/dates";
+import { notifications } from "@mantine/notifications";
 import AppShell from "@/components/AppShell";
-
-type OrderItem = {
-  item_id: string;
-  item_name: string;
-  quantity: number;
-  quick_rx_record?: boolean;
-};
-
-type Order = {
-  id: string;
-  ward_id: string;
-  ward_name: string;
-  order_date: string;
-  order_number: string;
-  order_type: string;
-  masa_pejabat: boolean;
-  masa_diterima: string | null;
-  sudah_disedia: boolean;
-  completion_minutes: number | null;
-  masa_selesai: string | null;
-  items: OrderItem[];
-  created_at: string;
-  updated_at: string;
-};
+import SortableTh from "@/components/SortableTh";
+import type { Order, OrderItem } from "@/lib/types";
 
 type SortKey =
   | "order_date"
@@ -117,9 +95,19 @@ function formatElapsed(mins: number): string {
   return `${mins} min`;
 }
 
+// One AudioContext at a time: browsers cap concurrent contexts (~6), and the
+// old code created a new one per beep without ever closing it, so alerts
+// silently stopped after a few warnings. Note: autoplay policy means audio
+// only works after a user gesture on the page — before that, resume() is a
+// no-op and we degrade to silence.
+let audioCtx: AudioContext | null = null;
+
 function playWarningBeep() {
   try {
-    const ctx = new AudioContext();
+    if (!audioCtx) audioCtx = new AudioContext();
+    const ctx = audioCtx;
+    if (ctx.state === "suspended") void ctx.resume();
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -130,6 +118,10 @@ function playWarningBeep() {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
     osc.start();
     osc.stop(ctx.currentTime + 0.5);
+    osc.onended = () => {
+      void ctx.close().catch(() => {});
+      if (audioCtx === ctx) audioCtx = null;
+    };
   } catch {
     /* audio not available */
   }
@@ -148,14 +140,17 @@ export default function RecordsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("order_date");
   const [sortAsc, setSortAsc] = useState(false);
-  const [togglingReady, setTogglingReady] = useState<string | null>(null);
-  const [togglingPejabat, setTogglingPejabat] = useState<string | null>(null);
+  const [togglingReady, setTogglingReady] = useState<number | null>(null);
+  const [togglingPejabat, setTogglingPejabat] = useState<number | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
-    orderId: string;
+    orderId: number;
     value: boolean;
   } | null>(null);
   const [, setTick] = useState(0);
   const playedAlerts = useRef<Set<string>>(new Set());
+  // Monotonic token: a superseded fetch (e.g. after a month change) must stop
+  // paging and never overwrite the newer request's results.
+  const fetchSeq = useRef(0);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -169,6 +164,10 @@ export default function RecordsPage() {
     masa_diterima: "" as string | null,
   });
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
+  // updated_at as loaded when the modal opened — sent back as the
+  // optimistic-lock token so a save can't silently overwrite someone
+  // else's concurrent edit.
+  const [loadedUpdatedAt, setLoadedUpdatedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -176,24 +175,45 @@ export default function RecordsPage() {
   const range = useMemo(() => getMonthRange(year, month), [year, month]);
 
   const fetchOrders = useCallback(async () => {
+    const seq = ++fetchSeq.current;
+    const stale = () => seq !== fetchSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/orders?from=${range.from}&to=${range.to}&page=1&pageSize=600`
-      );
-      if (!res.ok) throw new Error("Gagal memuatkan data");
-      const data = await res.json();
-      setOrders(data.orders);
+      // The API caps pageSize, so page through everything to avoid
+      // silently truncating a busy month.
+      const PAGE_SIZE = 600;
+      const collected: Order[] = [];
+      let page = 1;
+      let total = 0;
+      for (;;) {
+        const res = await fetch(
+          `/api/orders?from=${range.from}&to=${range.to}&page=${page}&pageSize=${PAGE_SIZE}`
+        );
+        if (stale()) return;
+        if (!res.ok) throw new Error("Gagal memuatkan data");
+        const data = await res.json();
+        if (stale()) return;
+        const batch: Order[] = data.orders ?? [];
+        total = data.total ?? collected.length;
+        collected.push(...batch);
+        if (batch.length === 0 || collected.length >= total) break;
+        page += 1;
+      }
+      setOrders(collected);
     } catch (e: unknown) {
+      if (stale()) return;
       setError(e instanceof Error ? e.message : "Ralat tidak diketahui");
     } finally {
-      setLoading(false);
+      // Only the newest request owns the loading flag.
+      if (!stale()) setLoading(false);
     }
   }, [range.from, range.to]);
 
   useEffect(() => {
-    fetchOrders();
+    // Defer to a microtask so the fetcher's synchronous state updates do not
+    // run inside the effect body (react-hooks/set-state-in-effect).
+    Promise.resolve().then(() => fetchOrders());
   }, [fetchOrders]);
 
   useEffect(() => {
@@ -241,11 +261,10 @@ export default function RecordsPage() {
     }
   };
 
-  const handleToggleReady = async (orderId: string, value: boolean) => {
-    if (!value) {
-      setConfirmDialog({ orderId, value });
-      return;
-    }
+  // The actual PATCH for the "Sudah Disediakan" switch. Kept separate from
+  // handleToggleReady so the confirmation dialog (which must apply an
+  // UN-toggle) can perform the write instead of re-entering the confirm branch.
+  const applyToggleReady = async (orderId: number, value: boolean) => {
     setTogglingReady(orderId);
     try {
       const res = await fetch(`/api/orders/${orderId}/ready`, {
@@ -253,7 +272,10 @@ export default function RecordsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sudah_disedia: value }),
       });
-      if (!res.ok) throw new Error("Gagal mengemaskini");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Gagal mengemaskini status kesediaan");
+      }
       const data = await res.json();
       setOrders((prev) =>
         prev.map((o) =>
@@ -269,18 +291,33 @@ export default function RecordsPage() {
       );
     } catch (e: unknown) {
       console.error(e);
+      notifications.show({
+        title: "Ralat",
+        message: e instanceof Error ? e.message : "Gagal mengemaskini",
+        color: "red",
+      });
     } finally {
       setTogglingReady(null);
     }
   };
 
+  const handleToggleReady = async (orderId: number, value: boolean) => {
+    // Turning the switch ON is safe; turning it OFF must be confirmed first.
+    if (!value) {
+      setConfirmDialog({ orderId, value });
+      return;
+    }
+    await applyToggleReady(orderId, value);
+  };
+
   const handleConfirmReady = async () => {
     if (!confirmDialog) return;
-    await handleToggleReady(confirmDialog.orderId, confirmDialog.value);
+    const { orderId, value } = confirmDialog;
+    await applyToggleReady(orderId, value);
     setConfirmDialog(null);
   };
 
-  const handleTogglePejabat = async (orderId: string, value: boolean) => {
+  const handleTogglePejabat = async (orderId: number, value: boolean) => {
     setTogglingPejabat(orderId);
     try {
       const res = await fetch(`/api/orders/${orderId}/masa-pejabat`, {
@@ -288,7 +325,10 @@ export default function RecordsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ masa_pejabat: value }),
       });
-      if (!res.ok) throw new Error("Gagal mengemaskini");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Gagal mengemaskini status masa pejabat");
+      }
       const data = await res.json();
       setOrders((prev) =>
         prev.map((o) =>
@@ -297,6 +337,11 @@ export default function RecordsPage() {
       );
     } catch (e: unknown) {
       console.error(e);
+      notifications.show({
+        title: "Ralat",
+        message: e instanceof Error ? e.message : "Gagal mengemaskini",
+        color: "red",
+      });
     } finally {
       setTogglingPejabat(null);
     }
@@ -320,8 +365,10 @@ export default function RecordsPage() {
         va = a.ward_name;
         vb = b.ward_name;
       } else {
-        va = (a as Record<string, unknown>)[sortKey] as string | boolean;
-        vb = (b as Record<string, unknown>)[sortKey] as string | boolean;
+        // Index into the order by the sort key. Cast via `unknown` because
+        // Order is a closed interface; runtime behaviour is unchanged.
+        va = (a as unknown as Record<string, unknown>)[sortKey] as string | boolean;
+        vb = (b as unknown as Record<string, unknown>)[sortKey] as string | boolean;
       }
       if (typeof va === "boolean") {
         va = va ? "1" : "0";
@@ -352,6 +399,7 @@ export default function RecordsPage() {
         masa_diterima: data.masa_diterima,
       });
       setEditItems(data.items || []);
+      setLoadedUpdatedAt(data.updated_at ?? null);
     } catch (e: unknown) {
       setModalError(e instanceof Error ? e.message : "Ralat");
     } finally {
@@ -364,6 +412,7 @@ export default function RecordsPage() {
     setConfirmDelete(false);
     setModalError(null);
     setModalSuccess(null);
+    setLoadedUpdatedAt(null);
   };
 
   const handleSave = async () => {
@@ -377,7 +426,10 @@ export default function RecordsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...editForm,
-          sudah_disedia: selectedOrder.sudah_disedia,
+          // NOTE: sudah_disedia is deliberately NOT sent. It's toggled from
+          // the list, not this modal; echoing a value captured at open time
+          // would silently revert a concurrent toggle.
+          expected_updated_at: loadedUpdatedAt ?? undefined,
           items: editItems.map((i) => ({
             item_id: i.item_id,
             quantity: i.quantity,
@@ -385,7 +437,14 @@ export default function RecordsPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
+      if (!res.ok) {
+        if (res.status === 409) {
+          // Someone else edited this inden — refresh so the user sees the
+          // current state instead of saving over it.
+          fetchOrders();
+        }
+        throw new Error(data.error || "Gagal menyimpan");
+      }
       setModalSuccess("Berjaya disimpan");
       fetchOrders();
     } catch (e: unknown) {
@@ -418,12 +477,6 @@ export default function RecordsPage() {
 
   return (
     <AppShell>
-      <style>{`
-        @keyframes inden-warn-pulse {
-          0%, 100% { background-color: transparent; }
-          50% { background-color: var(--mantine-color-red-light); }
-        }
-      `}</style>
       <Stack gap="md">
         <Paper>
           <Group justify="space-between" align="center">
@@ -489,43 +542,39 @@ export default function RecordsPage() {
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>No</Table.Th>
-                    <Table.Th
-                      onClick={() => toggleSort("order_date")}
-                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                    <SortableTh
+                      active={sortKey === "order_date"}
+                      dir={sortAsc ? "asc" : "desc"}
+                      onSort={() => toggleSort("order_date")}
+                      style={{ whiteSpace: "nowrap", textAlign: "left" }}
                     >
-                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                        Tarikh
-                        <IconArrowsSort size={14} style={{ opacity: sortKey === "order_date" ? 1 : 0.4, transform: sortKey === "order_date" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                      </Group>
-                    </Table.Th>
+                      Tarikh
+                    </SortableTh>
                     <Table.Th style={{ textAlign: "center" }}>Masa Diterima</Table.Th>
-                    <Table.Th
-                      onClick={() => toggleSort("order_number")}
-                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                    <SortableTh
+                      active={sortKey === "order_number"}
+                      dir={sortAsc ? "asc" : "desc"}
+                      onSort={() => toggleSort("order_number")}
+                      style={{ whiteSpace: "nowrap", textAlign: "left" }}
                     >
-                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                        No. Inden
-                        <IconArrowsSort size={14} style={{ opacity: sortKey === "order_number" ? 1 : 0.4, transform: sortKey === "order_number" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                      </Group>
-                    </Table.Th>
-                    <Table.Th
-                      onClick={() => toggleSort("ward_name")}
-                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                      No. Inden
+                    </SortableTh>
+                    <SortableTh
+                      active={sortKey === "ward_name"}
+                      dir={sortAsc ? "asc" : "desc"}
+                      onSort={() => toggleSort("ward_name")}
+                      style={{ whiteSpace: "nowrap", textAlign: "left" }}
                     >
-                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                        Wad
-                        <IconArrowsSort size={14} style={{ opacity: sortKey === "ward_name" ? 1 : 0.4, transform: sortKey === "ward_name" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                      </Group>
-                    </Table.Th>
-                    <Table.Th
-                      onClick={() => toggleSort("order_type")}
-                      style={{ cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textAlign: "left" }}
+                      Wad
+                    </SortableTh>
+                    <SortableTh
+                      active={sortKey === "order_type"}
+                      dir={sortAsc ? "asc" : "desc"}
+                      onSort={() => toggleSort("order_type")}
+                      style={{ whiteSpace: "nowrap", textAlign: "left" }}
                     >
-                      <Group gap={4} style={{ flexWrap: "nowrap" }}>
-                        Jenis
-                        <IconArrowsSort size={14} style={{ opacity: sortKey === "order_type" ? 1 : 0.4, transform: sortKey === "order_type" && !sortAsc ? "scaleY(-1)" : undefined }} />
-                      </Group>
-                    </Table.Th>
+                      Jenis
+                    </SortableTh>
                     <Table.Th style={{ textAlign: "center", whiteSpace: "nowrap" }}>Bil. Item</Table.Th>
                     <Table.Th style={{ textAlign: "center" }}>Disediakan</Table.Th>
                     <Table.Th style={{ textAlign: "center" }}>Masa Pejabat</Table.Th>
@@ -557,6 +606,21 @@ export default function RecordsPage() {
                       <Table.Tr
                         key={order.id}
                         onClick={() => openDetailModal(order)}
+                        // Keyboard access: rows previously opened the modal
+                        // via onClick only. Enter/Space on the row itself
+                        // opens it; events bubbling up from the row's own
+                        // controls (Switch, ActionIcons) are ignored so they
+                        // don't double-fire.
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Buka butiran inden ${order.order_number}`}
+                        onKeyDown={(e) => {
+                          if (e.target !== e.currentTarget) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openDetailModal(order);
+                          }
+                        }}
                         style={{
                           cursor: "pointer",
                           ...(hasQuickRx
@@ -809,14 +873,21 @@ export default function RecordsPage() {
                       <NumberInput
                         value={item.quantity}
                         onChange={(val) => {
-                          const v = typeof val === "number" ? val : 1;
+                          // Round — the server validates z.number().int() and
+                          // NumberInput allows decimals (e.g. via paste).
+                          const v =
+                            typeof val === "number" ? Math.round(val) : 1;
                           setEditItems((prev) =>
-                            prev.map((it, i) => (i === idx ? { ...it, quantity: Math.max(1, v) } : it))
+                            prev.map((it, i) =>
+                              i === idx ? { ...it, quantity: Math.max(1, v) } : it
+                            )
                           );
                         }}
                         min={1}
                         w={70}
                         size="xs"
+                        decimalScale={0}
+                        allowNegative={false}
                         hideControls
                       />
                     </Flex>

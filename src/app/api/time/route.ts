@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(_request: NextRequest) {
   const now = new Date();
+  // Asia/Kuching — Sabah's timezone. Kept consistent with the office-hours
+  // logic on the client (src/app/supply/page.tsx) so the two never disagree.
   const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kuala_Lumpur",
+    timeZone: "Asia/Kuching",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

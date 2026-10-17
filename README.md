@@ -2,7 +2,7 @@
 
 Sistem Pengurusan Bekalan Ubat (In-Patient Pharmacy) - Hospital Keningau
 
-Built with **Next.js 16**, **Mantine UI** (shadcn violet theme), **MongoDB Atlas**, and **Vercel**.
+Built with **Next.js 16**, **Mantine UI** (MantineHub pink preset), **MongoDB Atlas**, and **Vercel**.
 
 ## Features
 
@@ -20,7 +20,7 @@ Built with **Next.js 16**, **Mantine UI** (shadcn violet theme), **MongoDB Atlas
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 16 (App Router) |
-| UI | Mantine UI (shadcn violet theme) |
+| UI | Mantine UI (MantineHub pink preset) |
 | Database | MongoDB Atlas (M0 Free Tier) |
 | Hosting | Vercel (Free Tier) |
 | Language | TypeScript |
@@ -54,13 +54,22 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Database Optimization
 
-The app automatically creates MongoDB indexes on first dashboard load:
+Indexes are **not** created automatically — nothing in the app calls them on load. They are created by either:
 
-- `orders`: order_date, order_number (unique), ward_id, id (unique)
-- `order_items`: order_id, item_id
-- `wards`: id (unique)
-- `items`: id (unique)
+- Running `npx tsx scripts/migrate.ts` (SQLite → MongoDB migration), or
+- Manually `POST`-ing to `/api/admin/indexes`.
+
+Both paths share the same definition in `src/lib/ensure-indexes.ts`:
+
+- `orders`: id (unique), order_date, order_number (unique), ward_id
+- `order_items`: order_id + item_id (unique compound), item_id
+- `wards`: id (unique), name (unique)
+- `items`: id (unique), name (unique)
 - `ward_catalog`: ward_id + item_id (unique compound)
+
+The unique compound index on `order_items` is safe because every order write
+merges duplicate lines via `groupItems()` (`src/lib/order-utils.ts`), so an
+order can never contain the same item twice.
 
 ## Deployment
 

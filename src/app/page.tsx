@@ -26,29 +26,7 @@ import {
   IconCircleCheck,
   IconChartPie,
 } from "@tabler/icons-react";
-
-interface ItemStatus {
-  ward_name: string;
-  item_name: string;
-  quota: number;
-  used: number;
-}
-
-interface TopWard {
-  ward_id: string;
-  ward_name: string;
-  order_count: number;
-}
-
-interface DashboardData {
-  month: string;
-  itemStatus: ItemStatus[];
-  warnings: ItemStatus[];
-  exceeded: ItemStatus[];
-  orders_count: number;
-  items_count: number;
-  top_ward: TopWard | null;
-}
+import type { DashboardData } from "@/lib/types";
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);

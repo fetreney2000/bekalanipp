@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Stack,
   Group,
@@ -18,7 +18,6 @@ import {
   Alert,
   ThemeIcon,
   Title,
-  Box,
   Modal,
 } from "@mantine/core";
 import {
@@ -36,10 +35,11 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconList,
-  IconArrowsSort,
 } from "@tabler/icons-react";
 import { MonthPickerInput } from "@mantine/dates";
 import AppShell from "@/components/AppShell";
+import SortableTh from "@/components/SortableTh";
+import { currentIsoWeek } from "@/lib/date-range";
 
 type ReportType = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -130,14 +130,7 @@ export default function ReportsPage() {
   const [date, setDate] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
-  const [week, setWeek] = useState(() => {
-    const now = new Date();
-    const jan1 = new Date(now.getFullYear(), 0, 1);
-    const dayOfYear =
-      Math.floor((now.getTime() - jan1.getTime()) / 86400000) + 1;
-    const weekNum = Math.ceil(dayOfYear / 7);
-    return `${now.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
-  });
+  const [week, setWeek] = useState(() => currentIsoWeek());
   const [monthDate, setMonthDate] = useState<Date>(new Date());
   const month = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
   const [year, setYear] = useState(() => String(getCurrentYear()));
@@ -236,12 +229,20 @@ export default function ReportsPage() {
     }
   }, [qs]);
 
-  const mp = report?.totals_by_masa.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
-  const smp = report?.totals_by_masa.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
-  const wMp = report?.totals_by_masa_by_cat.ward?.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
-  const wSmp = report?.totals_by_masa_by_cat.ward?.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
-  const nwMp = report?.totals_by_masa_by_cat.not_ward?.masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
-  const nwSmp = report?.totals_by_masa_by_cat.not_ward?.selepas_masa_pejabat || { order_count: 0, bil_item: 0, jumlah_item: 0 };
+  // Derived stat objects, memoized on `report` so their references are stable
+  // across renders. Without this, the `|| {}` fallbacks produce a fresh object
+  // every render, which forces the card useMemo()s below to recompute always.
+  const { mp, smp, wMp, wSmp, nwMp, nwSmp } = useMemo(() => {
+    const empty = { order_count: 0, bil_item: 0, jumlah_item: 0 };
+    return {
+      mp: report?.totals_by_masa.masa_pejabat || empty,
+      smp: report?.totals_by_masa.selepas_masa_pejabat || empty,
+      wMp: report?.totals_by_masa_by_cat.ward?.masa_pejabat || empty,
+      wSmp: report?.totals_by_masa_by_cat.ward?.selepas_masa_pejabat || empty,
+      nwMp: report?.totals_by_masa_by_cat.not_ward?.masa_pejabat || empty,
+      nwSmp: report?.totals_by_masa_by_cat.not_ward?.selepas_masa_pejabat || empty,
+    };
+  }, [report]);
 
   const wadTotalOrders = wMp.order_count + wSmp.order_count;
   const bukanWadTotalOrders = nwMp.order_count + nwSmp.order_count;
@@ -630,9 +631,10 @@ export default function ReportsPage() {
                   <Table striped highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th
-                          style={{ cursor: "pointer" }}
-                          onClick={() => {
+                        <SortableTh
+                          active={itemSortKey === "item_name"}
+                          dir={itemSortDir}
+                          onSort={() => {
                             if (itemSortKey === "item_name") {
                               setItemSortDir((d) => (d === "asc" ? "desc" : "asc"));
                             } else {
@@ -641,21 +643,13 @@ export default function ReportsPage() {
                             }
                           }}
                         >
-                          <Group gap={4} wrap="nowrap">
-                            Item
-                            <IconArrowsSort
-                              size={14}
-                              style={{
-                                opacity: itemSortKey === "item_name" ? 1 : 0.4,
-                                transform: itemSortKey === "item_name" && itemSortDir === "desc" ? "scaleY(-1)" : undefined,
-                              }}
-                            />
-                          </Group>
-                        </Table.Th>
-                        <Table.Th
-                          ta="right"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => {
+                          Item
+                        </SortableTh>
+                        <SortableTh
+                          align="right"
+                          active={itemSortKey === "order_count"}
+                          dir={itemSortDir}
+                          onSort={() => {
                             if (itemSortKey === "order_count") {
                               setItemSortDir((d) => (d === "asc" ? "desc" : "asc"));
                             } else {
@@ -664,21 +658,13 @@ export default function ReportsPage() {
                             }
                           }}
                         >
-                          <Group gap={4} wrap="nowrap" justify="flex-end">
-                            Bil. Inden
-                            <IconArrowsSort
-                              size={14}
-                              style={{
-                                opacity: itemSortKey === "order_count" ? 1 : 0.4,
-                                transform: itemSortKey === "order_count" && itemSortDir === "desc" ? "scaleY(-1)" : undefined,
-                              }}
-                            />
-                          </Group>
-                        </Table.Th>
-                        <Table.Th
-                          ta="right"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => {
+                          Bil. Inden
+                        </SortableTh>
+                        <SortableTh
+                          align="right"
+                          active={itemSortKey === "quantity_sum"}
+                          dir={itemSortDir}
+                          onSort={() => {
                             if (itemSortKey === "quantity_sum") {
                               setItemSortDir((d) => (d === "asc" ? "desc" : "asc"));
                             } else {
@@ -687,17 +673,8 @@ export default function ReportsPage() {
                             }
                           }}
                         >
-                          <Group gap={4} wrap="nowrap" justify="flex-end">
-                            Jumlah Kuantiti
-                            <IconArrowsSort
-                              size={14}
-                              style={{
-                                opacity: itemSortKey === "quantity_sum" ? 1 : 0.4,
-                                transform: itemSortKey === "quantity_sum" && itemSortDir === "desc" ? "scaleY(-1)" : undefined,
-                              }}
-                            />
-                          </Group>
-                        </Table.Th>
+                          Jumlah Kuantiti
+                        </SortableTh>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>

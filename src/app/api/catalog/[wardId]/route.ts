@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { getMonthRange } from "@/lib/date-range";
+import type { ItemRow } from "@/lib/types";
 import { z } from "zod";
+
+/** A projected `ward_catalog` row. */
+type CatalogEntryRow = {
+  ward_id: number;
+  item_id: number;
+  max_per_order: number;
+  monthly_quota: number | null;
+};
 
 const catalogUpsertSchema = z.object({
   item_id: z.number().int(),
@@ -29,27 +39,22 @@ export async function GET(
       return NextResponse.json({ error: "Wad/jabatan tidak ditemui." }, { status: 404 });
     }
 
-    const catalogEntries = await db
+    const catalogEntries = (await db
       .collection("ward_catalog")
       .find({ ward_id: numberWardId })
       .project({ _id: 0, ward_id: 1, item_id: 1, max_per_order: 1, monthly_quota: 1 })
-      .toArray();
+      .toArray()) as CatalogEntryRow[];
 
-    const itemIds = catalogEntries.map((e: any) => e.item_id);
+    const itemIds = catalogEntries.map((e) => e.item_id);
     const itemDocs = itemIds.length > 0
-      ? await db.collection("items").find({ id: { $in: itemIds } }).project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 }).toArray()
+      ? ((await db.collection("items").find({ id: { $in: itemIds } }).project({ _id: 0, id: 1, name: 1, quick_rx_record: 1 }).toArray()) as ItemRow[])
       : [];
-    const itemNameMap = new Map(itemDocs.map((i: any) => [i.id, i.name]));
-    const itemQuickRxMap = new Map(itemDocs.map((i: any) => [i.id, !!i.quick_rx_record]));
+    const itemNameMap = new Map(itemDocs.map((i) => [i.id, i.name]));
+    const itemQuickRxMap = new Map(itemDocs.map((i) => [i.id, !!i.quick_rx_record]));
 
-    let usageMap = new Map<number, number>();
+    const usageMap = new Map<number, number>();
     if (month && catalogEntries.length > 0) {
-      const startOfMonth = `${month}-01`;
-      const [yearStr, monthStr] = month.split("-");
-      const year = parseInt(yearStr);
-      const m = parseInt(monthStr);
-      const lastDay = new Date(year, m, 0).getDate();
-      const endOfMonth = `${month}-${String(lastDay).padStart(2, "0")}`;
+      const { start: startOfMonth, end: endOfMonth } = getMonthRange(month);
 
       const usageAgg = await db
         .collection("order_items")

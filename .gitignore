@@ -12,7 +12,9 @@
 
 # testing
 /coverage
-a
+
+# local tooling (Kilo agent workspace)
+.kilo/
 
 # next.js
 /.next/
